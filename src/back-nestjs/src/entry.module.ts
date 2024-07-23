@@ -2,15 +2,17 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth/auth.controller';
-import { UsersController } from './users/users.controller';
+import { UserController } from './user/user.controller';
 import { AuthModule } from './auth/auth.module';
 import { User } from './entities/user.entity';
+import { UserModule } from './user/user.module';
 
 @Module({
-  controllers: [AuthController, UsersController],
+  controllers: [AuthController, UserController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
+    UserModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

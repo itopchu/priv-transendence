@@ -6,10 +6,10 @@ import { UserStatus, UserDTO } from '../dto/user.dto'
 import { AccessTokenDTO } from '../dto/auth.dto';
 
 @Injectable()
-export class UsersService {
+export class UserService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private userRepository: Repository<User>,
   ) { }
 
   async createUser(access: AccessTokenDTO, userMe: Record<string, any>): Promise<UserDTO> {
@@ -25,14 +25,35 @@ export class UsersService {
     user.status = UserStatus.Offline;
     try {
       await user.validate();
-      await this.usersRepository.save(user);
+      await this.userRepository.save(user);
       return new UserDTO(user);
     } catch (error) {
       console.error('User validation error: ', error);
       throw error;
     }
   }
-  async findOne(intraId: number): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { intraId } });
+
+  async getUserByIntraId(intraId: number): Promise<User | null> {
+    try {
+      const found = this.userRepository.findOne({ where: { intraId } });
+      if (!found)
+        throw new Error("User not found.");
+      return found;
+    } catch (error) {
+      console.error("Failed to get user by intraId:", error);
+    }
+    return (null);
+  }
+
+  async getUserById(id: number): Promise<User | null> {
+    try {
+      const found = await this.userRepository.findOne({ where: { id } });
+      if (!found)
+        return (null);
+      return found;
+    } catch (error) {
+      console.error("Failed to get user by id:", error);
+    }
+    return (null);
   }
 }

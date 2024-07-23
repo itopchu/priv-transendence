@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { sign, verify, JwtPayload } from 'jsonwebtoken';
-import { UsersService as UserService } from '../users/users.service';
+import { UserService as UserService } from '../user/user.service';
 import { AccessTokenDTO } from '../dto/auth.dto';
 import { UserDTO } from '../dto/user.dto';
-import { User } from '../entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -126,7 +125,7 @@ export class AuthService {
       return this.failResponse(res, responseData, 'Invalid token payload.', '/login');
 
     // Find user
-    const user = await this.userService.findOne(Number(decoded.intraId));
+    const user = await this.userService.getUserByIntraId(Number(decoded.intraId));
     if (!user)
       return this.failResponse(res, responseData, 'User not found.', '/login');
 

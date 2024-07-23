@@ -3,9 +3,6 @@ import EntryModule from './entry.module';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
-
 
 async function bootstrap() {
     const app = await NestFactory.create(EntryModule);

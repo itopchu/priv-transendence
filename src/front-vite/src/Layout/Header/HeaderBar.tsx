@@ -23,6 +23,9 @@ export const HeaderBar: React.FC = () => {
       direction={'row'}
       width={'100%'}
       height={'3.5em'}
+      zIndex={'1'}
+      borderBottom={1}
+      borderColor={theme.palette.divider}
     >
       <MenuDrawer />
       <IconButton
