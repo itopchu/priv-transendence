@@ -26,7 +26,7 @@ const MainContainer = styled(Container)(({ theme }) => ({
 const Game: React.FC = () => {
   const theme = useTheme();
 
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   return (
     <MainContainer>
       <Stack direction="column" spacing={2}>

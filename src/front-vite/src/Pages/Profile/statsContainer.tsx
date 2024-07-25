@@ -21,7 +21,7 @@ interface StatsContainerProps {
 
 export const StatsContainer: React.FC<StatsContainerProps> = ({ owner, setOwner }) => {
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
   let gameStats = () => {
     // Fetch game stats to show
@@ -38,7 +38,6 @@ export const StatsContainer: React.FC<StatsContainerProps> = ({ owner, setOwner 
         borderBottom={1}
         borderColor={theme.palette.divider}
         padding={'0.3em'}
-        bgcolor={alpha(theme.palette.background.default, 0.1)}
         justifyContent={'space-around'}
         divider={<Divider orientation='vertical' />}
         flex={1}
@@ -112,7 +111,6 @@ export const StatsContainer: React.FC<StatsContainerProps> = ({ owner, setOwner 
   return (
     <Stack
       width={'100%'}
-      padding={'0.3em'}
       maxHeight={isSmallScreen ? '80vh' : '80vh'}
       overflow={'hidden'}
     >

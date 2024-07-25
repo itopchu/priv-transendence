@@ -32,7 +32,7 @@ const team: Developer[] = [
 
 export const Bar: React.FC = () => {
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
   return (
     <Box component="footer" bgcolor={theme.palette.background.default}>

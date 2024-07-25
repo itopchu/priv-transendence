@@ -5,6 +5,15 @@ import { sign, verify, JwtPayload } from 'jsonwebtoken';
 import { UserService as UserService } from '../user/user.service';
 import { AccessTokenDTO } from '../dto/auth.dto';
 import { UserDTO } from '../dto/user.dto';
+import { User } from '../entities/user.entity';
+import * as qrcode from 'qrcode';
+import { authenticator } from 'otplib';
+
+export interface ResponseData {
+  message: string;
+  redirectTo: string;
+  user: UserDTO | null;
+}
 
 @Injectable()
 export class AuthService {
@@ -94,51 +103,71 @@ export class AuthService {
       return (userDTOreturn);
     } catch (error) {
       console.error('Error creating user:', error);
-      res.redirect(process.env.ORIGIN_URL_FRONT + '/login');
+      res.redirect(process.env.ORIGIN_URL_FRONT + '/profile/settings');
       return (null);
     }
   }
 
-  async validate(req: Request, res: Response) {
-    // Local variable to accumulate response data
-    const responseData = {
-      message: '',
-      rediretTo: '',
-      user: null as UserDTO | null,
-    }
+  async validateAuth(responseData: ResponseData, req: Request, res: Response): Promise<User | null> {
 
     // Extract token
     const token = req.cookies['auth_token'];
-    if (!token)
-      return this.failResponse(res, responseData, 'Validator token not found.', '/login');
+    if (!token) {
+      this.failResponse(res, responseData, 'Validator token not found.', '/login');
+      return null;
+    }
 
     // Verify token
     let decoded: string | JwtPayload;
     try {
       decoded = verify(token, this.configService.get<string>('SECRET_KEY'));
     } catch (error) {
-      return this.failResponse(res, responseData, 'Token validation error.', '/login');
+      this.failResponse(res, responseData, 'Token validation error.', '/login');
+      return null;
     }
 
     // Check decoded type
-    if (typeof decoded !== 'object' || isNaN(Number(decoded.intraId)))
-      return this.failResponse(res, responseData, 'Invalid token payload.', '/login');
+    if (typeof decoded !== 'object' || isNaN(Number(decoded.intraId))) {
+      this.failResponse(res, responseData, 'Invalid token payload.', '/login');
+      return null;
+    }
 
     // Find user
     const user = await this.userService.getUserByIntraId(Number(decoded.intraId));
-    if (!user)
-      return this.failResponse(res, responseData, 'User not found.', '/login');
+    if (!user) {
+      this.failResponse(res, responseData, 'User not found.', '/login');
+      return null;
+    }
+    return user;
+  }
 
-    // Success
+  async validate(req: Request, res: Response) {
+    // Local variable to accumulate response data
+    const responseData: ResponseData = {
+      message: '',
+      redirectTo: '',
+      user: null,
+    }
+
+    const user = await this.validateAuth(responseData, req, res);
+    if (!user)
+      return ;
+  
     responseData.message = 'User successfully validated.';
     responseData.user = new UserDTO(user);
     res.status(200).json(responseData);
   }
 
-  private failResponse(res: Response, responseData: any, message: string, redirectTo: string) {
+  failResponse(res: Response, responseData: any, message: string, redirectTo: string) {
     responseData.message = message;
     responseData.redirectTo = redirectTo;
     res.clearCookie('auth_token');
     res.status(401).json(responseData);
+  }
+
+  set2FASecret(res: Response) {
+    const secret2FA =  authenticator.generateSecret();
+    const signedToken = sign({ auth2Fsecret: secret2FA }, this.configService.get<string>('SECRET_AUTH'));
+    res.cookie('secret2FA', signedToken, { httpOnly: true});
   }
 }

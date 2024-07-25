@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { error } from 'console';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,13 +10,14 @@ export enum UserStatus {
 
 export interface User {
   id: number;
-  nameNick?: string | null;
+  nameNick?: string;
   nameFirst?: string;
   nameLast?: string;
   email?: string;
-  image?: string | null;
+  image?: string;
   greeting?: string;
   status?: UserStatus;
+  auth2F?: boolean;
 }
 
 interface UserContextType {

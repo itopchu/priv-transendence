@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { UserStatus, UserDTO } from '../dto/user.dto'
 import { AccessTokenDTO } from '../dto/auth.dto';
+import { Request, Response } from 'express';
 
 @Injectable()
 export class UserService {
@@ -23,6 +24,7 @@ export class UserService {
     user.image = userMe.image.link;
     user.greeting = 'Hello, I have just landed!';
     user.status = UserStatus.Offline;
+    user.auth2F = null;
     try {
       await user.validate();
       await this.userRepository.save(user);
@@ -55,5 +57,23 @@ export class UserService {
       console.error("Failed to get user by id:", error);
     }
     return (null);
+  }
+
+  async updateUser(res: Response, user: User) {
+    try {
+      const updateResult = await this.userRepository.update({ id: user.id }, user);
+      if (!updateResult.affected) {
+        res.status(500).json({ message: 'Failed to update user' });
+        return;
+      }
+      const updatedUser = await this.userRepository.findOne({ where: { id: user.id } });
+      if (!updatedUser) {
+        res.status(404).json({ message: 'User not found after update' });
+        return;
+      }
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update user', error: error.message });
+    }
   }
 }

@@ -22,8 +22,8 @@ export const HeaderBar: React.FC = () => {
       paddingX={'0.3em'}
       direction={'row'}
       width={'100%'}
-      height={'3.5em'}
-      zIndex={'1'}
+      height={'3em'}
+      zIndex={'50'}
       borderBottom={1}
       borderColor={theme.palette.divider}
     >

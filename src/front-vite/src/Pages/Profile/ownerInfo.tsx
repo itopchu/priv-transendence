@@ -18,7 +18,7 @@ interface OwnerInfoProps {
 
 export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useUser();
 
   let imagePart = () => {
@@ -40,7 +40,12 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
             minHeight: '115px',
             maxHeight: '200px',
             maxWidth: '200px',
-            bgcolor: theme.palette.success.main,
+            border: '2px solid',
+            borderColor: () => (
+              owner?.status === 'online' ? theme.palette.success.main :
+              owner?.status === 'offline' ? theme.palette.error.main :
+              owner?.status === 'ingame' ? theme.palette.warning.main : theme.palette.action.hover
+            ),
           }}
           src={owner?.image ?? ''}
           alt="owner"
