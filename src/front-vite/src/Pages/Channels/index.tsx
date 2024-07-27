@@ -101,6 +101,9 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
+  const WEBSOCKET_URL: string = import.meta.env.ORIGIN_URL_WEBSOCKET || 'http://localhost.codam.nl:5000';
+
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<string[]>([]);
 
@@ -109,8 +112,12 @@ const ChannelsPage: React.FC = () => {
     console.log("domates");
   };
 
+
   useEffect(() => {
-    const newSocket = io("ws://localhost:5000");
+
+    console.log(`ws://${WEBSOCKET_URL}`);
+
+    const newSocket = io(`${WEBSOCKET_URL}`);
     setSocket(newSocket);
     console.log("baglanti kuruluyor");
 

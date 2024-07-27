@@ -22,6 +22,7 @@ services:
       context: ./src/back-nestjs
       args:
         PORT: ${PORT_BACKEND}
+        PORT_WEBSOCKET: ${PORT_WEBSOCKET}
     volumes:
       - ./src/back-nestjs:/app
       - nestjs_modules:/app/node_modules
@@ -32,8 +33,10 @@ services:
       - database
     environment:
       PORT: ${PORT_BACKEND}
+      PORT_WEBSOCKET: ${PORT_WEBSOCKET}
     ports:
-      - "${PORT_BACKEND}:${PORT_BACKEND}" # Optional: expose for debugging.
+      - ${PORT_WEBSOCKET}:${PORT_WEBSOCKET}
+      - "${PORT_BACKEND}:${PORT_BACKEND}"
     expose:
       - "${PORT_BACKEND}"
     networks:
