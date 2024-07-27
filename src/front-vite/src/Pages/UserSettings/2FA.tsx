@@ -1,33 +1,70 @@
 import React, { useState } from 'react';
-import { Typography, Box, Switch, Stack, useTheme } from '@mui/material';
+import { Typography, Box, Switch, Stack, useTheme, Button, TextField } from '@mui/material';
 import { useUser } from '../../Providers/UserContext/User';
 import axios from 'axios';
 
 export const Auth2F: React.FC = () => {
   const theme = useTheme();
-  const { user } = useUser();
-  const [ auth2FEnabled, setAuth2FEnabled ] = useState(user?.auth2F);
-  const [ qrUrl, setQrUrl ] = useState<string | null>(null);
+  const { user, setUser } = useUser();
+  const [auth2FEnabled, setAuth2FEnabled] = useState(user?.auth2F);
+  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [isScanned, setIsScanned] = useState<boolean>(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [hasError, setHasError] = useState<boolean>(false);
+  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
-  const generateQR = async () => {
+  async function generateQR() {
     try {
-      const response = await axios.get('/auth/qr', { withCredentials: true });
-      setQrUrl(response.data.qrUrl);
+      const response = await axios.get(BACKEND_URL + '/auth/QRCode', { withCredentials: true, responseType: 'blob' });
+      const qrData = response.data;
+      setQrImage(URL.createObjectURL(qrData));
     } catch (error) {
+      resetPage();
       console.error('Error generating QR code', error);
     }
-  };
+  }
 
-  const handleToggle = () => {
+  function resetPage() {
+    setQrImage(null);
+    setIsScanned(false);
+    setVerificationCode('');
+    setAuth2FEnabled(user.auth2F);
+    setHasError(false);
+  }
+
+  async function verifyQR() {
+    try {
+      const response = await axios.post(BACKEND_URL + '/auth/QRCode', { verificationCode }, { withCredentials: true });
+      setUser(response.data.userDTO);
+      resetPage();
+    } catch (error) {
+      setHasError(true);
+      setVerificationCode('');
+    }
+  }
+
+  async function deleteQR() {
+    try {
+      const response = await axios.delete(BACKEND_URL + '/auth/QRCode', { withCredentials: true });
+      setUser(response.data.userDTO);
+    } catch (error) {
+      console.error('Error deleting QR code', error);
+    }
+    resetPage();
+  }
+
+  function handleToggle() {
+    setAuth2FEnabled(!auth2FEnabled);
+    setQrImage(null);
+    setIsScanned(false);
+    setVerificationCode('');
     if (auth2FEnabled) {
-      // Disable 2FA in backend
+      deleteQR();
     }
     else {
-      generateQR()
-      // Enable 2FA in backend
+      generateQR();
     }
-    setAuth2FEnabled(!auth2FEnabled);
-  };
+  }
 
   const infoSection = () => {
     return (
@@ -74,15 +111,26 @@ export const Auth2F: React.FC = () => {
       direction="column"
       justifyContent="space-between"
       height="100%"
+      gap={2}
     >
       <Stack
-        direction={'row'}
+        direction={'column'}
         display={'flex'}
         justifyContent={'center'}
         alignItems={'center'}
         gap={1}
         padding={'0.3em'}
       >
+        <Stack direction={'column'}>
+          <Switch
+            color='secondary'
+            checked={auth2FEnabled}
+            onChange={handleToggle}
+          />
+          <Typography variant="body1">
+            {auth2FEnabled ? 'Enabled' : 'Disabled'}
+          </Typography>
+        </Stack>
         {auth2FEnabled && (
           user.auth2F ? (
             <Box
@@ -93,20 +141,58 @@ export const Auth2F: React.FC = () => {
               You are secured with 2FA!
             </Box>
           ) : (
-            <Box>
-              {/* {qrUrl && <QRCode value={qrUrl} />} */}
-            </Box>
+            isScanned ? (
+              <Stack padding={'0'} width={'100%'} gap={2} textAlign={'center'}>
+                <Typography variant="body2" color="secondary">
+                  Please verify the TOTP code using your authentication app
+                </Typography>
+                <TextField
+                  color={hasError ? 'error' : 'secondary'}
+                  variant="outlined"
+                  label="Verification Code"
+                  inputProps={{ maxLength: 6 }}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  fullWidth
+                />
+                <Button
+                  fullWidth
+                  variant='contained'
+                  color='secondary'
+                  onClick={() => { verifyQR }}
+                  sx={{
+                    borderRadius: '1em',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Submit
+                </Button>
+              </Stack>
+            ) : (
+              <Stack direction={'column'} gap={1} width={'100%'}>
+                {qrImage ? (
+                  <>
+                    <img src={qrImage} alt="QR Code" />
+                    <Button
+                      fullWidth
+                      variant='contained'
+                      color='secondary'
+                      onClick={() => { setIsScanned(true) }}
+                      sx={{
+                        borderRadius: '1em',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      Click if scanned
+                    </Button>
+                  </>
+                ) : (
+                  'Loading QR Code...'
+                )}
+              </Stack>
+            )
           )
-        )
-        }
-        <Switch
-          color='secondary'
-          checked={auth2FEnabled}
-          onChange={handleToggle}
-        />
-        <Typography variant="body1">
-          {auth2FEnabled ? 'Enabled' : 'Disabled'}
-        </Typography>
+        )}
       </Stack>
       {infoSection()}
     </Stack>

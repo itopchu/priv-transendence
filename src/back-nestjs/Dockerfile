@@ -12,4 +12,6 @@ RUN npm install
 
 COPY . .
 
-CMD ["npm", "run", "start:debug"]
+RUN npm install -g nodemon
+
+CMD ["nodemon", "-L", "--watch", "src", "--exec", "ts-node", "src/main.ts"]

@@ -48,18 +48,6 @@ async function bootstrap() {
         transform: true,
     }));
 
-    // Configures TypeORM to connect to a PostgreSQL database
-    // TypeOrmModule.forRoot({
-    //   type: 'postgres',
-    //   host: configService.get('POSTGRES_HOST'),
-    //   port: configService.get('PORT_POSTGRES'),
-    //   username: configService.get('POSTGRES_USER'),
-    //   password: configService.get('POSTGRES_PASSWORD'),
-    //   database: configService.get('POSTGRES_DB'),
-    //   entities: [User], // List your entities here
-    //   synchronize: true,
-    // });
-
     await app.listen(port).catch(() => {
         console.log(`listen to ${port} failed`);
         process.exit(1);

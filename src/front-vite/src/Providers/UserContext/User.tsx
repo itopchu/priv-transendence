@@ -36,7 +36,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const validate = async () => {
       try {
         const response = await axios.get(BACKEND_URL + '/auth/validate', { withCredentials: true });
-        setUser(response.data.user);
+        if (response.data.userDTO)
+          setUser(response.data.userDTO);
       } catch (error) {
         navigate('/login');
         setUser({ id: 0 });

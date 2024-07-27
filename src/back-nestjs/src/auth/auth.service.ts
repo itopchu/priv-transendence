@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { ConsoleLogger, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { sign, verify, JwtPayload } from 'jsonwebtoken';
-import { UserService as UserService } from '../user/user.service';
+import { UserService } from '../user/user.service';
 import { AccessTokenDTO } from '../dto/auth.dto';
 import { UserDTO } from '../dto/user.dto';
 import { User } from '../entities/user.entity';
-import * as qrcode from 'qrcode';
-import { authenticator } from 'otplib';
+import * as QRCode from 'qrcode';
+import * as speakeasy from 'speakeasy';
 
 export interface ResponseData {
   message: string;
@@ -21,17 +21,6 @@ export class AuthService {
     private configService: ConfigService,
     private userService: UserService,
   ) { }
-
-  handleRedir(res: Response, clear: boolean, redir?: string, mess?: string) {
-    if (clear)
-      res.clearCookie('auth_token');
-    const responseObj: any = {};
-    if (mess)
-      responseObj.message = mess;
-    if (redir)
-      responseObj.redirectTo = redir;
-    res.json(responseObj);
-  }
 
   async getUserAccessToken(code: string): Promise<AccessTokenDTO | null> {
     if (!code) {
@@ -83,91 +72,116 @@ export class AuthService {
     return null;
   }
 
-  async login(code: string, res: Response): Promise<UserDTO | null> {
-    if (!code) {
-      res.clearCookie('auth_token');
-      res.redirect(process.env.ORIGIN_URL_FRONT + '/login');
-      return (null);
+  async login(code: string, res: Response) {
+    const { access, userMe, userId } = (await this.validateTempCode(code)) ?? {};
+    if (!access || !userMe || !userId)
+      return res.status(401).clearCookie('auth_token').redirect(`${process.env.ORIGIN_URL_FRONT}/login`);
+    const user = await this.userService.getUserByIntraId(userId);
+    if (!user) {
+      try {
+        await this.userService.createUser(access, userMe);
+        this.addAuthToCookie(res, userId);
+        return res.redirect(`${process.env.ORIGIN_URL_FRONT}/profile/settings`);
+      } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(401).clearCookie('auth_token').redirect(`${process.env.ORIGIN_URL_FRONT}/login`);
+        return ;
+      }
     }
+
+    if (user.auth2F) {
+      // 2FA GIVE A JSON AND 
+    }
+
+    this.addAuthToCookie(res, userId);
+    res.redirect(`${process.env.ORIGIN_URL_FRONT}/`);
+    // const userDTO = new UserDTO(user);
+    // res.json({ userDTO });
+  }
+
+  async validateTempCode(code: string): Promise<{ access: AccessTokenDTO, userMe: Record<string, any>, userId: number } | null> {
+    if (!code)
+      return null;
     const access = await this.getUserAccessToken(code);
     if (access === null)
-      return (null);
+      return null;
     const userMe = await this.getUserMe(access.access_token);
     if (userMe === null)
-      return (null);
-    const signedToken = sign({ intraId: userMe.id }, this.configService.get<string>('SECRET_KEY'));
+      return null;
+    const userId: number = Number(userMe.id);
+    if (isNaN(userId))
+      return null;
+    return { access, userMe, userId };
+  }
+
+  addAuthToCookie(res: Response, intraId: number) {
+    const payload: JwtPayload = { intraId: intraId };
+    const signedToken = sign(payload, this.configService.get<string>('SECRET_KEY'));
     res.cookie('auth_token', signedToken, { httpOnly: true, maxAge: 10 * 365 * 24 * 60 * 60 * 1000 });
+  }
+
+  generate2FASecret(): speakeasy.GeneratedSecret {
+    const secretCode = speakeasy.generateSecret({ name: process.env.PROJECT_NAME });
+    return secretCode;
+  }
+
+  respondWithQRCode(otpauth_url: string, res: Response) {
+    QRCode.toFileStream(res, otpauth_url);
+  }
+
+  async getQRCode(user: User, res: Response) {
+    const secretCode = this.generate2FASecret();
+    const secretKey = this.configService.get<string>('SECRET_KEY');
+
+    const payload = {
+      signedBase: secretCode.base32,
+      intraId: user.intraId
+    };
+
+    const secretQR = sign(payload, secretKey);
+    res.cookie('secretQR', secretQR, { httpOnly: true });
     try {
-      const userDTOreturn = await this.userService.createUser(access, userMe);
-      res.redirect(process.env.ORIGIN_URL_FRONT + '/');
-      return (userDTOreturn);
+      this.respondWithQRCode(secretCode.otpauth_url, res);
     } catch (error) {
-      console.error('Error creating user:', error);
-      res.redirect(process.env.ORIGIN_URL_FRONT + '/profile/settings');
-      return (null);
+      console.error('Error generating QR code:', error);
     }
   }
 
-  async validateAuth(responseData: ResponseData, req: Request, res: Response): Promise<User | null> {
+  async verifyQRCode(user: User, req: Request, res: Response) {
+    const secretQR = req.cookies['secretQR']
+    if (!secretQR)
+      return res.status(404);
 
-    // Extract token
-    const token = req.cookies['auth_token'];
-    if (!token) {
-      this.failResponse(res, responseData, 'Validator token not found.', '/login');
-      return null;
-    }
-
-    // Verify token
-    let decoded: string | JwtPayload;
+    let decodedSecret;
     try {
-      decoded = verify(token, this.configService.get<string>('SECRET_KEY'));
-    } catch (error) {
-      this.failResponse(res, responseData, 'Token validation error.', '/login');
-      return null;
+      decodedSecret = verify(secretQR, this.configService.get<string>('JWT_SECRET'));
+    } catch (err) {
+      return res.status(401).clearCookie('secretQR');
     }
 
-    // Check decoded type
-    if (typeof decoded !== 'object' || isNaN(Number(decoded.intraId))) {
-      this.failResponse(res, responseData, 'Invalid token payload.', '/login');
-      return null;
-    }
+    if (typeof decodedSecret !== 'object' || decodedSecret.intraId !== user.intraId)
+      return res.status(409).clearCookie('secretQR');
 
-    // Find user
-    const user = await this.userService.getUserByIntraId(Number(decoded.intraId));
-    if (!user) {
-      this.failResponse(res, responseData, 'User not found.', '/login');
-      return null;
-    }
-    return user;
+    const token = req.body as string;
+    if (!token)
+      return res.status(404).clearCookie('secretQR');
+
+    if (!this.validate2FACode(decodedSecret.secretKey, token))
+      return res.status(418).clearCookie('secretQR');
+
+    user.auth2F = decodedSecret.secretKey;
+    if (!await this.userService.updateUser(res, user))
+      return res.clearCookie('secretQR');
+    res.clearCookie('secretQR').json({ userDTO: new UserDTO(user) });
   }
 
-  async validate(req: Request, res: Response) {
-    // Local variable to accumulate response data
-    const responseData: ResponseData = {
-      message: '',
-      redirectTo: '',
-      user: null,
-    }
-
-    const user = await this.validateAuth(responseData, req, res);
-    if (!user)
-      return ;
-  
-    responseData.message = 'User successfully validated.';
-    responseData.user = new UserDTO(user);
-    res.status(200).json(responseData);
+  async deleteQRCode(user: User, res: Response) {
+    user.auth2F = null;
+    if (await this.userService.updateUser(res, user))
+      return res.json({ userDTO: new UserDTO(user) })
   }
 
-  failResponse(res: Response, responseData: any, message: string, redirectTo: string) {
-    responseData.message = message;
-    responseData.redirectTo = redirectTo;
-    res.clearCookie('auth_token');
-    res.status(401).json(responseData);
-  }
-
-  set2FASecret(res: Response) {
-    const secret2FA =  authenticator.generateSecret();
-    const signedToken = sign({ auth2Fsecret: secret2FA }, this.configService.get<string>('SECRET_AUTH'));
-    res.cookie('secret2FA', signedToken, { httpOnly: true});
+  validate2FACode(secretKey: string, inputToken: string): boolean {
+    return speakeasy.totp.verify({ secret: secretKey, encoding: 'base32', token: inputToken });
   }
 }

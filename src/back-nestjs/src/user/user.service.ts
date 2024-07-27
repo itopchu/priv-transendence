@@ -25,26 +25,37 @@ export class UserService {
     user.greeting = 'Hello, I have just landed!';
     user.status = UserStatus.Offline;
     user.auth2F = null;
+
     try {
       await user.validate();
-      await this.userRepository.save(user);
-      return new UserDTO(user);
-    } catch (error) {
-      console.error('User validation error: ', error);
-      throw error;
+    } catch (validationError) {
+      console.error('User validation error: ', validationError);
+      throw validationError;
     }
+
+    try {
+      const userFound = await this.userRepository.findOne({ where: { intraId: user.intraId } });
+      if (userFound) {
+        throw new Error('User already exists.');
+      }
+      await this.userRepository.save(user);
+    } catch (repositoryError) {
+      console.error('Error saving user: ', repositoryError);
+      throw repositoryError;
+    }
+
+    return new UserDTO(user);
   }
 
   async getUserByIntraId(intraId: number): Promise<User | null> {
     try {
-      const found = this.userRepository.findOne({ where: { intraId } });
+      const found = await this.userRepository.findOne({ where: { intraId } });
       if (!found)
         throw new Error("User not found.");
       return found;
     } catch (error) {
-      console.error("Failed to get user by intraId:", error);
+      return (null);
     }
-    return (null);
   }
 
   async getUserById(id: number): Promise<User | null> {
@@ -59,21 +70,22 @@ export class UserService {
     return (null);
   }
 
-  async updateUser(res: Response, user: User) {
+  async updateUser(res: Response, user: User): Promise<boolean> {
     try {
       const updateResult = await this.userRepository.update({ id: user.id }, user);
       if (!updateResult.affected) {
         res.status(500).json({ message: 'Failed to update user' });
-        return;
+        return false;
       }
       const updatedUser = await this.userRepository.findOne({ where: { id: user.id } });
       if (!updatedUser) {
         res.status(404).json({ message: 'User not found after update' });
-        return;
+        return false;
       }
-      res.status(200).json(updatedUser);
     } catch (error) {
       res.status(500).json({ message: 'Failed to update user', error: error.message });
+      return false;
     }
+    return true;
   }
 }

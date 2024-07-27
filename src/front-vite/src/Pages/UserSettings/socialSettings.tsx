@@ -16,7 +16,7 @@ export const SocialSettings: React.FC = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     const payload = { nickname, email, greeting };
-    const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
+    const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
     try {
       const response = await axios.post(BACKEND_URL + '/user/update', payload, {
         headers: {
@@ -91,6 +91,7 @@ export const SocialSettings: React.FC = () => {
         onClick={handleSubmit}
         sx={{
           borderRadius: '1em',
+          fontWeight: 'bold',
         }}
       >
         {isSubmitting ? 'Submitting...' : 'Submit'}

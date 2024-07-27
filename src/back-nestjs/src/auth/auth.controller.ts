@@ -1,6 +1,8 @@
-import { Controller, Get, Query, Req, Res } from '@nestjs/common';
+import { Controller, Delete, UseGuards, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { AuthService, ResponseData } from './auth.service';
+import { AuthService } from './auth.service';
+import { AuthGuard } from './auth.guard';
+import { UserDTO } from '../dto/user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -11,29 +13,53 @@ export class AuthController {
 
   @Get('login')
   async login(@Query('code') code: string, @Res() res: Response) {
-    return await this.authService.login(code, res);
+   await this.authService.login(code, res)
   }
 
   @Get('validate')
+  @UseGuards(AuthGuard)
   async validate(@Req() req: Request, @Res() res: Response) {
-    return await this.authService.validate(req, res);
+    const userDTO = new UserDTO(req.authUser);
+    return res.json({ userDTO });
   }
 
   @Get('logout')
   async logout(@Res() res: Response) {
-    this.authService.handleRedir(res, true, '/login', 'Logged out successfully');
+    try {
+      res.clearCookie('auth_token');
+      res.status(200).send({ message: 'Logged out successfully' });
+    } catch (error) {
+      res.status(500).send({ message: 'Error logging out' });
+    }
   }
 
-  // @Get('qr')
-  // async getQR(@Req() req: Request, @Res() res: Response) {
-  //   const rpData : ResponseData = {
-  //     message: '',
-  //     redirectTo: '',
-  //     user: null,
-  //   };
-  //   const user = await this.authService.validateAuth(rpData, req, res);
-  //   if (!user)
-  //     return ;
-  //   res.json({qrUrl: await this.authService.generateQR(res, user)});
-  // }
+  @Get('QRCode')
+  @UseGuards(AuthGuard)
+  async getQRCode(@Req() req: Request, @Res() res: Response) {
+    await this.authService.getQRCode(req.authUser, res);
+  }
+
+  @Post('QRCode')
+  @UseGuards(AuthGuard)
+  async verifyQRCode(@Req() req: Request, @Res() res: Response) {
+    const secretQR = req.cookies['secretQR'];
+    if (!secretQR)
+      return res.status(401).redirect(process.env.ORIGIN_URL_FRONT + '/profile/settings');
+    await this.authService.verifyQRCode(req.authUser, req, res);
+  }
+
+  @Delete('QRCode')
+  @UseGuards(AuthGuard)
+  async deleteQRCode(@Req() req: Request, @Res() res: Response) {
+    await this.authService.deleteQRCode(req.authUser, res);
+  }
+
+  // Not done yet
+  @Post('2FACode')
+  @UseGuards(AuthGuard)
+  async verify2FACode(@Req() req: Request, @Res() res: Response) {
+    if (!req.authUser.auth2F)
+      return res.status(200);
+    const token = req.body as string;
+  }
 }

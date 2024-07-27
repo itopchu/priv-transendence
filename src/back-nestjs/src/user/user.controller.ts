@@ -1,14 +1,15 @@
-import { Controller, Get, Param, Req, Res, ParseIntPipe, Post } from '@nestjs/common';
+import { UseGuards, Controller, Get, Param, Req, Res, ParseIntPipe, Post } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UserService } from './user.service';
 import { UserDTO } from '../dto/user.dto';
-import { ResponseData, AuthService } from '../auth/auth.service';
+import { AuthService } from '../auth/auth.service';
+import { AuthGuard } from '../auth/auth.guard';
+
 
 @Controller('user')
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    private readonly authService: AuthService,
   ) {}
 
   @Get(':id')
@@ -20,17 +21,10 @@ export class UserController {
   }
 
   @Post('update')
+  @UseGuards(AuthGuard)
   async updateUser(@Req() req: Request, @Res() res: Response) {
-    const responseData : ResponseData = {
-      message: '',
-      redirectTo: '',
-      user: null,
-    };
-
-    const user = await this.authService.validateAuth(responseData, req, res);
-    if (!user)
-        return ;
     const { nickname, email, greeting } = req.body;
+    const user = req.authUser;
     user.nameNick = nickname;
     user.email = email;
     user.greeting = greeting;
