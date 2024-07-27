@@ -6,6 +6,7 @@ import { UserController } from './user/user.controller';
 import { AuthModule } from './auth/auth.module';
 import { User } from './entities/user.entity';
 import { UserModule } from './user/user.module';
+import { ChannelsModule } from './channels/channels.module';
 
 @Module({
   controllers: [AuthController, UserController],
@@ -27,6 +28,7 @@ import { UserModule } from './user/user.module';
         synchronize: true,
       })
     }),
+    ChannelsModule,
   ],
 })
 

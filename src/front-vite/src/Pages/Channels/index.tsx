@@ -1,7 +1,8 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Divider, Typography, Button, IconButton, Container, useTheme, Stack } from '@mui/material';
 import { styled } from '@mui/system';
+import { io, Socket } from 'socket.io-client';
 import {
   Add as AddIcon,
   Group as GroupIcon,
@@ -100,6 +101,48 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [messages, setMessages] = useState<string[]>([]);
+
+  const send = () => {
+    socket?.emit("message", "domates");
+    console.log("domates");
+  };
+
+  useEffect(() => {
+    const newSocket = io("ws://localhost:5000");
+    setSocket(newSocket);
+    console.log("baglanti kuruluyor");
+
+    newSocket.on("connect", () => {
+      console.log("connected");
+    });
+
+    newSocket.on("disconnect", () => {
+      console.log("disconnected");
+    });
+
+    newSocket.on("error", (error) => {
+      console.error("Socket error:", error);
+    });
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  const messageListener = (message: string) => {
+    setMessages((prevMessages) => [...prevMessages, message]);
+    console.log("patates");
+  };
+
+  useEffect(() => {
+    socket?.on("message", messageListener);
+    return () => {
+      socket?.off("message", messageListener);
+    };
+  }, [socket]);
+
   let createChannelButton = () => {
     return (
       <Stack
@@ -107,6 +150,7 @@ const ChannelsPage: React.FC = () => {
         height={'48px'}
         direction={'row'}
         justifyContent={'center'}
+        onClick={send}//Buraya bak
         alignItems={'center'}
         gap={1}
         bgcolor={theme.palette.primary.main}
