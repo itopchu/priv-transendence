@@ -24,7 +24,7 @@ export const Auth2F: React.FC = () => {
     }
   }
 
-  function resetPage() {
+  const resetPage = async () => {
     setQrImage(null);
     setIsScanned(false);
     setVerificationCode('');
@@ -32,26 +32,27 @@ export const Auth2F: React.FC = () => {
     setHasError(false);
   }
 
-  async function verifyQR() {
+  const verifyQR = async () => {
     try {
-      const response = await axios.post(BACKEND_URL + '/auth/QRCode', { verificationCode }, { withCredentials: true });
-      setUser(response.data.userDTO);
-      resetPage();
+      const response = await axios.post(BACKEND_URL + '/auth/QRCode', { verificationCode: verificationCode }, { withCredentials: true });
+      if (response.data.userDTO)
+        setUser(response.data.userDTO);
+      await resetPage();
     } catch (error) {
       setHasError(true);
       setVerificationCode('');
     }
-  }
+  };
 
-  async function deleteQR() {
+  const deleteQR = async () => {
     try {
       const response = await axios.delete(BACKEND_URL + '/auth/QRCode', { withCredentials: true });
       setUser(response.data.userDTO);
     } catch (error) {
       console.error('Error deleting QR code', error);
     }
-    resetPage();
-  }
+    await resetPage();
+  };
 
   function handleToggle() {
     setAuth2FEnabled(!auth2FEnabled);
@@ -134,8 +135,11 @@ export const Auth2F: React.FC = () => {
         {auth2FEnabled && (
           user.auth2F ? (
             <Box
-              bgcolor={theme.palette.background.default}
+              bgcolor={theme.palette.success.main}
+              color={theme.palette.background.default}
+              textAlign={'center'}
               borderRadius={'1em'}
+              fontWeight={'bold'}
               width={'100%'}
             >
               You are secured with 2FA!
@@ -159,7 +163,7 @@ export const Auth2F: React.FC = () => {
                   fullWidth
                   variant='contained'
                   color='secondary'
-                  onClick={() => { verifyQR }}
+                  onClick={verifyQR}
                   sx={{
                     borderRadius: '1em',
                     fontWeight: 'bold',

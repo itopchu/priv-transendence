@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Badge, Typography, TextField, Button, Box, Avatar, Switch, FormControlLabel, useMediaQuery, Stack, Divider, useTheme, lighten, alpha } from '@mui/material';
+import { TextField, Button, Stack, useTheme } from '@mui/material';
 import { useUser } from '../../Providers/UserContext/User';
 import axios from 'axios'; // Import axios
 
@@ -24,7 +24,8 @@ export const SocialSettings: React.FC = () => {
         },
         withCredentials: true,
       });
-      setUser(response.data);
+      if (response.data.userDTO)
+        setUser(response.data.userDTO);
     } catch (error) {
       setNickname(user.nameNick);
       setEmail(user.email);

@@ -13,7 +13,7 @@ export class AuthController {
 
   @Get('login')
   async login(@Query('code') code: string, @Res() res: Response) {
-   await this.authService.login(code, res)
+    await this.authService.login(code, res)
   }
 
   @Get('validate')
@@ -42,9 +42,6 @@ export class AuthController {
   @Post('QRCode')
   @UseGuards(AuthGuard)
   async verifyQRCode(@Req() req: Request, @Res() res: Response) {
-    const secretQR = req.cookies['secretQR'];
-    if (!secretQR)
-      return res.status(401).redirect(process.env.ORIGIN_URL_FRONT + '/profile/settings');
     await this.authService.verifyQRCode(req.authUser, req, res);
   }
 

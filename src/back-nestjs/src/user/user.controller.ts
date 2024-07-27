@@ -10,7 +10,7 @@ import { AuthGuard } from '../auth/auth.guard';
 export class UserController {
   constructor(
     private readonly userService: UserService,
-  ) {}
+  ) { }
 
   @Get(':id')
   async getUserById(@Res() res: Response, @Param('id', ParseIntPipe) id: number) {
@@ -28,6 +28,7 @@ export class UserController {
     user.nameNick = nickname;
     user.email = email;
     user.greeting = greeting;
-    await this.userService.updateUser(res, user);
+    if (await this.userService.updateUser(res, user))
+      return res.json(new UserDTO(user));
   }
 }

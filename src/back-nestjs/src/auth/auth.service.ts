@@ -154,7 +154,7 @@ export class AuthService {
 
     let decodedSecret;
     try {
-      decodedSecret = verify(secretQR, this.configService.get<string>('JWT_SECRET'));
+      decodedSecret = verify(secretQR, this.configService.get<string>('SECRET_KEY'));
     } catch (err) {
       return res.status(401).clearCookie('secretQR');
     }
@@ -162,14 +162,15 @@ export class AuthService {
     if (typeof decodedSecret !== 'object' || decodedSecret.intraId !== user.intraId)
       return res.status(409).clearCookie('secretQR');
 
-    const token = req.body as string;
-    if (!token)
+    const { verificationCode } = req.body;
+
+    if (!verificationCode)
       return res.status(404).clearCookie('secretQR');
 
-    if (!this.validate2FACode(decodedSecret.secretKey, token))
+    if (!this.validate2FACode(decodedSecret.signedBase, verificationCode))
       return res.status(418).clearCookie('secretQR');
 
-    user.auth2F = decodedSecret.secretKey;
+    user.auth2F = decodedSecret.signedBase;
     if (!await this.userService.updateUser(res, user))
       return res.clearCookie('secretQR');
     res.clearCookie('secretQR').json({ userDTO: new UserDTO(user) });
