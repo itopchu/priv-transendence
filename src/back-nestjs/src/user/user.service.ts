@@ -17,11 +17,11 @@ export class UserService {
     const user = new User();
     user.accessToken = access.access_token;
     user.intraId = userMe.id;
-    user.nameNick = userMe.login;
+    user.nameNick = null;
     user.nameFirst = userMe.first_name;
     user.nameLast = userMe.last_name;
     user.email = userMe.email;
-    user.image = userMe.image.link;
+    user.image = null;
     user.greeting = 'Hello, I have just landed!';
     user.status = UserStatus.Offline;
     user.auth2F = null;
@@ -70,22 +70,30 @@ export class UserService {
     return (null);
   }
 
-  async updateUser(res: Response, user: User): Promise<boolean> {
-    try {
-      const updateResult = await this.userRepository.update({ id: user.id }, user);
-      if (!updateResult.affected) {
-        res.status(500).json({ message: 'Failed to update user' });
-        return false;
+  async updateUser(res: Response, user: User): Promise<User | null> {
+    const properties = Object.keys(user);
+
+    for (const prop of properties) {
+      if (prop === 'id') continue;
+
+      try {
+        await this.userRepository.update({ id: user.id }, { [prop]: user[prop] });
+      } catch (error) {
+
       }
-      const updatedUser = await this.userRepository.findOne({ where: { id: user.id } });
+    }
+
+    let updatedUser: User | null;
+    try {
+      updatedUser = await this.userRepository.findOne({ where: { id: user.id } });
       if (!updatedUser) {
         res.status(404).json({ message: 'User not found after update' });
-        return false;
+        return null;
       }
     } catch (error) {
-      res.status(500).json({ message: 'Failed to update user', error: error.message });
-      return false;
+      res.status(500).json({ message: 'Failed to retrieve user after update', error: error.message });
+      return null;
     }
-    return true;
+    return updatedUser;
   }
 }

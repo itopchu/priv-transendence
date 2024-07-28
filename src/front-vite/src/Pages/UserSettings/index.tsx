@@ -34,7 +34,8 @@ const UserSettings: React.FC = () => {
           '&:hover': {
             transform: 'scale(1.02)',
             bgcolor: alpha(theme.palette.background.default, 0.7),
-            boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.5)',          },
+            boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.5)',
+          },
         }}
       >
         <Box
@@ -66,7 +67,7 @@ const UserSettings: React.FC = () => {
       >
         Settings
       </Box>
-      <Stack alignSelf={'center'} direction={isSmallScreen ? 'column' : 'row'} gap={3} width={'100%'} justifyContent={'space-around'}>
+      <Stack alignSelf={'center'} direction={isSmallScreen ? 'column' : 'row'} gap={3} width={'100%'} justifyContent={'space-around'} alignItems={'flex-start'}>
         {cardContainer({ children: <PersonalInfo /> }, 'Personal Information')}
         {cardContainer({ children: <SocialSettings /> }, 'Social Settings')}
         {cardContainer({ children: <Auth2F /> }, '2FA Switch')}

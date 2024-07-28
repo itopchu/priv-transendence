@@ -7,6 +7,8 @@ import { AuthModule } from './auth/auth.module';
 import { User } from './entities/user.entity';
 import { UserModule } from './user/user.module';
 import { ChannelsModule } from './channels/channels.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   controllers: [AuthController, UserController],
@@ -14,6 +16,10 @@ import { ChannelsModule } from './channels/channels.module';
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UserModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/',
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
