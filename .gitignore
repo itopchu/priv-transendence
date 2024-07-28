@@ -1,5 +1,6 @@
 /src/front-vite/node_modules/
 /src/back-nestjs/node_modules/
+/src/back-nestjs/uploads/
 # Logs
 logs
 *.log
