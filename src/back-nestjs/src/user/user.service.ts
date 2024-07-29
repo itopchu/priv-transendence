@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { UserStatus, UserDTO } from '../dto/user.dto'
 import { AccessTokenDTO } from '../dto/auth.dto';
 import { Request, Response } from 'express';
+import { UserDTO } from '../dto/user.dto';
 
 @Injectable()
 export class UserService {
@@ -17,14 +17,10 @@ export class UserService {
     const user = new User();
     user.accessToken = access.access_token;
     user.intraId = userMe.id;
-    user.nameNick = null;
     user.nameFirst = userMe.first_name;
     user.nameLast = userMe.last_name;
     user.email = userMe.email;
-    user.image = null;
     user.greeting = 'Hello, I have just landed!';
-    user.status = UserStatus.Offline;
-    user.auth2F = null;
 
     try {
       await user.validate();

@@ -151,7 +151,7 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
       justifyContent={'space-between'}
       padding={'1em'}
       gap={'1em'}
-      bgcolor={theme.palette.primary.dark}
+      bgcolor={theme.palette.primary.main}
       borderBottom={1}
       borderColor={theme.palette.divider}
     >
@@ -160,6 +160,7 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
         gap={1}
         bgcolor={alpha(theme.palette.background.default, 0.5)}
         borderRadius={'1em'}
+        justifyContent={isSmallScreen ? 'space-between' : '' }
       >
         {imagePart()}
         {namePart()}

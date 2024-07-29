@@ -30,9 +30,7 @@ const ProfilePage: React.FC = () => {
     getOwner();
   }, [visitedUserId]);
 
-
-  let pageWrapper = () => {
-    return (
+  return (
       <>
         <OwnerInfo owner={owner} setOwner={setOwner} />
         <Stack
@@ -44,11 +42,6 @@ const ProfilePage: React.FC = () => {
           <StatsContainer owner={owner} setOwner={setOwner} />
         </Stack>
       </>
-    );
-  };
-
-  return (
-    pageWrapper()
   );
 };
 
