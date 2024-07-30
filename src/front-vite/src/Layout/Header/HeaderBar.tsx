@@ -11,8 +11,6 @@ export const HeaderBar: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  console.log(user.image);
-
   return (
     <Stack
       bgcolor={theme.palette.primary.dark}
@@ -31,42 +29,40 @@ export const HeaderBar: React.FC = () => {
     >
       <MenuDrawer />
       <IconButton
+        onClick={() => navigate(`/profile/${user.id}`)}
         sx={{
-          p: 0,
-          overflow: 'hidden',
+          overflow: 'clip',
+          display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          aspectRatio: '1:1',
+          position: 'relative',
           height: '100%',
-          '&:hover': {
-            '& > *': {
-              transform: 'scale(1.4)',
-              transition: 'transform 0.3s ease',
-            },
-          },
-          '& img': {
-            maxWidth: '100%',
-            maxHeight: '100%',
-            aspectRatio: '1:1',
+          aspectRatio: '1/1',
+          boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.4)',
+          '& img, & svg': {
+            position: 'absolute',
+            height: '100%',
+            width: '100%',
             objectFit: 'cover',
-            transition: 'transform 0.3s ease',
+            transition: 'transform 0.3s ease-in-out',
           },
-          '& svg': {
-            maxWidth: '100%',
-            maxHeight: '100%',
-            aspectRatio: '1:1',
-            objectFit: 'cover',
-            transition: 'transform 0.3s ease',
+          '&:hover img, &:hover svg': {
+            transform: 'scale(1.3)',
           },
         }}
       >
         {user && user.image ? (
-          <img
-            src={user.image || ''}
-            alt="User"
-          />
+          <img src={user.image} alt="User profile" />
         ) : (
-          <AccountCircle sx={{ aspectRatio: '1:1', color: theme.palette.secondary.main, fontSize: '2.5rem', maxWidth: '100%', maxHeight: '100%', objectFit: 'cover' }} />
+          <AccountCircle
+            color='secondary'
+            sx={{
+              fontSize: 'inherit',
+              width: '100%',
+              height: '100%',
+              boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.4)',
+            }}
+          />
         )}
       </IconButton>
     </Stack>

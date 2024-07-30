@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique } from 'typeorm';
 import { IsAscii, Length, validateOrReject, IsOptional } from 'class-validator';
-import { UserStatus } from '../dto/user.dto';
 
 @Entity()
 @Unique(['nameNick'])
@@ -40,13 +39,6 @@ export class User {
 
   @Column({ nullable: true, default: null })
   auth2F: string | null;
-
-  @Column({
-    type: 'enum',
-    enum: UserStatus,
-    default: UserStatus.Offline,
-  })
-  status: UserStatus;
 
   @CreateDateColumn()
   createdAt: Date;

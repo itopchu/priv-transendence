@@ -59,10 +59,6 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ owner, setOwner }) => {
         sx={{
           minWidth: '250px',
           width: '100%',
-          backgroundColor: alpha(theme.palette.background.default, 0.05),
-          '&:hover': {
-            backgroundColor: alpha(theme.palette.background.default, 0.1),
-          },
           '& > *': {
             alignItems: 'center',
             height: '3em',
@@ -114,6 +110,7 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ owner, setOwner }) => {
           borderTop={1}
           borderColor={theme.palette.divider}
           height={'100%'}
+          bgcolor={theme.palette.primary.light}
           sx={{
             overflowY: 'scroll',
             '&.hide-scrollbar': {
