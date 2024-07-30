@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Typography, Box, Switch, Stack, useTheme, Button, TextField } from '@mui/material';
 import { useUser } from '../../Providers/UserContext/User';
 import axios from 'axios';
@@ -13,13 +13,17 @@ export const Auth2F: React.FC = () => {
   const [hasError, setHasError] = useState<boolean>(false);
   const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
+  useEffect(() => {
+    setAuth2FEnabled(user?.auth2F);
+  }, [user]);
+
   async function generateQR() {
     try {
       const response = await axios.get(BACKEND_URL + '/auth/QRCode', { withCredentials: true, responseType: 'blob' });
       const qrData = response.data;
       setQrImage(URL.createObjectURL(qrData));
     } catch (error) {
-      resetPage();
+      await resetPage();
       console.error('Error generating QR code', error);
     }
   }
@@ -35,9 +39,10 @@ export const Auth2F: React.FC = () => {
   const verifyQR = async () => {
     try {
       const response = await axios.post(BACKEND_URL + '/auth/QRCode', { verificationCode: verificationCode }, { withCredentials: true });
-      if (response.data.userDTO)
+      if (response.data.userDTO) {
         setUser(response.data.userDTO);
-      await resetPage();
+        await resetPage();
+      }
     } catch (error) {
       setHasError(true);
       setVerificationCode('');
@@ -47,24 +52,28 @@ export const Auth2F: React.FC = () => {
   const deleteQR = async () => {
     try {
       const response = await axios.delete(BACKEND_URL + '/auth/QRCode', { withCredentials: true });
-      setUser(response.data.userDTO);
+      if (response.data.userDTO) {
+        setUser(response.data.userDTO);
+      }
+      await resetPage();
     } catch (error) {
       console.error('Error deleting QR code', error);
     }
-    await resetPage();
   };
 
   function handleToggle() {
-    setAuth2FEnabled(!auth2FEnabled);
-    setQrImage(null);
-    setIsScanned(false);
-    setVerificationCode('');
-    if (auth2FEnabled) {
-      deleteQR();
-    }
-    else {
-      generateQR();
-    }
+    setAuth2FEnabled((prevState) => {
+      const newAuth2FEnabled = !prevState;
+      setQrImage(null);
+      setIsScanned(false);
+      setVerificationCode('');
+      if (newAuth2FEnabled) {
+        generateQR();
+      } else {
+        deleteQR();
+      }
+      return newAuth2FEnabled;
+    });
   }
 
   const infoSection = () => {

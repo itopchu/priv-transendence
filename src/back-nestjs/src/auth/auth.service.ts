@@ -75,7 +75,7 @@ export class AuthService {
   async login(code: string, res: Response) {
     const { access, userMe, userId } = (await this.validateTempCode(code)) ?? {};
     if (!access || !userMe || !userId)
-      return res.status(401).clearCookie('auth_token').redirect(`${process.env.ORIGIN_URL_FRONT}/login`);
+      return res.status(401).clearCookie('auth_token').redirect(`${process.env.ORIGIN_URL_FRONT}/`);
     const user = await this.userService.getUserByIntraId(userId);
     if (!user) {
       try {
@@ -84,19 +84,20 @@ export class AuthService {
         return res.redirect(`${process.env.ORIGIN_URL_FRONT}/profile/settings`);
       } catch (error) {
         console.error('Error creating user:', error);
-        res.status(401).clearCookie('auth_token').redirect(`${process.env.ORIGIN_URL_FRONT}/login`);
+        res.status(401).clearCookie('auth_token').redirect(`${process.env.ORIGIN_URL_FRONT}/`);
         return ;
       }
     }
 
     if (user.auth2F) {
-      // 2FA GIVE A JSON AND 
+      const payload: JwtPayload = { intraId: userId };
+      const signedToken = sign(payload, this.configService.get<string>('SECRET_KEY'));
+      res.cookie('2fa_token', signedToken, { httpOnly: true, maxAge: 10 * 365 * 24 * 60 * 60 * 1000 });
+      return res.status(200).redirect(`${process.env.ORIGIN_URL_FRONT}/2fa`)
     }
 
     this.addAuthToCookie(res, userId);
     res.redirect(`${process.env.ORIGIN_URL_FRONT}/`);
-    // const userDTO = new UserDTO(user);
-    // res.json({ userDTO });
   }
 
   async validateTempCode(code: string): Promise<{ access: AccessTokenDTO, userMe: Record<string, any>, userId: number } | null> {
@@ -171,18 +172,48 @@ export class AuthService {
       return res.status(418).clearCookie('secretQR');
 
     user.auth2F = decodedSecret.signedBase;
-    if (!await this.userService.updateUser(res, user))
+    const newUser = await this.userService.updateUser(res, user);
+    if (!newUser)
       return res.clearCookie('secretQR');
-    res.clearCookie('secretQR').json({ userDTO: new UserDTO(user) });
+    const userDTO = new UserDTO(newUser);
+    res.clearCookie('secretQR').json({ userDTO });
   }
 
   async deleteQRCode(user: User, res: Response) {
     user.auth2F = null;
-    if (await this.userService.updateUser(res, user))
-      return res.json({ userDTO: new UserDTO(user) })
+    const newUser = await this.userService.updateUser(res, user);
+    if (newUser)
+      return res.json({ userDTO: new UserDTO(newUser) })
   }
 
   validate2FACode(secretKey: string, inputToken: string): boolean {
     return speakeasy.totp.verify({ secret: secretKey, encoding: 'base32', token: inputToken });
+  }
+
+  async verify2FACode(req: Request, res: Response) {
+    const token_2FA = req.cookies['2fa_token'];
+    if (!token_2FA)
+      return res.status(404).redirect(`${process.env.ORIGIN_URL_FRONT}/`);
+
+    const { TOTPcode } = req.body;
+    if (!TOTPcode || typeof TOTPcode !== 'string' || TOTPcode.length !== 6) {
+      return res.status(400);
+    }
+
+    let decodedSecret;
+    try {
+      decodedSecret = verify(token_2FA, this.configService.get<string>('SECRET_KEY'));
+    } catch (err) {
+      return res.status(401);
+    }
+
+    const user = await this.userService.getUserByIntraId(decodedSecret.intraId);
+    if (!user)
+      return res.status(404).clearCookie('2fa_token').redirect(`${process.env.ORIGIN_URL_FRONT}/`);
+
+    if (!this.validate2FACode(user.auth2F, TOTPcode))
+      return res.status(418);
+    this.addAuthToCookie(res, user.intraId);
+    res.clearCookie('2fa_token').status(200).json({ userDTO: new UserDTO(user) })
   }
 }

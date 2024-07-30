@@ -25,7 +25,15 @@ export class AuthGuard implements CanActivate {
   }
 
   async validateAuth(req: any, res: any) {
-    console.log(`Request URL: ${req.url}`);
+
+    // Check for 2FA token
+    const twoFAToken = req.cookies['2fa_token'];
+    if (twoFAToken) {
+      const user = { id: 0, auth2F: true };
+      res.status(200).json(user);
+      return;
+    }
+
     // Extract token
     const token = req.cookies['auth_token'];
     if (!token)
@@ -51,7 +59,7 @@ export class AuthGuard implements CanActivate {
 
   handleUnauthorized(res: any): void {
     res.clearCookie('auth_token');
-    res.redirect(`${process.env.ORIGIN_URL_FRONT}/login`);
+    res.redirect(`${process.env.ORIGIN_URL_FRONT}/`);
     res.status(401);
     throw new UnauthorizedException();
   }

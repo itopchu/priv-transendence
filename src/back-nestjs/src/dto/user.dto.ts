@@ -15,7 +15,7 @@ export class UserDTO {
     this.nameFirst = user.nameFirst;
     this.nameLast = user.nameLast;
     this.email = user.email;
-    this.image = user.image;
+    this.image = process.env.ORIGIN_URL_BACK + '/' + user.image;
     this.greeting = user.greeting;
     this.status = user.status;
     this.auth2F = user.auth2F ? true : false;

@@ -14,7 +14,7 @@ export interface User {
   nameFirst?: string;
   nameLast?: string;
   email?: string;
-  image?: string;
+  image?: string | null;
   greeting?: string;
   status?: UserStatus;
   auth2F?: boolean;
@@ -30,21 +30,23 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>({ id: 0 });
   const navigate = useNavigate();
-
   const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+
   useEffect(() => {
     const validate = async () => {
       try {
         const response = await axios.get(BACKEND_URL + '/auth/validate', { withCredentials: true });
         if (response.data.userDTO)
           setUser(response.data.userDTO);
+        if (user.id === 0 && user.auth2F)
+          navigate('/2fa');
       } catch (error) {
-        navigate('/login');
+        navigate('/');
         setUser({ id: 0 });
       }
     };
     validate();
-  }, [user.id]);
+  }, [user.id, navigate]);
 
   return (
     <UserContext.Provider value={{ user, setUser }}>

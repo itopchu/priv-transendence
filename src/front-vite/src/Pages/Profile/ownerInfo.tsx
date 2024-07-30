@@ -31,6 +31,7 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
       >
         <Avatar
           sx={{
+            aspectRatio: '1:1',
             alignItems: 'center',
             justifyContent: 'center',
             display: 'flex',

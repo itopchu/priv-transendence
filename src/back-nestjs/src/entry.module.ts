@@ -6,8 +6,10 @@ import { UserController } from './user/user.controller';
 import { AuthModule } from './auth/auth.module';
 import { User } from './entities/user.entity';
 import { UserModule } from './user/user.module';
-// import { ChannelsModule } from './channels/channels.module';
+import { ChannelsModule } from './channels/channels.module';
 import { GameModule } from './game/game.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   controllers: [AuthController, UserController],
@@ -15,6 +17,10 @@ import { GameModule } from './game/game.module';
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UserModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/',
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -29,7 +35,7 @@ import { GameModule } from './game/game.module';
         synchronize: true,
       })
     }),
-    // ChannelsModule,
+    ChannelsModule,
     GameModule,
   ],
 })

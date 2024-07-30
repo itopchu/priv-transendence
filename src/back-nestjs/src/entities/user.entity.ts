@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
-import { IsAscii, Length, validateOrReject } from 'class-validator';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique } from 'typeorm';
+import { IsAscii, Length, validateOrReject, IsOptional } from 'class-validator';
 import { UserStatus } from '../dto/user.dto';
 
 @Entity()
+@Unique(['nameNick'])
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -14,6 +15,7 @@ export class User {
   intraId: number;
 
   @Column({ nullable: true, length: 20 })
+  @IsOptional()
   @IsAscii()
   @Length(0, 20)
   nameNick: string | null;
@@ -27,10 +29,11 @@ export class User {
   @Column({ nullable: false })
   email: string;
 
-  @Column({ nullable: true, default: 'default_profile_photo.png' })
+  @Column({ nullable: true, default: null })
   image: string | null;
 
   @Column({ nullable: true, default: 'Hello, I have just landed!', length: 100 })
+  @IsOptional()
   @IsAscii()
   @Length(0, 100)
   greeting: string | null;

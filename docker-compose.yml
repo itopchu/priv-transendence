@@ -35,7 +35,7 @@ services:
       PORT: ${PORT_BACKEND}
       PORT_WEBSOCKET: ${PORT_WEBSOCKET}
     ports:
-      - ${PORT_WEBSOCKET}:${PORT_WEBSOCKET}
+      - "${PORT_WEBSOCKET}:${PORT_WEBSOCKET}"
       - "${PORT_BACKEND}:${PORT_BACKEND}"
     expose:
       - "${PORT_BACKEND}"

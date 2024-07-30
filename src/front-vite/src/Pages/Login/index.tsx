@@ -25,6 +25,7 @@ const LoginPage: React.FC = () => {
         borderRadius={'1em'}
         padding={'2em'}
         sx={{
+          boxShadow: `3px 9px 10px rgba(0, 0, 0, 0.5)`,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -49,10 +50,10 @@ const LoginPage: React.FC = () => {
             fontSize: '1em',
             fontWeight: 'bold',
             textTransform: 'none',
-            boxShadow: `0 3px 5px 2px ${theme.palette.primary.dark}`,
+            boxShadow: `2px 2px 3px 0px ${theme.palette.primary.dark}`,
             ':hover': {
               bgcolor: `${theme.palette.primary.main}`,
-              boxShadow: `0 5px 7px 2px ${theme.palette.primary.main}`,
+              boxShadow: `2px 2px 3px 0px ${theme.palette.secondary.main}`,
             },
           }}
         >

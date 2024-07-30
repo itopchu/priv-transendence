@@ -9,6 +9,7 @@ import LoginPage from '../../Pages/Login/index';
 import ChannelsPage from '../../Pages/Channels/index';
 import LogoutPage from '../../Pages/Logout';
 import { useUser } from '../../Providers/UserContext/User';
+import AuthPage from '../../Pages/2FA';
 
 export const Main: React.FC = () => {
   const { user } = useUser();
@@ -28,7 +29,10 @@ export const Main: React.FC = () => {
           <Route path="/profile" element={<Navigate replace to={`/profile/${user.id}`} />} />
         </>
       ) : (
-        <Route path="/login" element={<LoginPage />} />
+        <>
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/2fa" element={<AuthPage />} />
+        </>
       )}
       <Route path="*" element={<ErrorPage />} />
     </Routes>

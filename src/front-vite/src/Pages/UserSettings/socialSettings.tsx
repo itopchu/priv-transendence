@@ -7,7 +7,7 @@ export const SocialSettings: React.FC = () => {
   const theme = useTheme();
   const { user, setUser } = useUser();
   // State hooks for form fields
-  const [nickname, setNickname] = useState(user.nameNick);
+  const [nickname, setNickname] = useState(user?.nameNick || '');
   const [email, setEmail] = useState(user.email);
   const [greeting, setGreeting] = useState(user.greeting);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,7 +27,7 @@ export const SocialSettings: React.FC = () => {
       if (response.data.userDTO)
         setUser(response.data.userDTO);
     } catch (error) {
-      setNickname(user.nameNick);
+      setNickname(user?.nameNick || '');
       setEmail(user.email);
       setGreeting(user.greeting);
       console.error(error);

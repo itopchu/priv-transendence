@@ -19,8 +19,10 @@ export class AuthController {
   @Get('validate')
   @UseGuards(AuthGuard)
   async validate(@Req() req: Request, @Res() res: Response) {
-    const userDTO = new UserDTO(req.authUser);
-    return res.json({ userDTO });
+    if (req.authUser) {
+      const userDTO = new UserDTO(req.authUser);
+      return res.json({ userDTO });
+    }
   }
 
   @Get('logout')
@@ -53,10 +55,7 @@ export class AuthController {
 
   // Not done yet
   @Post('2FACode')
-  @UseGuards(AuthGuard)
   async verify2FACode(@Req() req: Request, @Res() res: Response) {
-    if (!req.authUser.auth2F)
-      return res.status(200);
-    const token = req.body as string;
+    await this.authService.verify2FACode(req, res);
   }
 }

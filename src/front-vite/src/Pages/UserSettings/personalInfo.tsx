@@ -1,13 +1,47 @@
-import React, { useState } from 'react';
-import { Container, Badge, Typography, TextField, Button, Box, Avatar, Switch, FormControlLabel, useMediaQuery, Stack, Divider, useTheme, lighten, alpha } from '@mui/material';
+import React from 'react';
+import { TextField, Button, Avatar, Stack, useTheme } from '@mui/material';
 import { useUser } from '../../Providers/UserContext/User';
 import {
   Upload as UploadIcon
 } from '@mui/icons-material';
+import axios from 'axios';
 
 export const PersonalInfo: React.FC = () => {
   const theme = useTheme();
-  const { user } = useUser();
+  const { user, setUser } = useUser();
+  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+
+  const handleFileSelect = async (file: File) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      return;
+    }
+
+    const maxSizeInMB = 5;
+    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
+      alert('File size exceeds 5MB. Please select a smaller file.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await axios.post(`${BACKEND_URL}/user/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        withCredentials: true,
+      });
+      if (response.data.userDTO)
+        setUser(response.data.userDTO);
+    } catch (error) {
+      alert('Failed to upload image. Please try again.');
+    }
+  };
 
   return (
     <>
@@ -15,6 +49,7 @@ export const PersonalInfo: React.FC = () => {
         <Button
           component="label"
           sx={{
+            aspectRatio: '1:1',
             borderRadius: '50%',
             padding: 0,
             '&:hover .image-profile': {
@@ -31,7 +66,7 @@ export const PersonalInfo: React.FC = () => {
           <Avatar
             className="image-profile"
             sx={{
-              width: '100%',
+              width: '200px',
               height: '200px',
               aspectRatio: '1:1',
               border: user.image ? 'none' : '2px solid',
@@ -54,8 +89,11 @@ export const PersonalInfo: React.FC = () => {
           <input
             type="file"
             hidden
+            accept="image/jpeg, image/png"
             onChange={(e) => {
-              // handleFileSelect(e.target.files[0]);
+              if (e.target.files && e.target.files[0]) {
+                handleFileSelect(e.target.files[0]);
+              }
             }}
           />
         </Button>

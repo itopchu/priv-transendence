@@ -16,7 +16,7 @@ const LogoutPage: React.FC = () => {
       } catch (error) {
         console.error('Error logging out:', error);
       } finally {
-        navigate('/login');
+        navigate('/');
       }
     }
     logout();

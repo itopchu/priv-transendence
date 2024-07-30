@@ -11,6 +11,8 @@ export const HeaderBar: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
+  console.log(user.image);
+
   return (
     <Stack
       bgcolor={theme.palette.primary.dark}
@@ -29,7 +31,6 @@ export const HeaderBar: React.FC = () => {
     >
       <MenuDrawer />
       <IconButton
-        onClick={() => { navigate(`/profile/${user.id}`) }}
         sx={{
           p: 0,
           overflow: 'hidden',
@@ -46,21 +47,26 @@ export const HeaderBar: React.FC = () => {
           '& img': {
             maxWidth: '100%',
             maxHeight: '100%',
+            aspectRatio: '1:1',
             objectFit: 'cover',
             transition: 'transform 0.3s ease',
           },
           '& svg': {
+            maxWidth: '100%',
+            maxHeight: '100%',
+            aspectRatio: '1:1',
+            objectFit: 'cover',
             transition: 'transform 0.3s ease',
           },
         }}
       >
         {user && user.image ? (
           <img
-            src={user.image}
+            src={user.image || ''}
             alt="User"
           />
         ) : (
-          <AccountCircle sx={{ color: theme.palette.secondary.main, fontSize: '2.5rem' }} />
+          <AccountCircle sx={{ aspectRatio: '1:1', color: theme.palette.secondary.main, fontSize: '2.5rem', maxWidth: '100%', maxHeight: '100%', objectFit: 'cover' }} />
         )}
       </IconButton>
     </Stack>
