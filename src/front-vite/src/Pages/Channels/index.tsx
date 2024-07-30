@@ -101,7 +101,7 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
-  const WEBSOCKET_URL: string = import.meta.env.ORIGIN_URL_WEBSOCKET || 'http://localhost.codam.nl:5000';
+  const WEBSOCKET_URL: string = import.meta.env.ORIGIN_URL_WEBSOCKET || 'http://localhost.codam.nl:3001';
 
 
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -114,8 +114,6 @@ const ChannelsPage: React.FC = () => {
 
 
   useEffect(() => {
-
-    console.log(`ws://${WEBSOCKET_URL}`);
 
     const newSocket = io(`${WEBSOCKET_URL}`);
     setSocket(newSocket);
@@ -181,6 +179,7 @@ const ChannelsPage: React.FC = () => {
   let pageContainer = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
+        <div>{messages ? messages : 'Veri bekleniyor...' }</div>
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}

@@ -1,0 +1,31 @@
+.App {
+	text-align: center;
+  }
+  
+  .game {
+	position: relative;
+	width: 800px;
+	height: 400px;
+	margin: 0 auto;
+	background: #000;
+  }
+  
+  .player {
+	position: absolute;
+	width: 20px;
+	height: 100px;
+	background: #fff;
+  }
+  
+  .ball {
+	position: absolute;
+	width: 20px;
+	height: 20px;
+	background: #fff;
+  }
+  
+  .score {
+	margin: 20px;
+	font-size: 24px;
+	color: #fff;
+  }

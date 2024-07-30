@@ -1,4 +1,4 @@
-import React from 'react';
+/* import React from 'react';
 import { Container, Stack, Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { styled } from '@mui/system';
 
@@ -176,6 +176,82 @@ const Game: React.FC = () => {
         </HistoryBox>
       </Stack>
     </MainContainer>
+  );
+};
+
+export default Game; */
+
+import React, { useEffect, useState } from 'react';
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:3001');
+
+const Game = () => {
+  const [player, setPlayer] = useState('');
+  const [roomId, setRoomId] = useState(Number);
+  const [isJoined, setIsJoined] = useState(false);
+  const [gameState, setGameState] = useState({
+    player1: { y: 150 },
+    player2: { y: 150 },
+    ball: { x: 390, y: 190 },
+    score: { player1: 0, player2: 0 },
+  });
+
+  useEffect(() => {
+    socket.on('state', (state) => {
+      setGameState(state);
+    });
+
+    socket.on('startGame', (roomId) => {
+      setRoomId(roomId);
+    });
+
+    return () => {
+      socket.off('state');
+      socket.off('startGame');
+    };
+  }, []);
+
+  const handleMouseMove = (e: { clientY: number; }) => {
+    if (!player || !roomId) return;
+    const y = e.clientY - 50; // Adjust based on paddle height
+    socket.emit('move', { roomId, player, y });
+  };
+
+  const joinRoom = (roomId: string) => {
+    socket.emit('joinRoom', roomId);
+    setIsJoined(true);
+  };
+
+  if (!player) {
+    return (
+      <div>
+        <h1>Oyuncu Seç</h1>
+        <button onClick={() => setPlayer('player1')}>Oyuncu 1</button>
+        <button onClick={() => setPlayer('player2')}>Oyuncu 2</button>
+      </div>
+    );
+  }
+
+  if (!roomId || !isJoined) {
+    return (
+      <div>
+        <h1>Oda Seç</h1>
+        <input type="text" placeholder="Oda ID" onChange={(e) => setRoomId(e.target.value)} />
+        <button onClick={() => joinRoom(roomId)}>Odaya Katil</button>
+      </div>
+    );
+  }
+
+  return (
+    <div onMouseMove={handleMouseMove} style={{ position: 'relative', width: '800px', height: '400px', border: '1px solid black' }}>
+      <div style={{ position: 'absolute', left: '10px', top: `${gameState.player1.y}px`, width: '10px', height: '100px', backgroundColor: 'blue' }}></div>
+      <div style={{ position: 'absolute', right: '10px', top: `${gameState.player2.y}px`, width: '10px', height: '100px', backgroundColor: 'red' }}></div>
+      <div style={{ position: 'absolute', left: `${gameState.ball.x}px`, top: `${gameState.ball.y}px`, width: '10px', height: '10px', backgroundColor: 'green', borderRadius: '50%' }}></div>
+      <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)' }}>
+        Score: {gameState.score.player1} - {gameState.score.player2}
+      </div>
+    </div>
   );
 };
 
