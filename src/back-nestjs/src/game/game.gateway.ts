@@ -18,9 +18,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       });
     }, 16); // yaklaşık 60 FPS
 
-    setInterval(() => {
+/*     setInterval(() => {
       console.log(this.rooms.has('1'));
-    }, 1000);
+    }, 1000); */
   }
 
   handleConnection(client: Socket, ...args: any[]) {
