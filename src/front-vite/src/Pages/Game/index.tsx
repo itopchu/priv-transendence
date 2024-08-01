@@ -183,12 +183,14 @@ export default Game; */
 
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
+import { useUser } from '../../Providers/UserContext/User';
+import { NumbersSharp } from '@mui/icons-material';
 
-const socket = io('http://localhost:3001');
+const socket = io('http://localhost:3001', { query: {  }});
 
 const Game = () => {
-  const [player, setPlayer] = useState('');
-  const [roomId, setRoomId] = useState(Number);
+  const { user, setUser } = useUser();
+  const [roomId, setRoomId] = useState('');
   const [isJoined, setIsJoined] = useState(false);
   const [gameState, setGameState] = useState({
     player1: { y: 150 },
@@ -196,14 +198,10 @@ const Game = () => {
     ball: { x: 390, y: 190 },
     score: { player1: 0, player2: 0 },
   });
-
+  
   useEffect(() => {
     socket.on('state', (state) => {
       setGameState(state);
-    });
-
-    socket.on('startGame', (roomId) => {
-      setRoomId(roomId);
     });
 
     return () => {
@@ -211,31 +209,27 @@ const Game = () => {
       socket.off('startGame');
     };
   }, []);
-
+  
+  
   const handleMouseMove = (e: { clientY: number; }) => {
-    if (!player || !roomId) return;
+    if (!roomId) return;
     const y = e.clientY - 50; // Adjust based on paddle height
-    socket.emit('move', { roomId, player, y });
+    socket.emit('move', { roomId, userId: user.id, y });
   };
-
+  
   const joinRoom = (roomId: string) => {
-    socket.emit('joinRoom', roomId);
+    socket.emit('joinRoom', { roomId: roomId, userId: user.id });
     setIsJoined(true);
   };
 
-  if (!player) {
-    return (
-      <div>
-        <h1>Oyuncu Seç</h1>
-        <button onClick={() => setPlayer('player1')}>Oyuncu 1</button>
-        <button onClick={() => setPlayer('player2')}>Oyuncu 2</button>
-      </div>
-    );
-  }
+  const handleDisconnect = () => {
+      socket.disconnect();
+  };
 
   if (!roomId || !isJoined) {
     return (
       <div>
+        <button onClick={handleDisconnect}>Disconnect</button>
         <h1>Oda Seç</h1>
         <input type="text" placeholder="Oda ID" onChange={(e) => setRoomId(e.target.value)} />
         <button onClick={() => joinRoom(roomId)}>Odaya Katil</button>
