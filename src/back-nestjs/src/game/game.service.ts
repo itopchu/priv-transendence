@@ -28,7 +28,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy() {
-    // Tüm zamanlayıcıları temizle
+    console.log('GameService destroyed');
     this.intervalIds.forEach(intervalId => clearInterval(intervalId));
   }
 
@@ -50,12 +50,12 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     return this.gameStates.get(roomId);
   }
 
-  updatePlayerPosition(roomId: string, player: string, y: number): void {
+  updatePlayerPosition(roomId: string, position: boolean, y: number): void {
     const gameState = this.getGameState(roomId);
 
-    if (player === 'player1') {
+    if (position) {
       gameState.player1.y = y;
-    } else if (player === 'player2') {
+    } else if (!position) {
       gameState.player2.y = y;
     }
   }
