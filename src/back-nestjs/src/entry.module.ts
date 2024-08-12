@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth/auth.controller';
 import { UserController } from './user/user.controller';
 import { AuthModule } from './auth/auth.module';
-import { User } from './entities/user.entity';
+import { User, Friendship } from './entities/user.entity';
 import { UserModule } from './user/user.module';
 // import { ChannelsModule } from './channels/channels.module';
 import { GameModule } from './game/game.module';
@@ -31,7 +31,7 @@ import { join } from 'path';
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
-        entities: [User], // List your entities here
+        entities: [User, Friendship],
         synchronize: true,
       })
     }),

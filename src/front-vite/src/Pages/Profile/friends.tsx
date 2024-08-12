@@ -1,25 +1,35 @@
-import React, { Dispatch, SetStateAction } from 'react';
-import { User } from '../../Providers/UserContext/User';
+import React, { useEffect, useState } from 'react';
+import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { Avatar, Stack, Divider, Typography, useTheme, Grid, IconButton, Box } from '@mui/material';
 import {
   AccountCircle as AccountCircleIcon,
-  EmojiEvents as Cup,
-  PersonAdd as AddIcon,
-  Block as BlockIcon,
-  VideogameAsset as GameIcon,
-  Message as MessageIcon,
   PersonOff as PersonOffIcon,
 } from '@mui/icons-material';
 import { darken, alpha } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
+import axios from 'axios';
 
 interface FriendsBoxProps {
-  owner: User | undefined;
-  setOwner: Dispatch<SetStateAction<User | undefined>>;
+  visitedUser: UserPublic | undefined;
 }
 
-export const FriendsBox: React.FC<FriendsBoxProps> = ({ owner, setOwner }) => {
+const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+
+export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
   const theme = useTheme();
+  const [friends, setFriends] = useState<UserPublic[]>([]);
+
+  // get friends
+  useEffect(() => {
+    const getFriends = async () => {
+      const response = await axios.get(BACKEND_URL + `/user/friends/${visitedUser?.id}`, {withCredentials: true});
+      if (response.data.friendsDTO)
+        setFriends(response.data.friendsDTO);
+    }
+    getFriends();
+    console.log(friends);
+    return () => { setFriends([]) }
+  }, [])
 
   let friendLine = () => {
     return (

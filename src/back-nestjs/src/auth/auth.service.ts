@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
 import { sign, verify, JwtPayload } from 'jsonwebtoken';
 import { UserService } from '../user/user.service';
 import { AccessTokenDTO } from '../dto/auth.dto';
-import { UserDTO } from '../dto/user.dto';
+import { UserClient } from '../dto/user.dto';
 import { User } from '../entities/user.entity';
 import * as QRCode from 'qrcode';
 import * as speakeasy from 'speakeasy';
@@ -12,7 +12,7 @@ import * as speakeasy from 'speakeasy';
 export interface ResponseData {
   message: string;
   redirectTo: string;
-  user: UserDTO | null;
+  user: UserClient | null;
 }
 
 @Injectable()
@@ -85,7 +85,7 @@ export class AuthService {
       } catch (error) {
         console.error('Error creating user:', error);
         res.status(401).clearCookie('auth_token').redirect(`${process.env.ORIGIN_URL_FRONT}/`);
-        return ;
+        return;
       }
     }
 
@@ -175,15 +175,15 @@ export class AuthService {
     const newUser = await this.userService.updateUser(res, user);
     if (!newUser)
       return res.clearCookie('secretQR');
-    const userDTO = new UserDTO(newUser);
-    res.clearCookie('secretQR').json({ userDTO });
+    const userClient = new UserClient(newUser);
+    res.clearCookie('secretQR').json({ userClient });
   }
 
   async deleteQRCode(user: User, res: Response) {
     user.auth2F = null;
     const newUser = await this.userService.updateUser(res, user);
     if (newUser)
-      return res.json({ userDTO: new UserDTO(newUser) })
+      return res.json({ userClient: new UserClient(newUser) })
   }
 
   validate2FACode(secretKey: string, inputToken: string): boolean {
@@ -196,7 +196,7 @@ export class AuthService {
       return res.status(404).redirect(`${process.env.ORIGIN_URL_FRONT}/`);
 
     const { TOTPcode } = req.body;
-    if (!TOTPcode || typeof TOTPcode !== 'string' || TOTPcode.length !== 6) {
+    if (!TOTPcode || typeof TOTPcode !== 'string' || TOTPcode.length !== 6 || !/^\d{6}$/.test(TOTPcode)) {
       return res.status(400);
     }
 
@@ -214,6 +214,6 @@ export class AuthService {
     if (!this.validate2FACode(user.auth2F, TOTPcode))
       return res.status(418);
     this.addAuthToCookie(res, user.intraId);
-    res.clearCookie('2fa_token').status(200).json({ userDTO: new UserDTO(user) })
+    res.clearCookie('2fa_token').status(200).json({ userClient: new UserClient(user) })
   }
 }

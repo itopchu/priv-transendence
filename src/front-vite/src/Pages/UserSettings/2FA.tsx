@@ -39,8 +39,8 @@ export const Auth2F: React.FC = () => {
   const verifyQR = async () => {
     try {
       const response = await axios.post(BACKEND_URL + '/auth/QRCode', { verificationCode: verificationCode }, { withCredentials: true });
-      if (response.data.userDTO) {
-        setUser(response.data.userDTO);
+      if (response.data.userClient) {
+        setUser(response.data.userClient);
         await resetPage();
       }
     } catch (error) {
@@ -52,8 +52,8 @@ export const Auth2F: React.FC = () => {
   const deleteQR = async () => {
     try {
       const response = await axios.delete(BACKEND_URL + '/auth/QRCode', { withCredentials: true });
-      if (response.data.userDTO) {
-        setUser(response.data.userDTO);
+      if (response.data.userClient) {
+        setUser(response.data.userClient);
       }
       await resetPage();
     } catch (error) {

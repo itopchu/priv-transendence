@@ -1,6 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique } from 'typeorm';
-import { IsAscii, Length, validateOrReject, IsOptional } from 'class-validator';
-
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, PrimaryColumn, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { IsAscii, Length, validateOrReject, IsOptional, IsEmail, IsInt, IsEnum } from 'class-validator';
 @Entity()
 @Unique(['nameNick'])
 export class User {
@@ -9,7 +8,7 @@ export class User {
 
   @Column({ nullable: false })
   accessToken: string;
-  
+
   @Column({ nullable: false })
   intraId: number;
 
@@ -18,14 +17,15 @@ export class User {
   @IsAscii()
   @Length(0, 20)
   nameNick: string | null;
-  
+
   @Column({ nullable: false })
   nameFirst: string;
-  
+
   @Column({ nullable: false })
   nameLast: string;
-  
+
   @Column({ nullable: false })
+  @IsEmail()
   email: string;
 
   @Column({ nullable: true, default: null })
@@ -37,13 +37,77 @@ export class User {
   @Length(0, 100)
   greeting: string | null;
 
+  
   @Column({ nullable: true, default: null })
   auth2F: string | null;
-
+  
   @CreateDateColumn()
   createdAt: Date;
 
+  @OneToMany(() => Friendship, friendship => friendship.user1)
+  friendships1: Friendship[];
+
+  @OneToMany(() => Friendship, friendship => friendship.user2)
+  friendships2: Friendship[];
+
   async validate() {
     await validateOrReject(this);
+  }
+}
+
+export enum FriendshipStatus {
+  available = 'available',
+  pending = 'pending',
+  awaiting = 'awaiting',
+  restricted = 'restricted',
+  accepted = 'accepted',
+}
+
+export enum FriendshipStatusBehaviour {
+  remove = 'remove',
+  add = 'add',
+  withdraw = 'withdraw',
+  restrtict = 'restrict',
+  restore = 'restore',
+  approve = 'approve',
+  decline = 'decline',
+}
+
+@Entity()
+@Unique(['user1', 'user2'])
+export class Friendship {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @ManyToOne(() => User, user => user.friendships1, { nullable: false })
+  @JoinColumn({ name: 'userLowId' })
+  user1: User;
+
+  @ManyToOne(() => User, user => user.friendships2, { nullable: false })
+  @JoinColumn({ name: 'userHighId' })
+  user2: User;
+
+  @Column({
+    type: 'enum',
+    enum: FriendshipStatus,
+    default: FriendshipStatus.available
+  })
+  user1Attitude: FriendshipStatus;
+
+  @Column({
+    type: 'enum',
+    enum: FriendshipStatus,
+    default: FriendshipStatus.available
+  })
+  user2Attitude: FriendshipStatus;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  checkUser() {
+    if (this.user1.id === this.user2.id)
+      throw new Error('User cannot be friend with himself');
+    if (this.user1.id > this.user2.id) {
+      [this.user1, this.user2] = [this.user2, this.user1];
+    }
   }
 }

@@ -186,7 +186,7 @@ import io from 'socket.io-client';
 import { useUser } from '../../Providers/UserContext/User';
 import { NumbersSharp } from '@mui/icons-material';
 
-const socket = io('http://localhost:3001', { query: {  }});
+const socket = io('http://localhost.codam.nl:3001', { query: {  }});
 
 const Game = () => {
   const { user, setUser } = useUser();
@@ -207,6 +207,7 @@ const Game = () => {
     return () => {
       socket.off('state');
       socket.off('startGame');
+      socket.disconnect();
     };
   }, []);
   

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { User, useUser } from "../../Providers/UserContext/User";
+import React, { useState } from "react";
+import { UserClient, useUser } from "../../Providers/UserContext/User";
 import { TextField, Button, Typography, Box, Stack, useTheme } from "@mui/material";
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
@@ -15,8 +15,8 @@ export const AuthPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       const response = await axios.post(BACKEND_URL + '/auth/2FACode', { TOTPcode: TOTPcode }, { withCredentials: true });
-      if (response.data.userDTO) {
-        const newUser: User = response.data.userDTO;
+      if (response.data.userClient) {
+        const newUser: UserClient = response.data.userClient;
         setUser(newUser);
       }
       navigate('/');

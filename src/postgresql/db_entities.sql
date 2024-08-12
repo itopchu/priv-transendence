@@ -16,9 +16,9 @@ CREATE TABLE
 CREATE TABLE
 	IF NOT EXISTS Friends (
 		status ENUM ('pending', 'accepted', 'blocked'),
-		PRIMARY KEY (sender_id, receiver_id),
-		FOREIGN KEY (sender_id) REFERENCES Users (user_id),
-		FOREIGN KEY (receiver_id) REFERENCES Users (user_id),
+		PRIMARY KEY (lower_id, higher_id),
+		FOREIGN KEY (lower_id) REFERENCES Users (user_id),
+		FOREIGN KEY (higher_id) REFERENCES Users (user_id),
 	);
 
 CREATE TABLE

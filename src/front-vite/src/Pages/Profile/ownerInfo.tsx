@@ -1,25 +1,192 @@
-import React, { Dispatch, SetStateAction } from 'react';
-import { User, useUser } from '../../Providers/UserContext/User';
-import { Avatar, Stack, Typography, useTheme, Grid, IconButton, Box } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { UserPublic, useUser } from '../../Providers/UserContext/User';
+import { Avatar, Stack, Typography, useTheme, Grid, IconButton } from '@mui/material';
 import {
   AccountCircle as AccountCircleIcon,
+  CheckCircle as ApproveIcon,
+  HighlightOff as DeclineIcon,
   PersonAdd as AddIcon,
+  PersonOff as RemoveIcon,
+  HourglassEmpty as PendingIcon,
   Block as BlockIcon,
+  LockOpen as UnblockIcon,
   VideogameAsset as GameIcon,
   Message as MessageIcon,
 } from '@mui/icons-material';
 import { darken, alpha } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
+import axios from 'axios';
 
-interface OwnerInfoProps {
-  owner: User | undefined;
-  setOwner: Dispatch<SetStateAction<User | undefined>>;
+interface VisitedInfoProps {
+  visitedUser: UserPublic | undefined;
 }
 
-export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
+enum FriendshipStatus {
+  available = 'available',
+  pending = 'pending',
+  awaiting = 'awaiting',
+  accepted = 'accepted',
+  restricted = 'restricted',
+}
+
+enum FriendshipStatusBehaviour {
+  remove = 'remove',
+  add = 'add',
+  withdraw = 'withdraw',
+  restrtict = 'restrict',
+  restore = 'restore',
+  approve = 'approve',
+  decline = 'decline',
+}
+
+const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+
+export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>();
   const { user } = useUser();
+
+  useEffect(() => {
+    const getFriendshipStatus = async () => {
+      try {
+        const response = await axios.get(`${BACKEND_URL}/user/friendship/${visitedUser?.id}`, { withCredentials: true });
+        if (response.data.friendshipStatus)
+          setFriendshipStatus(response.data.friendshipStatus);
+      } catch (error) {
+        console.error(`Relationship not found:${error}`)
+      }
+    }
+    getFriendshipStatus();
+    return () => { setFriendshipStatus(undefined) }
+  }, [friendshipStatus])
+
+  async function postStatus(type: FriendshipStatusBehaviour) {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/user/friendship/${visitedUser?.id}`, { type }, { withCredentials: true });
+      if (response.data.friendshipStatus)
+        setFriendshipStatus(response.data.friendshipStatus);
+    } catch (error) {
+      console.error(`Relationship isn't updated:${error}`)
+    }
+  }
+
+  const userRelationButtons = () => {
+    if (visitedUser?.id === user.id) return;
+    switch (friendshipStatus) {
+      case FriendshipStatus.restricted:
+        return (
+          <Grid item>
+            <IconButton
+              onClick={() => postStatus(FriendshipStatusBehaviour.restore)}
+              sx={{
+                '&:hover': {
+                  color: theme.palette.error.main,
+                },
+              }}
+            >
+              <UnblockIcon />
+            </IconButton>
+          </Grid>
+        );
+      case FriendshipStatus.accepted:
+        return (
+          <Grid item>
+            <IconButton
+              onClick={() => postStatus(FriendshipStatusBehaviour.remove)}
+              sx={{
+                '&:hover': {
+                  color: theme.palette.primary.light,
+                },
+              }}
+            >
+              <RemoveIcon />
+            </IconButton>
+          </Grid>
+        );
+      case FriendshipStatus.pending:
+        return (
+          <Grid item>
+            <IconButton
+              onClick={() => postStatus(FriendshipStatusBehaviour.withdraw)}
+              sx={{
+                '&:hover': {
+                  color: theme.palette.warning.main,
+                },
+              }}
+            >
+              <PendingIcon />
+            </IconButton>
+          </Grid>
+        );
+      case FriendshipStatus.awaiting:
+        return (
+          <>
+            <Grid item>
+              <IconButton
+                onClick={() => postStatus(FriendshipStatusBehaviour.approve)}
+                sx={{
+                  '&:hover': {
+                    color: theme.palette.success.main,
+                  },
+                }}
+              >
+                <ApproveIcon />
+              </IconButton>
+            </Grid>
+            <Grid item>
+              <IconButton
+                onClick={() => postStatus(FriendshipStatusBehaviour.decline)}
+                sx={{
+                  '&:hover': {
+                    color: theme.palette.error.main,
+                  },
+                }}
+              >
+                <DeclineIcon />
+              </IconButton>
+            </Grid>
+          </>
+        );
+      default:
+        return (
+          <>
+            <Grid item>
+              <IconButton
+                onClick={() => postStatus(FriendshipStatusBehaviour.add)}
+                sx={{
+                  '&:hover': {
+                    color: theme.palette.primary.light,
+                  },
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Grid>
+            <Grid item>
+              <IconButton
+                onClick={() => postStatus(FriendshipStatusBehaviour.restrtict)}
+                sx={{
+                  '&:hover': {
+                    color: theme.palette.error.main,
+                  },
+                }}
+              >
+                <BlockIcon />
+              </IconButton>
+            </Grid>
+          </>
+        );
+    }
+  }
+
+  function handleGameInvite() {
+    console.log('game invite');
+  }
+
+  function handleChatInvite() {
+    console.log('chat invite');
+  }
 
   let imagePart = () => {
     return (
@@ -43,18 +210,18 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
             maxWidth: '200px',
             border: '2px solid',
             borderColor: () => (
-              owner?.status === 'online' ? theme.palette.success.main :
-              owner?.status === 'offline' ? theme.palette.error.main :
-              owner?.status === 'ingame' ? theme.palette.warning.main : theme.palette.action.hover
+              visitedUser?.status === 'online' ? theme.palette.success.main :
+                visitedUser?.status === 'offline' ? theme.palette.error.main :
+                  visitedUser?.status === 'ingame' ? theme.palette.warning.main : theme.palette.action.hover
             ),
           }}
-          src={owner?.image ?? ''}
-          alt="owner"
+          src={visitedUser?.image ?? ''}
+          alt="visitedUser"
         >
-          {!owner?.image && <AccountCircleIcon sx={{ width: '100%', height: 'auto' }} />}
+          {!visitedUser?.image && <AccountCircleIcon sx={{ width: '100%', height: 'auto' }} />}
         </Avatar>
         {
-          // owner?.id !== user.id && ////////// Temporarily outof order for development
+          visitedUser?.id !== user.id &&
           (
             <Stack direction={'column'}
               sx={{
@@ -64,30 +231,10 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
               }}
             >
               <Grid container justifyContent={'center'} alignContent={'center'} flexGrow={1}>
+                {userRelationButtons()}
                 <Grid item>
                   <IconButton
-                    sx={{
-                      '&:hover': {
-                        color: theme.palette.primary.light,
-                      },
-                    }}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </Grid>
-                <Grid item>
-                  <IconButton
-                    sx={{
-                      '&:hover': {
-                        color: theme.palette.error.main,
-                      },
-                    }}
-                  >
-                    <BlockIcon />
-                  </IconButton>
-                </Grid>
-                <Grid item>
-                  <IconButton
+                    onClick={handleGameInvite}
                     sx={{
                       '&:hover': {
                         color: '#BF77F6',
@@ -97,17 +244,20 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
                     <GameIcon />
                   </IconButton>
                 </Grid>
-                <Grid item>
-                  <IconButton
-                    sx={{
-                      '&:hover': {
-                        color: theme.palette.secondary.main,
-                      },
-                    }}
-                  >
-                    <MessageIcon />
-                  </IconButton>
-                </Grid>
+                {friendshipStatus !== FriendshipStatus.restricted &&
+                  <Grid item>
+                    <IconButton
+                      onClick={handleChatInvite}
+                      sx={{
+                        '&:hover': {
+                          color: theme.palette.secondary.main,
+                        },
+                      }}
+                    >
+                      <MessageIcon />
+                    </IconButton>
+                  </Grid>
+                }
               </Grid>
             </Stack>
           )
@@ -126,19 +276,19 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
         bgcolor={darken(theme.palette.primary.dark, 0.3)}
         borderRadius={'1em'}
       >
-        {owner?.nameNick && (
+        {visitedUser?.nameNick && (
           <Typography sx={{ wordBreak: 'break-word', color: 'secondary.light' }}>
-            {owner.nameNick}
+            {visitedUser.nameNick}
           </Typography>
         )}
-        {owner?.nameFirst && owner?.nameLast && (
+        {visitedUser?.nameFirst && visitedUser?.nameLast && (
           <Typography style={{ wordBreak: 'break-word' }}>
-            {`${owner.nameFirst} ${owner.nameLast}`}
+            {`${visitedUser.nameFirst} ${visitedUser.nameLast}`}
           </Typography>
         )}
-        {owner?.greeting && (
+        {visitedUser?.greeting && (
           <Typography style={{ wordBreak: 'break-word' }}>
-            {`${owner.greeting}`}
+            {`${visitedUser.greeting}`}
           </Typography>
         )}
       </Stack>
@@ -160,7 +310,7 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
         gap={1}
         bgcolor={alpha(theme.palette.background.default, 0.5)}
         borderRadius={'1em'}
-        justifyContent={isSmallScreen ? 'space-between' : '' }
+        justifyContent={isSmallScreen ? 'space-between' : ''}
       >
         {imagePart()}
         {namePart()}
@@ -173,11 +323,11 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
         bgcolor={alpha(theme.palette.background.default, 0.5)}
         borderRadius={'1em'}
       >
-        {owner?.email && (
+        {visitedUser?.email && (
           <Typography sx={{ wordBreak: 'break-word' }}>
             <span style={{ color: theme.palette.secondary.light }}>Email:</span>
             <br />
-            {owner.email}
+            {visitedUser.email}
           </Typography>
         )}
       </Stack>
@@ -185,4 +335,4 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({ owner, setOwner }) => {
   );
 };
 
-export default OwnerInfo;
+export default VisitedInfo;

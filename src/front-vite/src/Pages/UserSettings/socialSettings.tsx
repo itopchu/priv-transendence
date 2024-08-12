@@ -24,8 +24,8 @@ export const SocialSettings: React.FC = () => {
         },
         withCredentials: true,
       });
-      if (response.data.userDTO)
-        setUser(response.data.userDTO);
+      if (response.data.userClient)
+        setUser(response.data.userClient);
     } catch (error) {
       setNickname(user?.nameNick || '');
       setEmail(user.email);

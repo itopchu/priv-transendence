@@ -1,19 +1,17 @@
-import React, { Dispatch, SetStateAction } from 'react';
-import { User } from '../../Providers/UserContext/User';
+import React from 'react';
+import { UserPublic } from '../../Providers/UserContext/User';
 import { Avatar, Stack, Divider, Typography, useTheme, Box } from '@mui/material';
 import {
   EmojiEvents as Cup,
 } from '@mui/icons-material';
-import { darken, alpha } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
 
 
 interface StatsContainerProps {
-  owner: User | undefined;
-  setOwner: Dispatch<SetStateAction<User | undefined>>;
+  visitedUser: UserPublic;
 }
 
-export const StatsContainer: React.FC<StatsContainerProps> = ({ owner, setOwner }) => {
+export const StatsContainer: React.FC<StatsContainerProps> = ({ visitedUser }) => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 

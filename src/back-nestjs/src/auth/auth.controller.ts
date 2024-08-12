@@ -2,7 +2,7 @@ import { Controller, Delete, UseGuards, Get, Post, Query, Req, Res } from '@nest
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
-import { UserDTO } from '../dto/user.dto';
+import { UserClient } from '../dto/user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -20,8 +20,8 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async validate(@Req() req: Request, @Res() res: Response) {
     if (req.authUser) {
-      const userDTO = new UserDTO(req.authUser);
-      return res.json({ userDTO });
+      const userClient = new UserClient(req.authUser);
+      res.json({ userClient });
     }
   }
 
@@ -38,22 +38,27 @@ export class AuthController {
   @Get('QRCode')
   @UseGuards(AuthGuard)
   async getQRCode(@Req() req: Request, @Res() res: Response) {
+    if (!req.authUser)
+      return res.status(404).send({ message: 'User not found' });
     await this.authService.getQRCode(req.authUser, res);
   }
 
   @Post('QRCode')
   @UseGuards(AuthGuard)
   async verifyQRCode(@Req() req: Request, @Res() res: Response) {
+    if (!req.authUser)
+      return res.status(404).send({ message: 'User not found' });
     await this.authService.verifyQRCode(req.authUser, req, res);
   }
 
   @Delete('QRCode')
   @UseGuards(AuthGuard)
   async deleteQRCode(@Req() req: Request, @Res() res: Response) {
+    if (!req.authUser)
+      return res.status(404).send({ message: 'User not found' });
     await this.authService.deleteQRCode(req.authUser, res);
   }
 
-  // Not done yet
   @Post('2FACode')
   async verify2FACode(@Req() req: Request, @Res() res: Response) {
     await this.authService.verify2FACode(req, res);

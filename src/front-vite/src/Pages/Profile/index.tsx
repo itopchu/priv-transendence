@@ -1,47 +1,59 @@
-import React, { useEffect, useState } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import { Stack, useTheme } from '@mui/material';
 import { useMediaQuery } from '@mui/material';
-import { User, useUser } from '../../Providers/UserContext/User';
+import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import OwnerInfo from './ownerInfo';
+import VisitedInfo from './ownerInfo';
 import StatsContainer from './statsContainer';
 import FriendsBox from './friends';
 
 const ProfilePage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const visitedUserId = useLocation().pathname.split('/').pop();
-  const [owner, setOwner] = useState<User>();
-  const { user } = useUser();
+  const visitedUserId = location.pathname.split('/').pop();
+  const [visitedUser, setVisitedUser] = useState<UserPublic>({ id: Number(visitedUserId) });
+  const { user, userSocket } = useUser();
 
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+  function handleSubscriptionError(errorMessage: string) {
+    console.error(`Subscription error: ${errorMessage}`);
+    navigate('/404');
+  }
+
   useEffect(() => {
-    const getOwner = async () => {
-      try {
-        const response = await axios.get(BACKEND_URL + "/user/" + visitedUserId, { withCredentials: true })
-        setOwner(response.data);
-      } catch (error) {
-        console.error('Error fetching profile owner:', error);
-        navigate('/');
-      }
+    if (!userSocket) return;
+
+    function handleProfileStatus(receivedUser: UserPublic) {
+      setVisitedUser(receivedUser);
     };
-    getOwner();
-  }, [visitedUserId]);
+
+    userSocket.emit('profileStatus', visitedUserId);
+    userSocket.on('profileStatus', handleProfileStatus);
+    userSocket.on('profileError', handleSubscriptionError);
+
+    return () => {
+      if (userSocket) {
+        userSocket.emit('unsubscribeProfileStatus', visitedUserId);
+        userSocket.off('profileStatus', handleSubscriptionError);
+        userSocket.off('subscriptionError', handleSubscriptionError);
+      }
+      setVisitedUser({ id: 0 });
+    };
+  }, [userSocket]);
 
   return (
-      <>
-        <OwnerInfo owner={owner} setOwner={setOwner} />
-        <Stack
-          direction={isSmallScreen ? 'column' : 'row'}
-          bgcolor={theme.palette.primary.dark}
-          minHeight={'60vh'}
-        >
-          {user.id === owner?.id && <FriendsBox owner={owner} setOwner={setOwner} />}
-          <StatsContainer owner={owner} setOwner={setOwner} />
-        </Stack>
-      </>
+    <>
+      <VisitedInfo visitedUser={visitedUser} />
+      <Stack
+        direction={isSmallScreen ? 'column' : 'row'}
+        bgcolor={theme.palette.primary.dark}
+        minHeight={isSmallScreen ? '1vh' : '60vh'}
+      >
+        {user.id === visitedUser?.id && <FriendsBox visitedUser={visitedUser} />}
+        <StatsContainer visitedUser={visitedUser} />
+      </Stack>
+    </>
   );
 };
 

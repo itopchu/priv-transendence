@@ -1,9 +1,9 @@
-import React from 'react';
+import React from'react';
 import { MenuDrawer } from './Navigation/Menu/MenuDrawer';
 import { Box, IconButton, Stack } from '@mui/material';
 import { useUser } from '../../Providers/UserContext/User';
 import { AccountCircle } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 
 export const HeaderBar: React.FC = () => {
@@ -29,13 +29,13 @@ export const HeaderBar: React.FC = () => {
     >
       <MenuDrawer />
       <IconButton
-        onClick={() => navigate(`/profile/${user.id}`)}
+        onClick={() => {navigate(`/profile/${user.id}`)}}
         sx={{
-          overflow: 'clip',
+          overflow: 'hidden',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          position: 'relative',
+          position:'relative',
           height: '100%',
           aspectRatio: '1/1',
           boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.4)',
@@ -47,12 +47,12 @@ export const HeaderBar: React.FC = () => {
             transition: 'transform 0.3s ease-in-out',
           },
           '&:hover img, &:hover svg': {
-            transform: 'scale(1.3)',
+            transform:'scale(1.3)',
           },
         }}
       >
-        {user && user.image ? (
-          <img src={user.image} alt="User profile" />
+        {user && user.image? (
+          <img src={user.image} alt="User profile" style={{ objectFit: 'cover' }} />
         ) : (
           <AccountCircle
             color='secondary'

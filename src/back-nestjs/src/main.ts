@@ -17,33 +17,6 @@ async function bootstrap() {
     // Enables req.cookies
     app.use(cookieParser());
 
-    // For now unnecessary because single cookie is enough
-    // // Define cookie configuration
-    // const cookieConfig = {
-    //     maxAge: 24 * 60 * 60 * 1000, // hour * minute * second * milisecond
-    //     // secure: 'production', // used with HTTPS websites
-    //     // httpOnly: true, // prevents client-side JavaScript from accessing the cookie
-    // };
-
-    // // Define session configuration
-    // const sessionConfig = {
-    //     secret: configService.get<string>('SECRET_PWD') || "none",
-    //     resave: false,
-    //     saveUninitialized: false,
-    //     cookie: cookieConfig, // Include cookie configuration
-    //     rolling: true, // used to update cookies in each request
-    // };
-
-    // app.use(session(sessionConfig));
-
-
-    // Unknown may be needed later?
-    // const passp = require('passport');
-    // app.use(passp.initialize());
-    // app.use(passp.session());
-
-    // This option tells the ValidationPipe to automatically transform the input data
-    // to the type of the object that is expected by the route handler.
     app.useGlobalPipes(new ValidationPipe({
         transform: true,
     }));
