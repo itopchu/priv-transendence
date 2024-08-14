@@ -55,7 +55,7 @@ export class User {
   }
 }
 
-export enum FriendshipStatus {
+export enum FriendshipAttitude {
   available = 'available',
   pending = 'pending',
   awaiting = 'awaiting',
@@ -63,11 +63,11 @@ export enum FriendshipStatus {
   accepted = 'accepted',
 }
 
-export enum FriendshipStatusBehaviour {
+export enum FriendshipAttitudeBehaviour {
   remove = 'remove',
   add = 'add',
   withdraw = 'withdraw',
-  restrtict = 'restrict',
+  restrict = 'restrict',
   restore = 'restore',
   approve = 'approve',
   decline = 'decline',
@@ -89,17 +89,17 @@ export class Friendship {
 
   @Column({
     type: 'enum',
-    enum: FriendshipStatus,
-    default: FriendshipStatus.available
+    enum: FriendshipAttitude,
+    default: FriendshipAttitude.available
   })
-  user1Attitude: FriendshipStatus;
+  user1Attitude: FriendshipAttitude;
 
   @Column({
     type: 'enum',
-    enum: FriendshipStatus,
-    default: FriendshipStatus.available
+    enum: FriendshipAttitude,
+    default: FriendshipAttitude.available
   })
-  user2Attitude: FriendshipStatus;
+  user2Attitude: FriendshipAttitude;
 
   @BeforeInsert()
   @BeforeUpdate()
@@ -108,6 +108,7 @@ export class Friendship {
       throw new Error('User cannot be friend with himself');
     if (this.user1.id > this.user2.id) {
       [this.user1, this.user2] = [this.user2, this.user1];
+      [this.user1Attitude, this.user2Attitude] = [this.user2Attitude, this.user1Attitude];
     }
   }
 }

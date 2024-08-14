@@ -40,7 +40,7 @@ const ProfilePage: React.FC = () => {
       }
       setVisitedUser({ id: 0 });
     };
-  }, [userSocket]);
+  }, [userSocket, visitedUserId]);
 
   return (
     <>

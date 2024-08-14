@@ -8,6 +8,8 @@ import {
 import { darken, alpha } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { FriendshipAttitudeBehaviour, FriendshipAttitude } from './ownerInfo';
 
 interface FriendsBoxProps {
   visitedUser: UserPublic | undefined;
@@ -17,6 +19,7 @@ const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost
 
 export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [friends, setFriends] = useState<UserPublic[]>([]);
 
   // get friends
@@ -29,9 +32,20 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
     getFriends();
     console.log(friends);
     return () => { setFriends([]) }
-  }, [])
+  }, [visitedUser])
 
-  let friendLine = () => {
+  async function postRemoval(friend: UserPublic) {
+    try {
+      const type = FriendshipAttitudeBehaviour.remove;
+      const response = await axios.post(`${BACKEND_URL}/user/friendship/${friend?.id}`, { type }, { withCredentials: true });
+      if (response.data.friendshipAttitude && response.data.friendshipAttitude !== FriendshipAttitude.accepted)
+        setFriends(friends.filter((f) => f.id !== friend.id));
+    } catch (error) {
+      console.error(`Relationship isn't updated:${error}`)
+    }
+  }
+
+  let friendInfo = (friend :UserPublic) => {
     return (
       <Stack direction={'row'}
         sx={{
@@ -40,16 +54,34 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
           paddingX: '1em',
           alignItems: 'center',
           height: '3.1em',
+          color: theme.palette.secondary.main,
+          marginY: '0.3em',
+          boxShadow: `0px ${theme.spacing(0.5)} ${theme.spacing(0.75)} rgba(0, 0, 0, 0.2)`,
+          backgroundColor: alpha(theme.palette.background.default, 0.5),
+          transition: 'border-radius 0.2s ease, boxShadow 0.2s ease',
+          '&:hover': {
+            boxShadow: `0px ${theme.spacing(0.5)} ${theme.spacing(0.75)} rgba(0, 0, 0, 1)`,
+            backgroundColor: alpha(theme.palette.background.default, 0.9),
+            borderRadius: '2em',
+          },
         }}
+        onClick={() => { navigate(`/profile/${friend?.id}`) }}
       >
         <Stack direction={'row'} spacing={2} alignContent='center' alignItems={'center'} marginY={theme.spacing(.5)}>
-          <AccountCircleIcon />
+          {friend.image ? <Avatar src={friend.image} /> : <AccountCircleIcon />}
           <Typography sx={{ '&:hover': { color: theme.palette.secondary.dark } }}>
-            UserName
+            {friend.nameNick
+            ? friend.nameNick
+            : friend.nameFirst
+            ? `${friend.nameFirst} ${friend.nameLast}`
+            : 'Unknown'}
           </Typography>
         </Stack>
         <Stack direction={'row'} spacing={2} alignContent='center' alignItems={'center'} marginY={theme.spacing(.5)}>
-          <Stack onClick={(event) => { event.stopPropagation(); }}
+          <Stack onClick={
+            (event) => { event.stopPropagation();
+            postRemoval(friend);
+          }}
             sx={{ cursor: 'pointer', '&:hover': { color: theme.palette.error.dark } }}
           >
             <PersonOffIcon />
@@ -59,7 +91,7 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
     );
   };
 
-  let friendCategory = () => {
+  let friendLines = () => {
     return (
       <Stack
         direction='column'
@@ -69,33 +101,13 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
         sx={{
           minWidth: '250px',
           width: '100%',
-          '& > *': {
-            alignItems: 'center',
-            height: '3em',
-            color: theme.palette.secondary.main,
-            marginY: '0.3em',
-            boxShadow: `0px ${theme.spacing(0.5)} ${theme.spacing(0.75)} rgba(0, 0, 0, 0.2)`,
-            backgroundColor: alpha(theme.palette.background.default, 0.5),
-            transition: 'border-radius 0.2s ease, boxShadow 0.2s ease',
-            '&:hover': {
-              boxShadow: `0px ${theme.spacing(0.5)} ${theme.spacing(0.75)} rgba(0, 0, 0, 1)`,
-              backgroundColor: alpha(theme.palette.background.default, 0.9),
-              borderRadius: '2em',
-            },
-          },
         }}
       >
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
-        {friendLine()}
+      {friends.map((friend) => (
+        <div key={friend.id}>
+          {friendInfo(friend)}
+        </div>
+      ))}
       </Stack>
     );
   };
@@ -133,8 +145,7 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
           }}
           className="hide-scrollbar"
         >
-          {friendCategory()}
-          {friendCategory()}
+          {friendLines()}
         </Stack>
       </Stack>
     );

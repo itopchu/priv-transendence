@@ -21,7 +21,7 @@ interface VisitedInfoProps {
   visitedUser: UserPublic | undefined;
 }
 
-enum FriendshipStatus {
+export enum FriendshipAttitude {
   available = 'available',
   pending = 'pending',
   awaiting = 'awaiting',
@@ -29,11 +29,11 @@ enum FriendshipStatus {
   restricted = 'restricted',
 }
 
-enum FriendshipStatusBehaviour {
+export enum FriendshipAttitudeBehaviour {
   remove = 'remove',
   add = 'add',
   withdraw = 'withdraw',
-  restrtict = 'restrict',
+  restrict = 'restrict',
   restore = 'restore',
   approve = 'approve',
   decline = 'decline',
@@ -44,28 +44,30 @@ const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost
 export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>();
+  const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
   const { user } = useUser();
 
   useEffect(() => {
-    const getFriendshipStatus = async () => {
+    const getFriendshipAttitude = async () => {
       try {
         const response = await axios.get(`${BACKEND_URL}/user/friendship/${visitedUser?.id}`, { withCredentials: true });
-        if (response.data.friendshipStatus)
-          setFriendshipStatus(response.data.friendshipStatus);
+        if (response.data.friendshipAttitude)
+          setFriendshipAttitude(response.data.friendshipAttitude);
       } catch (error) {
         console.error(`Relationship not found:${error}`)
       }
     }
-    getFriendshipStatus();
-    return () => { setFriendshipStatus(undefined) }
-  }, [friendshipStatus])
+    getFriendshipAttitude();
+    return () => { setFriendshipAttitude(FriendshipAttitude.available) };
+  }, [])
 
-  async function postStatus(type: FriendshipStatusBehaviour) {
+  async function postStatus(type: FriendshipAttitudeBehaviour) {
     try {
+      console.log('postStatus:', type);
       const response = await axios.post(`${BACKEND_URL}/user/friendship/${visitedUser?.id}`, { type }, { withCredentials: true });
-      if (response.data.friendshipStatus)
-        setFriendshipStatus(response.data.friendshipStatus);
+      console.log('Response.data:', response.data);
+      if (response.data.friendshipAttitude)
+        setFriendshipAttitude(response.data.friendshipAttitude);
     } catch (error) {
       console.error(`Relationship isn't updated:${error}`)
     }
@@ -73,12 +75,12 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
 
   const userRelationButtons = () => {
     if (visitedUser?.id === user.id) return;
-    switch (friendshipStatus) {
-      case FriendshipStatus.restricted:
+    switch (friendshipAttitude) {
+      case FriendshipAttitude.restricted:
         return (
           <Grid item>
             <IconButton
-              onClick={() => postStatus(FriendshipStatusBehaviour.restore)}
+              onClick={() => postStatus(FriendshipAttitudeBehaviour.restore)}
               sx={{
                 '&:hover': {
                   color: theme.palette.error.main,
@@ -89,11 +91,11 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             </IconButton>
           </Grid>
         );
-      case FriendshipStatus.accepted:
+      case FriendshipAttitude.accepted:
         return (
           <Grid item>
             <IconButton
-              onClick={() => postStatus(FriendshipStatusBehaviour.remove)}
+              onClick={() => postStatus(FriendshipAttitudeBehaviour.remove)}
               sx={{
                 '&:hover': {
                   color: theme.palette.primary.light,
@@ -104,11 +106,11 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             </IconButton>
           </Grid>
         );
-      case FriendshipStatus.pending:
+      case FriendshipAttitude.pending:
         return (
           <Grid item>
             <IconButton
-              onClick={() => postStatus(FriendshipStatusBehaviour.withdraw)}
+              onClick={() => postStatus(FriendshipAttitudeBehaviour.withdraw)}
               sx={{
                 '&:hover': {
                   color: theme.palette.warning.main,
@@ -119,12 +121,12 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             </IconButton>
           </Grid>
         );
-      case FriendshipStatus.awaiting:
+      case FriendshipAttitude.awaiting:
         return (
           <>
             <Grid item>
               <IconButton
-                onClick={() => postStatus(FriendshipStatusBehaviour.approve)}
+                onClick={() => postStatus(FriendshipAttitudeBehaviour.approve)}
                 sx={{
                   '&:hover': {
                     color: theme.palette.success.main,
@@ -136,7 +138,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             </Grid>
             <Grid item>
               <IconButton
-                onClick={() => postStatus(FriendshipStatusBehaviour.decline)}
+                onClick={() => postStatus(FriendshipAttitudeBehaviour.decline)}
                 sx={{
                   '&:hover': {
                     color: theme.palette.error.main,
@@ -153,7 +155,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
           <>
             <Grid item>
               <IconButton
-                onClick={() => postStatus(FriendshipStatusBehaviour.add)}
+                onClick={() => postStatus(FriendshipAttitudeBehaviour.add)}
                 sx={{
                   '&:hover': {
                     color: theme.palette.primary.light,
@@ -165,7 +167,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             </Grid>
             <Grid item>
               <IconButton
-                onClick={() => postStatus(FriendshipStatusBehaviour.restrtict)}
+                onClick={() => postStatus(FriendshipAttitudeBehaviour.restrict)}
                 sx={{
                   '&:hover': {
                     color: theme.palette.error.main,
@@ -244,7 +246,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
                     <GameIcon />
                   </IconButton>
                 </Grid>
-                {friendshipStatus !== FriendshipStatus.restricted &&
+                {friendshipAttitude !== FriendshipAttitude.restricted &&
                   <Grid item>
                     <IconButton
                       onClick={handleChatInvite}

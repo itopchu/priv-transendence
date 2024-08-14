@@ -66,7 +66,6 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log(error.message);
       return false;
     }
-    client.join(String(user.id));
     const userStatus = this.connectedUsers.get(user.id) | 0
     this.connectedUsers.set(user.id, userStatus + 1);
     this.emitStatus(user);
