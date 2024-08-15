@@ -1,7 +1,8 @@
 import axios from 'axios';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { io, Socket } from "socket.io-client";
+import { socket } from '../../socket'
+import { Socket } from 'socket.io-client';
 
 export interface User {
   id: number;
@@ -31,10 +32,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 const SOCKET_URL: string = import.meta.env.ORIGIN_URL_WEBSOCKET || 'http://localhost.codam.nl:3001';
-const userConnection = io(`${SOCKET_URL}/user`, {
-  withCredentials: true,
-  autoConnect: false,
-});
+const userConnection = socket;
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserClient>({ id: 0 });

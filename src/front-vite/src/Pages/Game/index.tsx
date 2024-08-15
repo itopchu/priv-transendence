@@ -26,7 +26,7 @@ const MainContainer = styled(Container)(({ theme }) => ({
   backgroundColor: theme.palette.primary.dark,
 }));
 
-const socket = io('http://localhost.codam.nl:3001', { autoConnect: false });
+const socket = io('http://localhost.codam.nl:3001');
 
 const Game: React.FC = () => {
   const theme = useTheme();
@@ -97,7 +97,7 @@ const Game: React.FC = () => {
 
     return (
       <div onMouseMove={handleMouseMove} 
-      style={{ position: 'absolute', width: '1000px', height: '400px', border: '1px solid black',
+      style={{ position: 'absolute', width: '80vw', height: '40vh', border: '1px solid black',
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)'}}>
@@ -172,9 +172,9 @@ const Game: React.FC = () => {
               borderTopRightRadius: '1em',
             }}
           >
-            <Box bgcolor={theme.palette.background.default} borderRadius={'1em'} padding={'1em'}>
+            {/* <Box bgcolor={theme.palette.background.default} borderRadius={'1em'} padding={'1em'}> */}
               Pong is one of the earliest arcade video games and the first sports arcade video game. It is a table tennis sports game featuring simple two-dimensional graphics. The game was originally manufactured by Atari, which released it in 1972. Allan Alcorn created Pong as a training exercise assigned to him by Atari co-founder Nolan Bushnell. Bushnell based the idea on an electronic ping-pong game included in the Magnavox Odyssey, which later resulted in a lawsuit against Atari.
-            </Box>
+            {/* </Box> */}
           </Typography>
           <Typography
             variant='h5'
