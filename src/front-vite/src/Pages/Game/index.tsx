@@ -33,11 +33,9 @@ const MainContainer = styled(Container)(({ theme }) => ({
   backgroundColor: theme.palette.primary.dark,
 }));
 
-const socket = io('http://localhost.codam.nl:3001');
-
 const Game: React.FC = () => {
   const theme = useTheme();
-  const { user, setUser } = useUser();
+  const { user, setUser, userSocket } = useUser();
   const [roomId, setRoomId] = useState("");
   const [isJoined, setIsJoined] = useState(false);
   const [gameState, setGameState] = useState({
@@ -50,41 +48,44 @@ const Game: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    socket.on("state", (state) => {
+    if (!userSocket) {
+      return;
+    }
+    userSocket.on("state", (state) => {
       setGameState(state);
     });
 
-    socket.on("connect", () => {
+    userSocket.on("connect", () => {
       setIsConnected(true);
     });
 
-    socket.on("disconnect", () => {
+    userSocket.on("disconnect", () => {
       setIsConnected(false);
     });
 
     return () => {
-      socket.off("state");
+      userSocket.off("state");
     };
-  }, [socket]);
+  }, [userSocket]);
 
   const Play = () => {
     const handleMouseMove = (e: { clientY: number }) => {
       if (!roomId) return;
       const y = e.clientY - 50; // Adjust based on paddle height
-      socket.emit("move", { roomId, userId: user.id, y });
+      userSocket?.emit("move", { roomId, userId: user.id, y });
     };
 
     const joinRoom = (roomId: string) => {
-      socket.emit("joinRoom", { roomId: roomId, userId: user.id });
+      userSocket?.emit("joinRoom", { roomId: roomId, userId: user.id });
       setIsJoined(true);
     };
 
     const handleConnection = () => {
       if (buttonText === "connect") {
-        socket.connect();
+        userSocket?.connect();
         setButtonText("disconnect");
       } else if (buttonText === "disconnect") {
-        socket.disconnect();
+        userSocket?.disconnect();
         setButtonText("connect");
       }
     };
@@ -171,7 +172,7 @@ const Game: React.FC = () => {
   };
 
   const handleSpeed = (speed: boolean) => {
-    socket.emit("speed", speed);
+    userSocket?.emit("speed", speed);
   };
 
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));

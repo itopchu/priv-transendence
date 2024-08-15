@@ -31,7 +31,6 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
-const SOCKET_URL: string = import.meta.env.ORIGIN_URL_WEBSOCKET || 'http://localhost.codam.nl:3001';
 const userConnection = socket;
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

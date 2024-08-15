@@ -11,7 +11,7 @@ interface Player {
 let speed: number = 1000;
 let intervalId: NodeJS.Timeout;
 
-@WebSocketGateway(Number(process.env.PORT_WEBSOCKET), { cors: { origin: '*' } })
+@WebSocketGateway(Number(process.env.PORT_WEBSOCKET), { namespace: "domats", cors: { origin: '*' } })
 export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
