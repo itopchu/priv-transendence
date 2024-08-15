@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Friendship, FriendshipStatus, FriendshipStatusBehaviour, User } from '../entities/user.entity';
+import { Friendship, FriendshipAttitude, FriendshipAttitudeBehaviour, User } from '../entities/user.entity';
 import { AccessTokenDTO } from '../dto/auth.dto';
 import { Request, Response } from 'express';
 import { UserClient } from '../dto/user.dto';
@@ -95,131 +95,139 @@ export class UserService {
     return updatedUser;
   }
 
-  // async getUserFriendsById(id: number): Promise<User[] | null> {
+  async getUserFriendsById(id: number): Promise<User[] | null> {
+    try {
+      const user = await this.getUserById(id);
+      if (!user)
+        return null;
 
-  //   try {
-  //     const user = await this.getUserById(id);
-  //     if (!user)
-  //       return null;
+      // user already containes friendships. mapping can be done with user
+      const friendships = await this.friendsRepository
+      .createQueryBuilder('friendship')
+      .leftJoinAndSelect('friendship.user1', 'user1')
+      .leftJoinAndSelect('friendship.user2', 'user2')
+      .where('friendship.user1 = :user1 OR friendship.user2 = :user2', { user1: id, user2: id })
+      .where('friendship.user1Attitude = :attitude1 AND friendship.user2Attitude = :attitude2', { attitude1: FriendshipAttitude.accepted, attitude2: FriendshipAttitude.accepted })
+      .getMany();
 
-  //     const test = await this.friendsRepository.createQueryBuilder('friendship')
-      
+      const friends = friendships.map(friendship => {
+        if (friendship.user1.id === id)
+          return friendship.user2;
+        return friendship.user1;
+      });
+      return friends;
+    } catch (error) {
+      console.error("Failed to get user friends by id:", error);
+      return null;
+    }
+  }
 
-  //     const friendships = await this.friendsRepository.createQueryBuilder('friendship')
-  //     .leftJoinAndSelect('friendship.user1', 'user1')
-  //     .leftJoinAndSelect('friendship.user2', 'user2')
-  //     .leftJoinAndSelect('friendship.user1Attitude', 'user1Attitude')
-  //     .leftJoinAndSelect('friendship.user2Attitude', 'user2Attitude')
-  //     .where('user1.id = :id', { id })
-  //     .orWhere('user2.id = :id', { id })
-  //     .andWhere('user1Attitude.status = :status OR user2Attitude.status = :status', { status: FriendshipStatus.accepted })
-  //     .getMany();
+  async getUserFriendship(userRequester: User, userResponder: User): Promise<Friendship | null> {
+    let friendship: Friendship | null;
+    try {
+      friendship = await this.friendsRepository
+      .createQueryBuilder('friendship')
+      .leftJoinAndSelect('friendship.user1', 'user1')
+      .leftJoinAndSelect('friendship.user2', 'user2')
+      .where('friendship.user1 = :user1 AND friendship.user2 = :user2', { user1: userRequester.id, user2: userResponder.id })
+      .orWhere('friendship.user1 = :user2 AND friendship.user2 = :user1', { user1: userRequester.id, user2: userResponder.id })
+      .getOne();
+      console.log('getUserFriendship:', friendship);
+    } catch (error) {
+      console.error("Failed to get friendship:", error);
+      return null;
+    }
+    return friendship;
+  }
 
-  //     const friends: User[] = friendships.map(friendship => {
-  //       if (friendship.user1.id === id) {
-  //         return friendship.user2;
-  //       } else {
-  //         return friendship.user1;
-  //       }
-  //     });
-
-  //     return friends.filter(friend => friend !== undefined);
-  //   } catch (error) {
-  //     console.error("Failed to get user friends by id:", error);
-  //     return null;
-  //   }
-  // }
-
-  // async postUserFriendShip(user: User, id: number, type: FriendshipStatusBehaviour): Promise<FriendshipStatus | null> {
-  //   if (user.id === id) {
-  //     console.error("User cannot befriend themselves.");
-  //     return null;
-  //   }
-
-  //   let friendship: Friendship | null;
-  //   try {
-  //     friendship = await this.friendsRepository.findOne({
-  //       where: [
-  //         { lowerUserId: user.id, higherUserId: id },
-  //         { lowerUserId: id, higherUserId: user.id }
-  //       ]
-  //     });
-  //   } catch (error) {
-  //     friendship = new Friendship();
-  //     friendship.higherUser
-  //     friendship.higherUserId
-  //     friendship.higherUserRelation
-  //     friendship.lowerUser
-  //     friendship.lowerUserId
-  //     friendship.lowerUserRelation;
-  //   }
-
-  //   if (friendship) {
-  //     switch (type) {
-  //       case FriendshipStatusBehaviour.remove:
-  //         try {
-  //           await this.friendsRepository.delete(friendship);
-  //           return FriendshipStatus.available;
-  //         } catch (error) {
-  //           console.error("Failed to remove friendship:", error);
-  //           return null;
-  //         }
-  //       case FriendshipStatusBehaviour.withdraw:
-  //         if (friendship.lowerUserId === user.id) {
-  //           friendship.lowerUserStatus = FriendshipStatus.restricted;
-  //         } else {
-  //           friendship.higherUserStatus = FriendshipStatus.restricted;
-  //         }
-  //         break;
-  //       case FriendshipStatusBehaviour.restrtict:
-  //         if (friendship.lowerUserId === user.id) {
-  //           friendship.lowerUserStatus = FriendshipStatus.restricted;
-  //         } else {
-  //           friendship.higherUserStatus = FriendshipStatus.restricted;
-  //         }
-  //         break;
-  //       case FriendshipStatusBehaviour.restore:
-  //         if (friendship.lowerUserId === user.id) {
-  //           friendship.lowerUserStatus = FriendshipStatus.available;
-  //         } else {
-  //           friendship.higherUserStatus = FriendshipStatus.available;
-  //         }
-  //         break;
-  //       case FriendshipStatusBehaviour.approve:
-  //         if (friendship.lowerUserId === user.id) {
-  //           friendship.higherUserStatus = FriendshipStatus.accepted;
-  //         } else {
-  //           friendship.lowerUserStatus = FriendshipStatus.accepted;
-  //         }
-  //         break;
-  //       case FriendshipStatusBehaviour.decline:
-  //         try {
-  //           await this.friendsRepository.delete(friendship);
-  //           return FriendshipStatus.available;
-  //         } catch (error) {
-  //           console.error("Failed to remove friendship:", error);
-  //           return null;
-  //         }
-  //       default:
-  //         console.error("Unknown friendship status behaviour.");
-  //         return null;
-  //     }
-
-  //     try {
-  //       await this.friendsRepository.save(friendship);
-  //       if (friendship.lowerUserId === user.id) {
-  //         return friendship.lowerUserStatus;
-  //       } else {
-  //         return friendship.higherUserStatus;
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to save friendship:", error);
-  //       return null;
-  //     }
-  //   }
-  // }
-
-  // async getUserFriendShip(user: User, id: number): Promise<FriendshipStatus> {
-  //   return FriendshipStatus.accepted;
-  // }
+  async postUserFriendShip(userRequester: User, userResponder: User, type: FriendshipAttitudeBehaviour): Promise<FriendshipAttitude | null> {
+    if (userRequester.id === userResponder.id) {
+      console.error("User cannot befriend themselves.");
+      return null;
+    }
+    let requesterAttitude: FriendshipAttitude;
+    let responderAttitude: FriendshipAttitude;
+    let friendship: Friendship | null = await this.getUserFriendship(userRequester, userResponder);
+    if (!friendship) {
+      friendship = new Friendship();
+      console.log('Friendship new:', friendship);
+      friendship.user1 = userRequester;
+      friendship.user1Attitude = FriendshipAttitude.available;
+      friendship.user2 = userResponder;
+      friendship.user2Attitude = FriendshipAttitude.available;
+    }
+    if (friendship.user1.id === userRequester.id) {
+      requesterAttitude = friendship.user1Attitude;
+      responderAttitude = friendship.user2Attitude;
+    } else {
+      requesterAttitude = friendship.user2Attitude;
+      responderAttitude = friendship.user1Attitude;
+    }
+    switch (type) {
+      case FriendshipAttitudeBehaviour.add:
+        if (requesterAttitude !== FriendshipAttitude.available || responderAttitude !== FriendshipAttitude.available)
+          return requesterAttitude;
+        requesterAttitude = FriendshipAttitude.pending;
+        responderAttitude = FriendshipAttitude.awaiting;
+        break;
+      case FriendshipAttitudeBehaviour.restrict:
+        if (requesterAttitude !== FriendshipAttitude.available)
+          return requesterAttitude;
+                requesterAttitude = FriendshipAttitude.restricted;
+        break;
+      case FriendshipAttitudeBehaviour.restore:
+        if (requesterAttitude !== FriendshipAttitude.restricted)
+          return requesterAttitude;
+        requesterAttitude = FriendshipAttitude.available;
+        break;
+      case FriendshipAttitudeBehaviour.remove:
+        if (requesterAttitude !== FriendshipAttitude.accepted || responderAttitude !== FriendshipAttitude.accepted)
+          return requesterAttitude;
+        requesterAttitude = FriendshipAttitude.available;
+        responderAttitude = FriendshipAttitude.available;
+        break;
+      case FriendshipAttitudeBehaviour.approve:
+        if (requesterAttitude !== FriendshipAttitude.awaiting || responderAttitude !== FriendshipAttitude.pending)
+          return requesterAttitude;
+        requesterAttitude = FriendshipAttitude.accepted;
+        responderAttitude = FriendshipAttitude.accepted;
+        break;
+      case FriendshipAttitudeBehaviour.decline:
+        if (requesterAttitude !== FriendshipAttitude.awaiting || responderAttitude !== FriendshipAttitude.pending)
+          return requesterAttitude;
+        requesterAttitude = FriendshipAttitude.available;
+        responderAttitude = FriendshipAttitude.available;
+        break;
+      case FriendshipAttitudeBehaviour.withdraw:
+        if (requesterAttitude !== FriendshipAttitude.pending || responderAttitude !== FriendshipAttitude.awaiting)
+          return requesterAttitude;
+        requesterAttitude = FriendshipAttitude.available;
+        responderAttitude = FriendshipAttitude.available;
+        break;
+      default:
+        console.error("Invalid type");
+        return requesterAttitude;
+    }
+    if (friendship.user1.id === userRequester.id) {
+      friendship.user1Attitude = requesterAttitude;
+      friendship.user2Attitude = responderAttitude;
+    } else {
+      friendship.user1Attitude = responderAttitude;
+      friendship.user2Attitude = requesterAttitude;
+    }
+    try {
+      if (friendship.id) {
+        console.log('Friendship update:', friendship);
+        await this.friendsRepository.update({ id: friendship.id }, friendship);
+      }
+      else {
+        console.log('Friendship new:', friendship);
+        await this.friendsRepository.save(friendship);
+      }
+    } catch (error) {
+      console.error("Failed to save friendship:", error);
+      return requesterAttitude;
+    }
+    return requesterAttitude;
+  }
 }

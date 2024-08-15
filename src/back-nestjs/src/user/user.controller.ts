@@ -7,7 +7,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { UserGateway } from './user.gateway';
 import * as fs from 'fs';
 import * as path from 'path';
-import { FriendshipStatusBehaviour } from '../entities/user.entity'
+import { FriendshipAttitude, FriendshipAttitudeBehaviour } from '../entities/user.entity'
 
 const multerOptions = {
   limits: {
@@ -99,35 +99,53 @@ export class UserController {
     }
   }
   
-  // @Get('friendship/:id')
-  // @UseGuards(AuthGuard)
-  // async getUserFriendShip(@Res() res: Response, @Req() req: Request, @Param('id', ParseIntPipe) id: number) {
-  //   const user = req.authUser;
-  //   const friendship = await this.userService.getUserFriendShip(user, id);
-  //   res.status(200).json(friendship);
-  // }
+  @Get('friendship/:id')
+  @UseGuards(AuthGuard)
+  async getUserFriendshipAttitude(@Res() res: Response, @Req() req: Request, @Param('id', ParseIntPipe) id: number) {
+    const user = req.authUser;
+    const user2 = await this.userService.getUserById(id);
+    if (!user2)
+      return res.status(404);
+    const friendship = await this.userService.getUserFriendship(user, user2);
+    if (!friendship)
+      return res.status(404);
+    console.log('getUserFriendshipAttitude in get', friendship);
+    const friendshipAttitude = friendship.user1.id === user.id ? friendship.user1Attitude : friendship.user2Attitude;
+    return res.status(200).json({friendshipAttitude});
+  }
 
-  // @Post('friendship/:id')
-  // @UseGuards(AuthGuard)
-  // async postUserFriendShip(@Res() res: Response, @Req() req: Request, @Param('id', ParseIntPipe) id: number) {
-  //   const { type } = req.body;
-  //   const user = req.authUser;
-  //   if (!Object.values(FriendshipStatusBehaviour).includes(type))
-  //     throw new BadRequestException('Invalid Type');
-  //   if (user.id === id)
-  //     throw new BadRequestException('Invalid Id');
-  //   const friendship = await this.userService.postUserFriendShip(user, id, type);
-  //   if (!friendship)
-  //     return res.status(406);
-  // }
-
-  // @Get('friends/:id')
-  // async getUserFriendsById(@Res() res: Response, @Param('id', ParseIntPipe) id: number) {
-  //   const friends = await this.userService.getUserFriendsById(id);
-  //   if (!friends)
-  //     return res.status(404);
-  //   const friendsDTO = friends.map(friend => new UserPublicDTO(friend, null));
-  //   res.status(200).json(friendsDTO)
-  // }
-
+  @Post('friendship/:id')
+  @UseGuards(AuthGuard)
+  async postUserFriendShip(@Res() res: Response, @Req() req: Request, @Param('id', ParseIntPipe) id: number) {
+    const { type } = req.body;
+    if (!Object.values(FriendshipAttitudeBehaviour).includes(type)) {
+      console.log('Invalid Type');
+      throw new BadRequestException('Invalid Type');
+    }
+    const user = req.authUser;
+    if (user.id === id) {
+      console.log('user.id === id');
+      throw new BadRequestException('Invalid Id');
+    }
+    const user2 = await this.userService.getUserById(id);
+    if (!user2){
+      console.log('user2 not found');      
+      return res.status(404);
+    }
+    const friendshipAttitude = await this.userService.postUserFriendShip(user, user2, type);
+    if (!friendshipAttitude) {
+      console.log('friendshipAttitude not found');
+      return res.status(406);
+    }
+    return res.status(200).json({friendshipAttitude});
+  }
+  
+  @Get('friends/:id')
+  async getUserFriendsById(@Res() res: Response, @Param('id', ParseIntPipe) id: number) {
+    const friends = await this.userService.getUserFriendsById(id);
+    if (!friends)
+      return res.status(404);
+    const friendsDTO = friends.map(friend => new UserPublicDTO(friend, null));
+    return res.status(200).json({friendsDTO})
+  }
 }
