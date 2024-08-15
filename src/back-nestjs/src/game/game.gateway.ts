@@ -8,6 +8,9 @@ interface Player {
   position: boolean;
 }
 
+let speed: number = 1000;
+let intervalId: NodeJS.Timeout;
+
 @WebSocketGateway(Number(process.env.PORT_WEBSOCKET), { cors: { origin: '*' } })
 export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
@@ -23,20 +26,25 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
       });
     }, 16);
+  }
 
-    setInterval(() => {
+  startLoggingInterval() {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    intervalId = setInterval(() => {
       this.rooms.forEach((players, roomId) => {
         const room = this.rooms.get(roomId);
         if (room) {
-          console.log(`Room ${roomId} has ${room.length} players: ${room.join(', ')}`);
+          console.log(`Room ${roomId} has ${room.length} players: ${room.map(player => player.userId).join(' - ')}`);
         } else {
           console.log(`Room ${roomId} does not exist`);
         }
       });
-    }, 5000);
+    }, speed);
   }
 
-  handleConnection(client: Socket, ...args: any[]) {
+  handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
   }
 
@@ -75,5 +83,16 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         this.server.to(payload.roomId).emit('state', this.gameService.getGameState(payload.roomId));
       }
     }
+  }
+
+  @SubscribeMessage('speed')
+  changeSpeed(client: Socket, changedspeed: boolean): void {
+    if (changedspeed) {
+      if (speed > 1000)
+        speed -= 1000
+    }
+    else {speed += 1000}
+    console.log('Speed changed', speed);
+    this.startLoggingInterval();
   }
 }

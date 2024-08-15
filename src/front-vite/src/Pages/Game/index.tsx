@@ -1,11 +1,14 @@
-/* import React from 'react';
+import React, { ReactElement, useEffect, useState } from 'react';
 import { Container, Stack, Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { styled } from '@mui/system';
+
+import io from 'socket.io-client';
+import { useUser } from '../../Providers/UserContext/User';
 
 const GameBox = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   width: '100%',
-  paddingTop: '56.25%', // Aspect ratio 16:9
+  paddingTop: '56.25%',
   position: 'relative',
 }));
 
@@ -23,8 +26,94 @@ const MainContainer = styled(Container)(({ theme }) => ({
   backgroundColor: theme.palette.primary.dark,
 }));
 
+const socket = io('http://localhost.codam.nl:3001', { autoConnect: false });
+
 const Game: React.FC = () => {
   const theme = useTheme();
+  const { user, setUser } = useUser();
+  const [roomId, setRoomId] = useState('');
+  const [isJoined, setIsJoined] = useState(false);
+  const [gameState, setGameState] = useState({
+    player1: { y: 150 },
+    player2: { y: 150 },
+    ball: { x: 390, y: 190 },
+    score: { player1: 0, player2: 0 },
+  });
+  const [buttonText, setButtonText] = useState('disconnect');
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    socket.on('state', (state) => {
+      setGameState(state);
+    });
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+    
+    return () => {
+      socket.off('state');
+    };
+  }, [socket]);
+
+  const Play = () => {  
+    const handleMouseMove = (e: { clientY: number; }) => {
+      if (!roomId) return;
+      const y = e.clientY - 50; // Adjust based on paddle height
+      socket.emit('move', { roomId, userId: user.id, y });
+    };
+    
+    const joinRoom = (roomId: string) => {
+      socket.emit('joinRoom', { roomId: roomId, userId: user.id });
+      setIsJoined(true);
+    };
+
+    const handleConnection = () => {
+        if (buttonText === 'connect') {
+          socket.connect();
+          setButtonText('disconnect');
+        }
+        else if (buttonText === 'disconnect') {
+          socket.disconnect();
+          setButtonText('connect');
+        }
+    };
+
+    if (!roomId || !isJoined) {
+      return (
+        <div style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
+          <button onClick={handleConnection}>{buttonText}</button>
+          <h1>Oda Seç</h1>
+          
+          <input type="text" placeholder="Oda ID" onChange={(e) => setRoomId(e.target.value)} />
+          <button onClick={() => joinRoom(roomId)}>Odaya Katil</button>
+        </div>
+      );
+    }
+
+    return (
+      <div onMouseMove={handleMouseMove} 
+      style={{ position: 'absolute', width: '1000px', height: '400px', border: '1px solid black',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)'}}>
+        <div style={{ position: 'absolute', left: '10px', top: `${gameState.player1.y}px`, width: '10px', height: '100px', backgroundColor: 'blue' }}></div>
+        <div style={{ position: 'absolute', right: '10px', top: `${gameState.player2.y}px`, width: '10px', height: '100px', backgroundColor: 'red' }}></div>
+        <div style={{ position: 'absolute', left: `${gameState.ball.x}px`, top: `${gameState.ball.y}px`, width: '10px', height: '10px', backgroundColor: 'green', borderRadius: '50%' }}></div>
+        <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)' }}>
+          Score: {gameState.score.player1} - {gameState.score.player2}
+        </div>
+      </div>
+    );
+  };
+
+  const handleSpeed = (speed: boolean) => {
+    socket.emit('speed', speed);
+  };
 
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   return (
@@ -48,20 +137,12 @@ const Game: React.FC = () => {
             Pong Game
           </Typography>
         </Box>
+        <Box sx={{ backgroundColor: theme.palette.primary.main, padding: theme.spacing(2), borderRadius: theme.shape.borderRadius }}>
+          <button onClick={() => handleSpeed(true)} style={{ fontSize: '24px' }}>⬆️</button>
+          <button onClick={() => handleSpeed(false)} style={{ fontSize: '24px' }}>⬇️</button>
+        </Box>
         <GameBox>
-          <Typography
-            variant="h6"
-            component="div"
-            style={{
-              color: theme.palette.secondary.main,
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            Game
-          </Typography>
+            <Play />
         </GameBox>
         <HistoryBox>
           <Typography
@@ -176,77 +257,6 @@ const Game: React.FC = () => {
         </HistoryBox>
       </Stack>
     </MainContainer>
-  );
-};
-
-export default Game; */
-
-import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
-import { useUser } from '../../Providers/UserContext/User';
-import { NumbersSharp } from '@mui/icons-material';
-
-const socket = io('http://localhost.codam.nl:3001', { query: {  }});
-
-const Game = () => {
-  const { user, setUser } = useUser();
-  const [roomId, setRoomId] = useState('');
-  const [isJoined, setIsJoined] = useState(false);
-  const [gameState, setGameState] = useState({
-    player1: { y: 150 },
-    player2: { y: 150 },
-    ball: { x: 390, y: 190 },
-    score: { player1: 0, player2: 0 },
-  });
-  
-  useEffect(() => {
-    socket.on('state', (state) => {
-      setGameState(state);
-    });
-
-    return () => {
-      socket.off('state');
-      socket.off('startGame');
-      socket.disconnect();
-    };
-  }, []);
-  
-  
-  const handleMouseMove = (e: { clientY: number; }) => {
-    if (!roomId) return;
-    const y = e.clientY - 50; // Adjust based on paddle height
-    socket.emit('move', { roomId, userId: user.id, y });
-  };
-  
-  const joinRoom = (roomId: string) => {
-    socket.emit('joinRoom', { roomId: roomId, userId: user.id });
-    setIsJoined(true);
-  };
-
-  const handleDisconnect = () => {
-      socket.disconnect();
-  };
-
-  if (!roomId || !isJoined) {
-    return (
-      <div>
-        <button onClick={handleDisconnect}>Disconnect</button>
-        <h1>Oda Seç</h1>
-        <input type="text" placeholder="Oda ID" onChange={(e) => setRoomId(e.target.value)} />
-        <button onClick={() => joinRoom(roomId)}>Odaya Katil</button>
-      </div>
-    );
-  }
-
-  return (
-    <div onMouseMove={handleMouseMove} style={{ position: 'relative', width: '800px', height: '400px', border: '1px solid black' }}>
-      <div style={{ position: 'absolute', left: '10px', top: `${gameState.player1.y}px`, width: '10px', height: '100px', backgroundColor: 'blue' }}></div>
-      <div style={{ position: 'absolute', right: '10px', top: `${gameState.player2.y}px`, width: '10px', height: '100px', backgroundColor: 'red' }}></div>
-      <div style={{ position: 'absolute', left: `${gameState.ball.x}px`, top: `${gameState.ball.y}px`, width: '10px', height: '10px', backgroundColor: 'green', borderRadius: '50%' }}></div>
-      <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)' }}>
-        Score: {gameState.score.player1} - {gameState.score.player2}
-      </div>
-    </div>
   );
 };
 

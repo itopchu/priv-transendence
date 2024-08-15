@@ -41,10 +41,9 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
         score: { player1: 0, player2: 0 },
       });
 
-      // Yeni bir oyun odası için zamanlayıcı başlat
       const intervalId = setInterval(() => {
         this.updateBallPosition(roomId);
-      }, 16); // yaklaşık 60 FPS
+      }, 16);
       this.intervalIds.set(roomId, intervalId);
     }
     return this.gameStates.get(roomId);

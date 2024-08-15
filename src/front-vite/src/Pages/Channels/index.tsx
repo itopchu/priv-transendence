@@ -101,53 +101,6 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
-  const WEBSOCKET_URL: string = import.meta.env.ORIGIN_URL_WEBSOCKET || 'http://localhost.codam.nl:3001';
-
-
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [messages, setMessages] = useState<string[]>([]);
-
-  const send = () => {
-    socket?.emit("message", "domates");
-    console.log("domates");
-  };
-
-
-  useEffect(() => {
-
-    const newSocket = io(`${WEBSOCKET_URL}`);
-    setSocket(newSocket);
-    console.log("baglanti kuruluyor");
-
-    newSocket.on("connect", () => {
-      console.log("connected");
-    });
-
-    newSocket.on("disconnect", () => {
-      console.log("disconnected");
-    });
-
-    newSocket.on("error", (error) => {
-      console.error("Socket error:", error);
-    });
-
-    return () => {
-      newSocket.close();
-    };
-  }, []);
-
-  const messageListener = (message: string) => {
-    setMessages((prevMessages) => [...prevMessages, message]);
-    console.log("patates");
-  };
-
-  useEffect(() => {
-    socket?.on("message", messageListener);
-    return () => {
-      socket?.off("message", messageListener);
-    };
-  }, [socket]);
-
   let createChannelButton = () => {
     return (
       <Stack
@@ -155,7 +108,6 @@ const ChannelsPage: React.FC = () => {
         height={'48px'}
         direction={'row'}
         justifyContent={'center'}
-        onClick={send}//Buraya bak
         alignItems={'center'}
         gap={1}
         bgcolor={theme.palette.primary.main}
@@ -179,7 +131,6 @@ const ChannelsPage: React.FC = () => {
   let pageContainer = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
-        <div>{messages ? messages : 'Veri bekleniyor...' }</div>
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}

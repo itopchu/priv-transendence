@@ -61,6 +61,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let user: User;
     try {
       user = await authenticateUser(client, this.configService, this.userService);
+      console.log('Client connected:', user.nameFirst, client.id);//kontrol icin
     } catch (error) {
       client.disconnect(true);
       console.log(error.message);
@@ -75,6 +76,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: UserSocket) {
     const user = client.authUser;
+    console.log('Client disconnected:', user?.nameFirst, client.id);//kontrol icin
     if (user) {
       const rooms = Array.from(client.rooms);
       rooms.forEach(room => {

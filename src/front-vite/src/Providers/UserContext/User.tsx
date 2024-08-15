@@ -33,6 +33,7 @@ const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost
 const SOCKET_URL: string = import.meta.env.ORIGIN_URL_WEBSOCKET || 'http://localhost.codam.nl:3001';
 const userConnection = io(`${SOCKET_URL}/user`, {
   withCredentials: true,
+  autoConnect: false,
 });
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
