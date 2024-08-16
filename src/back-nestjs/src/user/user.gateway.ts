@@ -94,7 +94,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       const oldValue = this.connectedUsers.get(user.id) | 0;
-      if (oldValue > 2) {
+      if (oldValue >= 2) {
         this.connectedUsers.set(user.id, oldValue - 1);
       } else {
         this.connectedUsers.delete(user.id);
