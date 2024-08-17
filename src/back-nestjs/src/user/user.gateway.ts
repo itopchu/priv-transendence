@@ -15,11 +15,9 @@ export interface UserSocket extends Socket {
 interface Player {
   userId: number;
   clientId: string;
+  roomId: string;
   position: boolean;
 }
-
-let speed: number = 1000;
-let intervalId: NodeJS.Timeout;
 
 export async function authenticateUser(
   client: UserSocket,
@@ -94,7 +92,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       const oldValue = this.connectedUsers.get(user.id) | 0;
-      if (oldValue > 2) {
+      if (oldValue >= 2) {
         this.connectedUsers.set(user.id, oldValue - 1);
       } else {
         this.connectedUsers.delete(user.id);
@@ -135,8 +133,16 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
 
-
+  //game
+  //game
+  //game
+  //game
+  //game
+  //game
+  //game
+  //game
   private rooms: Map<string, Player[]> = new Map();
+  private queue: { qUserId: number, client: Socket }[] = [];
 
   afterInit(server: Server) {
     console.log('WebSocket server initialized');
@@ -147,41 +153,48 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }, 16);
   }
 
-  startLoggingInterval() {
-    if (intervalId) {
-      clearInterval(intervalId);
+  @SubscribeMessage('joinQueue')
+  handleJoinQueue(client: Socket, userId: number): void {
+    if (this.queue.some(player => player.qUserId === userId)) {
+      return (console.log('User already in queue', userId));
     }
-    intervalId = setInterval(() => {
-      this.rooms.forEach((players, roomId) => {
-        const room = this.rooms.get(roomId);
-        if (room) {
-          console.log(`Room ${roomId} has ${room.length} players: ${room.map(player => player.userId).join(' - ')}`);
-        } else {
-          console.log(`Room ${roomId} does not exist`);
-        }
-      });
-    }, speed);
+
+    this.queue.push({ qUserId: userId, client });
+    if (this.queue.length >= 2) {
+      const player1 = this.queue.shift();
+      const player2 = this.queue.shift();
+      
+      if (player1 && player2) {
+        const roomId = `room-${Date.now()}`;
+        this.rooms.set(roomId, [
+          { userId: player1.qUserId, clientId: player1.client.id, roomId: roomId, position: true },
+          { userId: player2.qUserId, clientId: player2.client.id, roomId: roomId, position: false }
+        ]);
+        
+        player1.client.join(roomId);
+        player2.client.join(roomId);
+        
+        this.server.to(roomId).emit('startGame', roomId);
+      }
+    }
   }
 
-  @SubscribeMessage('joinRoom')
-  handleJoinRoom(client: Socket, { roomId, userId }: { roomId: string, userId: number }): void {
-    if (!this.rooms.has(roomId)) {
-      this.rooms.set(roomId, []);
+  @SubscribeMessage('getRoomId')
+  handleGetRoomId(client: Socket, userId: number): string | null {
+    for (const [roomId, players] of this.rooms) {
+      const player = players.find(player => player.userId === userId);
+      if (player) {
+        player.clientId = client.id;
+        client.join(roomId);
+        console.log('player:', userId, roomId);
+        return roomId;
+      }
     }
-    const players = this.rooms.get(roomId);
-    if (players && !players.some(player=> player.userId === userId)) {
-      const position = players.length === 0;
-      players.push({ userId, clientId: client.id, position});
-      this.rooms.set(roomId, players);
-    }
-    client.join(roomId);
-    console.log(`Client ${userId} joined room ${roomId}`);
+    return null;
   }
-  
+
   @SubscribeMessage('move')
-  handleMove(client: Socket, payload: { roomId: string, userId: number, y: number }): void {
-    
-    
+  handleMove(client: Socket, payload: { userId: number, y: number, roomId: string }): void {
     const room = this.rooms.get(payload.roomId);
     if (room) {
       const player = room.find(player => player.userId === payload.userId);
@@ -193,14 +206,10 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('speed')
-  changeSpeed(client: Socket, changedspeed: boolean): void {
-    if (changedspeed) {
-      if (speed > 1000)
-        speed -= 1000
-    }
-    else {speed += 1000}
-    console.log('Speed changed', speed);
-    this.startLoggingInterval();
+  @SubscribeMessage('info')
+  changeSpeed(client: Socket): void {
+    this.rooms.forEach((players, roomId) => {
+      console.log(`Room ${roomId} has ${players.length} players: ${players.map(player => player.userId).join(' - ')}`);
+    });
   }
 }

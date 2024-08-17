@@ -8,8 +8,6 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { styled } from "@mui/system";
-
-import io from "socket.io-client";
 import { useUser } from "../../Providers/UserContext/User";
 
 const GameBox = styled(Box)(({ theme }) => ({
@@ -36,7 +34,7 @@ const MainContainer = styled(Container)(({ theme }) => ({
 const Game: React.FC = () => {
   const theme = useTheme();
   const { user, setUser, userSocket } = useUser();
-  const [roomId, setRoomId] = useState("");
+  const [roomId, setRoomId] = useState<string | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [gameState, setGameState] = useState({
     player1: { y: 150 },
@@ -55,6 +53,10 @@ const Game: React.FC = () => {
       setGameState(state);
     });
 
+    userSocket.on("startGame", (roomId) => {
+      setRoomId(roomId);
+    });
+
     userSocket.on("connect", () => {
       setIsConnected(true);
     });
@@ -63,34 +65,43 @@ const Game: React.FC = () => {
       setIsConnected(false);
     });
 
+    userSocket.emit("getRoomId", user.id, (roomId: string | null) => {
+      console.log("roomId", roomId);
+      setRoomId(roomId);
+    });
+    
+    console.log(roomId);
+
     return () => {
       userSocket.off("state");
+      userSocket.off("startGame");
+      userSocket.off("connect");
+      userSocket.off("disconnect");
     };
   }, [userSocket]);
 
+  const handleConnection = () => {
+    if (buttonText === "connect") {
+      userSocket?.connect();
+      setButtonText("disconnect");
+    } else if (buttonText === "disconnect") {
+      userSocket?.disconnect();
+      setButtonText("connect");
+    }
+  };
+
   const Play = () => {
-    const handleMouseMove = (e: { clientY: number }) => {
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!roomId) return;
-      const y = e.clientY - 50; // Adjust based on paddle height
-      userSocket?.emit("move", { roomId, userId: user.id, y });
+      const y: number = e.pageY - 300;
+      userSocket?.emit("move", { userId: user.id, roomId, y });
     };
 
-    const joinRoom = (roomId: string) => {
-      userSocket?.emit("joinRoom", { roomId: roomId, userId: user.id });
-      setIsJoined(true);
+    const joinRoom = () => {
+      userSocket?.emit("joinQueue", user.id);
     };
 
-    const handleConnection = () => {
-      if (buttonText === "connect") {
-        userSocket?.connect();
-        setButtonText("disconnect");
-      } else if (buttonText === "disconnect") {
-        userSocket?.disconnect();
-        setButtonText("connect");
-      }
-    };
-
-    if (!roomId || !isJoined) {
+    if (!roomId) {
       return (
         <div
           style={{
@@ -101,14 +112,8 @@ const Game: React.FC = () => {
           }}
         >
           <button onClick={handleConnection}>{buttonText}</button>
-          <h1>Oda Seç</h1>
-
-          <input
-            type="text"
-            placeholder="Oda ID"
-            onChange={(e) => setRoomId(e.target.value)}
-          />
-          <button onClick={() => joinRoom(roomId)}>Odaya Katil</button>
+          <h1>Enter Queue</h1>
+          <button onClick={joinRoom}>Odaya Katil</button>
         </div>
       );
     }
@@ -118,9 +123,9 @@ const Game: React.FC = () => {
         onMouseMove={handleMouseMove}
         style={{
           position: "absolute",
-          width: "1000px",
-          height: "400px",
-          border: "1px solid black",
+          width: "100%",
+          height: "100%",
+          border: "3px solid black",
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
@@ -131,8 +136,8 @@ const Game: React.FC = () => {
             position: "absolute",
             left: "10px",
             top: `${gameState.player1.y}px`,
-            width: "10px",
-            height: "100px",
+            width: "1%",
+            height: "10%",
             backgroundColor: "blue",
           }}
         ></div>
@@ -171,8 +176,8 @@ const Game: React.FC = () => {
     );
   };
 
-  const handleSpeed = (speed: boolean) => {
-    userSocket?.emit("speed", speed);
+  const getInfo = () => {
+    userSocket?.emit("info");
   };
 
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
@@ -205,16 +210,10 @@ const Game: React.FC = () => {
           }}
         >
           <button
-            onClick={() => handleSpeed(true)}
+            onClick={getInfo}
             style={{ fontSize: "24px" }}
           >
-            ⬆️
-          </button>
-          <button
-            onClick={() => handleSpeed(false)}
-            style={{ fontSize: "24px" }}
-          >
-            ⬇️
+            info
           </button>
         </Box>
         <GameBox>

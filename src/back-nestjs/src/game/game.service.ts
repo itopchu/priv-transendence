@@ -69,11 +69,11 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     x += dx;
     y += dy;
 
-    if (y <= 0 || y >= 390) dy = -dy;
+    if (y <= 0 || y >= 620) dy = -dy;
 
     if (
       (x <= 20 && y >= player1.y && y <= player1.y + 100) ||
-      (x >= 770 && y >= player2.y && y <= player2.y + 100)
+      (x >= 1120 && y >= player2.y && y <= player2.y + 100)
     ) {
       dx = -dx;
     }
@@ -84,7 +84,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
    if (x <= 0) {
       gameState.score.player2 += 1;
       resetBall();
-    } else if (x >= 780) {
+    } else if (x >= 1130) {
       gameState.score.player1 += 1;
       resetBall();
     } else {
