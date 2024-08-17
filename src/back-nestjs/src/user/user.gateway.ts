@@ -193,6 +193,21 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return null;
   }
 
+  /*   @SubscribeMessage('joinRoom')
+  handleJoinRoom(client: Socket, { roomId, userId }: { roomId: string, userId: number }): void {
+    if (!this.rooms.has(roomId)) {
+      this.rooms.set(roomId, []);
+    }
+    const players = this.rooms.get(roomId);
+    if (players && !players.some(player=> player.userId === userId)) {
+      const position = players.length === 0;
+      players.push({ userId, clientId: client.id, position});
+      this.rooms.set(roomId, players);
+    }
+    client.join(roomId);
+    console.log(`Client ${userId} joined room ${roomId}`);
+  } */
+
   @SubscribeMessage('move')
   handleMove(client: Socket, payload: { userId: number, y: number, roomId: string }): void {
     const room = this.rooms.get(payload.roomId);
