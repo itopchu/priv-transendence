@@ -91,11 +91,20 @@ const Game: React.FC = () => {
   };
 
   const Play = () => {
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!roomId) return;
-      const y: number = e.pageY - 300;
-      userSocket?.emit("move", { userId: user.id, roomId, y });
-    };
+
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          e.preventDefault(); // Varsayılan davranışı durdur
+          const y = e.key === "ArrowUp" ? -10 : 10;
+          userSocket?.emit("move", { userId: user.id, roomId, y });
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+     }, [])
 
     const joinRoom = () => {
       userSocket?.emit("joinQueue", user.id);
@@ -118,9 +127,12 @@ const Game: React.FC = () => {
       );
     }
 
+    const ballLeft = (gameState.ball.x / 1920) * 100;
+    const ballTop = (gameState.ball.y / 1080) * 100;
+    const paddleMe = (gameState.player1.y / 1080) * 100;
+    const paddleEnemy = (gameState.player2.y / 1080) * 100;
     return (
       <div
-        onMouseMove={handleMouseMove}
         style={{
           position: "absolute",
           width: "100%",
@@ -134,8 +146,8 @@ const Game: React.FC = () => {
         <div
           style={{
             position: "absolute",
-            left: "10px",
-            top: `${gameState.player1.y}px`,
+            left: "3%",
+            top: `${paddleMe}%`,
             width: "1%",
             height: "10%",
             backgroundColor: "blue",
@@ -144,21 +156,21 @@ const Game: React.FC = () => {
         <div
           style={{
             position: "absolute",
-            right: "10px",
-            top: `${gameState.player2.y}px`,
-            width: "10px",
-            height: "100px",
+            right: "3%",
+            top: `${paddleEnemy}%`,
+            width: "1%",
+            height: "10%",
             backgroundColor: "red",
           }}
         ></div>
         <div
           style={{
             position: "absolute",
-            left: `${gameState.ball.x}px`,
-            top: `${gameState.ball.y}px`,
+            left: `${ballLeft}%`,
+            top: `${ballTop}%`,
             width: "10px",
             height: "10px",
-            backgroundColor: "green",
+            backgroundColor: "orange",
             borderRadius: "50%",
           }}
         ></div>
@@ -178,6 +190,10 @@ const Game: React.FC = () => {
 
   const getInfo = () => {
     userSocket?.emit("info");
+  };
+
+  const stopGame = () => {
+    userSocket?.emit("stopGame", roomId);
   };
 
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));

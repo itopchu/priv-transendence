@@ -12,6 +12,10 @@ export interface UserSocket extends Socket {
   authUser?: User;
 }
 
+export interface GameSocket extends Socket {
+  roomId?: string;
+}
+
 interface Player {
   userId: number;
   clientId: string;
@@ -142,7 +146,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //game
   //game
   private rooms: Map<string, Player[]> = new Map();
-  private queue: { qUserId: number, client: Socket }[] = [];
+  private queue: { qUserId: number, client: GameSocket }[] = [];
 
   afterInit(server: Server) {
     console.log('WebSocket server initialized');
@@ -150,11 +154,11 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.rooms.forEach((players, roomId) => {
         this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
       });
-    }, 16);
+    }, 16);                                                                 // 60 FPS
   }
 
   @SubscribeMessage('joinQueue')
-  handleJoinQueue(client: Socket, userId: number): void {
+  handleJoinQueue(client: GameSocket, userId: number): void {
     if (this.queue.some(player => player.qUserId === userId)) {
       return (console.log('User already in queue', userId));
     }
@@ -173,14 +177,17 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
         
         player1.client.join(roomId);
         player2.client.join(roomId);
-        
+
+        player1.client.roomId = roomId;
+        player2.client.roomId = roomId;
+
         this.server.to(roomId).emit('startGame', roomId);
       }
     }
   }
 
   @SubscribeMessage('getRoomId')
-  handleGetRoomId(client: Socket, userId: number): string | null {
+  handleGetRoomId(client: GameSocket, userId: number): string | null {
     for (const [roomId, players] of this.rooms) {
       const player = players.find(player => player.userId === userId);
       if (player) {
@@ -193,23 +200,8 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return null;
   }
 
-  /*   @SubscribeMessage('joinRoom')
-  handleJoinRoom(client: Socket, { roomId, userId }: { roomId: string, userId: number }): void {
-    if (!this.rooms.has(roomId)) {
-      this.rooms.set(roomId, []);
-    }
-    const players = this.rooms.get(roomId);
-    if (players && !players.some(player=> player.userId === userId)) {
-      const position = players.length === 0;
-      players.push({ userId, clientId: client.id, position});
-      this.rooms.set(roomId, players);
-    }
-    client.join(roomId);
-    console.log(`Client ${userId} joined room ${roomId}`);
-  } */
-
   @SubscribeMessage('move')
-  handleMove(client: Socket, payload: { userId: number, y: number, roomId: string }): void {
+  handleMove(client: GameSocket, payload: { userId: number, y: number, roomId: string }): void {
     const room = this.rooms.get(payload.roomId);
     if (room) {
       const player = room.find(player => player.userId === payload.userId);
@@ -222,7 +214,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('info')
-  changeSpeed(client: Socket): void {
+  changeSpeed(client: GameSocket): void {
     this.rooms.forEach((players, roomId) => {
       console.log(`Room ${roomId} has ${players.length} players: ${players.map(player => player.userId).join(' - ')}`);
     });
