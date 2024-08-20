@@ -37,13 +37,13 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
       this.gameStates.set(roomId, {
         player1: { y: 150 },
         player2: { y: 150 },
-        ball: { x: 390, y: 190, dx: 2, dy: 2 },
+        ball: { x: 390, y: 190, dx: 2, dy: 1.2 },
         score: { player1: 0, player2: 0 },
       });
 
       const intervalId = setInterval(() => {
         this.updateBallPosition(roomId);
-      }, 16);
+      }, 5);
       this.intervalIds.set(roomId, intervalId);
     }
     return this.gameStates.get(roomId);
@@ -69,17 +69,17 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     x += dx;
     y += dy;
 
-    if (y <= 0 || y >= 1070) dy = -dy;
+    if (y <= 0 || y >= 1060) dy = -dy;
 
     if (
-      (x <= 77 && y >= player1.y && y <= player1.y + 108) ||
-      (x >= 1815 && y >= player2.y && y <= player2.y + 108)
+      (x <= 77 && y >= player1.y && y <= player1.y + 118) ||
+      (x >= 1824 && y >= player2.y && y <= player2.y + 118)
     ) {
       dx = -dx;
     }
 
     const resetBall = () => {
-      gameState.ball = { x: 390, y: 190, dx: 2, dy: 2 };
+      gameState.ball = { x: 390, y: 190, dx: 2, dy: 1.2 };
     }
    if (x <= 0) {
       gameState.score.player2 += 1;

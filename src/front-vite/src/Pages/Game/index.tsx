@@ -168,8 +168,8 @@ const Game: React.FC = () => {
             position: "absolute",
             left: `${ballLeft}%`,
             top: `${ballTop}%`,
-            width: "10px",
-            height: "10px",
+            width: "1%",
+            height: "1.8%",
             backgroundColor: "orange",
             borderRadius: "50%",
           }}
