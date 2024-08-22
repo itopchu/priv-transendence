@@ -1,31 +1,32 @@
-.App {
-	text-align: center;
-  }
-  
-  .game {
+.container {
 	position: relative;
 	width: 800px;
-	height: 400px;
+	height: 500px;
+	background-color: black;
 	margin: 0 auto;
-	background: #000;
+	overflow: hidden;
   }
   
-  .player {
+  .score {
 	position: absolute;
-	width: 20px;
+	top: 10px;
+	left: 50%;
+	transform: translateX(-50%);
+	color: white;
+	font-size: 24px;
+  }
+  
+  .paddle {
+	position: absolute;
+	width: 10px;
 	height: 100px;
-	background: #fff;
+	background-color: white;
   }
   
   .ball {
 	position: absolute;
 	width: 20px;
 	height: 20px;
-	background: #fff;
-  }
-  
-  .score {
-	margin: 20px;
-	font-size: 24px;
-	color: #fff;
+	border-radius: 50%;
+	background-color: white;
   }

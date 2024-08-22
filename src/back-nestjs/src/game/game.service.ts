@@ -79,7 +79,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     }
 
     const resetBall = () => {
-      gameState.ball = { x: 390, y: 190, dx: 2, dy: 1.2 };
+      gameState.ball = { x: 960, y: 540, dx: 2, dy: 1.2 };
     }
    if (x <= 0) {
       gameState.score.player2 += 1;

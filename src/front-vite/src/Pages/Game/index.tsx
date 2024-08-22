@@ -1,4 +1,4 @@
-import React, { ReactElement, useEffect, useState } from "react";
+/* import React, { ReactElement, useEffect, useState } from "react";
 import {
   Container,
   Stack,
@@ -8,9 +8,9 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { styled } from "@mui/system";
-import { useUser } from "../../Providers/UserContext/User";
+import { useUser } from "../../Providers/UserContext/User"; */
 
-const GameBox = styled(Box)(({ theme }) => ({
+/* const GameBox = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   width: "100%",
   paddingTop: "56.25%",
@@ -376,6 +376,161 @@ const Game: React.FC = () => {
         </HistoryBox>
       </Stack>
     </MainContainer>
+  );
+};
+
+export default Game;
+ */
+
+import React, { useState, useEffect, useRef } from "react";
+import "./Game.css";
+
+const Game: React.FC = () => {
+  const [gameState, setGameState] = useState({
+    player1: { y: 150 },
+    player2: { y: 150 },
+    ball: { x: 390, y: 190, dx: 2, dy: 2 },
+    score: { player1: 0, player2: 0 },
+    lastScored: null as "player1" | "player2" | null,
+  });
+
+  const requestRef = useRef<number>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const player1Direction = useRef<number>(0);
+  const player2Direction = useRef<number>(0);
+
+  const getRandomAngle = () => {
+    const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // Random angle between -22.5 and 22.5 degrees
+    return angle;
+  };
+
+  const resetBall = (lastScored: "player1" | "player2" | null) => {
+    const angle = getRandomAngle();
+    const speed = 2;
+    const dx = lastScored === "player1" ? -speed * Math.cos(angle) : speed * Math.cos(angle);
+    const dy = speed * Math.sin(angle);
+    return {
+      x: containerRef.current!.clientWidth / 2,
+      y: containerRef.current!.clientHeight / 2,
+      dx,
+      dy,
+    };
+  };
+
+  const updateBallPosition = () => {
+    setGameState((prevState) => {
+      let { x, y, dx, dy } = prevState.ball;
+      const { player1, player2 } = prevState;
+
+      x += dx;
+      y += dy;
+
+      if (y <= 0 || y >= containerRef.current!.clientHeight - 20) dy = -dy;
+
+      const paddleHit = (paddleY: number) => {
+        const paddleCenter = paddleY + 50;
+        const ballCenter = y + 10;
+        const offset = ballCenter - paddleCenter;
+        const normalizedOffset = offset / 50;
+        return normalizedOffset * 5; // Adjust the multiplier for desired bounce angle
+      };
+
+      if (
+        (x <= 30 && x + 20 >= 10 && y + 20 >= player1.y && y <= player1.y + 100) ||
+        (x >= containerRef.current!.clientWidth - 50 && x <= containerRef.current!.clientWidth - 30 && y + 20 >= player2.y && y <= player2.y + 100)
+      ) {
+        dx = -dx;
+        if (x <= 30) {
+          dy = paddleHit(player1.y);
+        } else {
+          dy = paddleHit(player2.y);
+        }
+      }
+
+      if (x <= 0) {
+        return {
+          ...prevState,
+          score: { ...prevState.score, player2: prevState.score.player2 + 1 },
+          ball: resetBall("player2"),
+          lastScored: "player2",
+        };
+      } else if (x >= containerRef.current!.clientWidth - 20) {
+        return {
+          ...prevState,
+          score: { ...prevState.score, player1: prevState.score.player1 + 1 },
+          ball: resetBall("player1"),
+          lastScored: "player1",
+        };
+      } else {
+        return {
+          ...prevState,
+          ball: { x, y, dx, dy },
+        };
+      }
+    });
+  };
+
+  const updatePlayerPosition = () => {
+    setGameState((prevState) => {
+      const newPlayer1Y = prevState.player1.y + player1Direction.current * 5;
+      const newPlayer2Y = prevState.player2.y + player2Direction.current * 5;
+      return {
+        ...prevState,
+        player1: { y: Math.max(0, Math.min(containerRef.current!.clientHeight - 100, newPlayer1Y)) },
+        player2: { y: Math.max(0, Math.min(containerRef.current!.clientHeight - 100, newPlayer2Y)) },
+      };
+    });
+  };
+
+  const animate = () => {
+    updateBallPosition();
+    updatePlayerPosition();
+    requestRef.current = requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    requestRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(requestRef.current!);
+  }, []);
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "o") {
+      player1Direction.current = -1;
+    } else if (e.key === "l") {
+      player1Direction.current = 1;
+    } else if (e.key === "w" || e.key === "W") {
+      player2Direction.current = -1;
+    } else if (e.key === "s" || e.key === "S") {
+      player2Direction.current = 1;
+    }
+  };
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === "o" || e.key === "l") {
+      player1Direction.current = 0;
+    } else if (e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
+      player2Direction.current = 0;
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  return (
+    <div className="container" ref={containerRef}>
+      <div className="score">
+        {gameState.score.player1} - {gameState.score.player2}
+      </div>
+      <div className="paddle" style={{ top: `${gameState.player1.y}px`, left: "10px" }} />
+      <div className="paddle" style={{ top: `${gameState.player2.y}px`, right: "10px" }} />
+      <div className="ball" style={{ top: `${gameState.ball.y}px`, left: `${gameState.ball.x}px` }} />
+    </div>
   );
 };
 
