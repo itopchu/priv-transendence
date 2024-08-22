@@ -394,13 +394,11 @@ const Game: React.FC = () => {
     lastScored: null as "player1" | "player2" | null,
   });
 
-  const [fps, setFps] = useState<number>(0);
   const requestRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const player1Direction = useRef<number>(0);
   const player2Direction = useRef<number>(0);
   const lastFrameTime = useRef<number>(performance.now());
-  const frameCount = useRef<number>(0);
 
   const getRandomAngle = () => {
     const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // Random angle between -22.5 and 22.5 degrees
@@ -420,19 +418,26 @@ const Game: React.FC = () => {
     };
   };
 
-  const updateBallPosition = () => {
+  const updateBallPosition = (deltaTime: number) => {
     setGameState((prevState) => {
       let { x, y, dx, dy } = prevState.ball;
       const { player1, player2 } = prevState;
 
-      x += dx;
-      y += dy;
+      x += dx * deltaTime * 60; // 60 ile çarparak hızlandırma
+      y += dy * deltaTime * 60; // 60 ile çarparak hızlandırma
 
-      if (y <= 0 || y >= containerRef.current!.clientHeight - 20) dy = -dy;
+      if (y <= 0) {
+        dy = Math.abs(dy);
+        y = 0;
+      }
+      else if(y >= containerRef.current!.clientHeight - 20) {
+        dy = Math.abs(dy) * -1;
+        y = containerRef.current!.clientHeight - 20;
+      }  
 
       const paddleHit = (paddleY: number) => {
         const paddleCenter = paddleY + 50;
-        const ballCenter = y + 10;
+        const ballCenter = y;
         const offset = ballCenter - paddleCenter;
         const normalizedOffset = offset / 50;
         return normalizedOffset * 5; // Adjust the multiplier for desired bounce angle
@@ -473,10 +478,10 @@ const Game: React.FC = () => {
     });
   };
 
-  const updatePlayerPosition = () => {
+  const updatePlayerPosition = (deltaTime: number) => {
     setGameState((prevState) => {
-      const newPlayer1Y = prevState.player1.y + player1Direction.current * 5;
-      const newPlayer2Y = prevState.player2.y + player2Direction.current * 5;
+      const newPlayer1Y = prevState.player1.y + player1Direction.current * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
+      const newPlayer2Y = prevState.player2.y + player2Direction.current * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
       return {
         ...prevState,
         player1: { y: Math.max(0, Math.min(containerRef.current!.clientHeight - 100, newPlayer1Y)) },
@@ -486,18 +491,12 @@ const Game: React.FC = () => {
   };
 
   const animate = (time: number) => {
-    updateBallPosition();
-    updatePlayerPosition();
-    requestRef.current = requestAnimationFrame(animate);
+    const deltaTime = (time - lastFrameTime.current) / 1000; // Geçen süreyi saniye cinsinden hesapla
+    lastFrameTime.current = time;
 
-    // FPS hesaplama
-    frameCount.current++;
-    const delta = time - lastFrameTime.current;
-    if (delta >= 1000) {
-      setFps((frameCount.current / delta) * 1000);
-      frameCount.current = 0;
-      lastFrameTime.current = time;
-    }
+    updateBallPosition(deltaTime);
+    updatePlayerPosition(deltaTime);
+    requestRef.current = requestAnimationFrame(animate);
   };
 
   useEffect(() => {
@@ -506,9 +505,12 @@ const Game: React.FC = () => {
   }, []);
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "o") {
+    if (e.key ===  "ArrowUp" || e.key === "ArrowDown" || e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
+      e.preventDefault();
+    }
+    if (e.key === "ArrowUp") {
       player1Direction.current = -1;
-    } else if (e.key === "l") {
+    } else if (e.key === "ArrowDown") {
       player1Direction.current = 1;
     } else if (e.key === "w" || e.key === "W") {
       player2Direction.current = -1;
@@ -518,7 +520,7 @@ const Game: React.FC = () => {
   };
 
   const handleKeyUp = (e: KeyboardEvent) => {
-    if (e.key === "o" || e.key === "l") {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       player1Direction.current = 0;
     } else if (e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
       player2Direction.current = 0;
@@ -539,7 +541,6 @@ const Game: React.FC = () => {
       <div className="score">
         {gameState.score.player1} - {gameState.score.player2}
       </div>
-      <div className="fps">FPS: {fps.toFixed(2)}</div>
       <div className="paddle" style={{ top: `${gameState.player1.y}px`, left: "10px" }} />
       <div className="paddle" style={{ top: `${gameState.player2.y}px`, right: "10px" }} />
       <div className="ball" style={{ top: `${gameState.ball.y}px`, left: `${gameState.ball.x}px` }} />
