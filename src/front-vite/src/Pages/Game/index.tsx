@@ -394,10 +394,13 @@ const Game: React.FC = () => {
     lastScored: null as "player1" | "player2" | null,
   });
 
+  const [fps, setFps] = useState<number>(0);
   const requestRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const player1Direction = useRef<number>(0);
   const player2Direction = useRef<number>(0);
+  const lastFrameTime = useRef<number>(performance.now());
+  const frameCount = useRef<number>(0);
 
   const getRandomAngle = () => {
     const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // Random angle between -22.5 and 22.5 degrees
@@ -482,10 +485,19 @@ const Game: React.FC = () => {
     });
   };
 
-  const animate = () => {
+  const animate = (time: number) => {
     updateBallPosition();
     updatePlayerPosition();
     requestRef.current = requestAnimationFrame(animate);
+
+    // FPS hesaplama
+    frameCount.current++;
+    const delta = time - lastFrameTime.current;
+    if (delta >= 1000) {
+      setFps((frameCount.current / delta) * 1000);
+      frameCount.current = 0;
+      lastFrameTime.current = time;
+    }
   };
 
   useEffect(() => {
@@ -527,6 +539,7 @@ const Game: React.FC = () => {
       <div className="score">
         {gameState.score.player1} - {gameState.score.player2}
       </div>
+      <div className="fps">FPS: {fps.toFixed(2)}</div>
       <div className="paddle" style={{ top: `${gameState.player1.y}px`, left: "10px" }} />
       <div className="paddle" style={{ top: `${gameState.player2.y}px`, right: "10px" }} />
       <div className="ball" style={{ top: `${gameState.ball.y}px`, left: `${gameState.ball.x}px` }} />
