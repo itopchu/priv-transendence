@@ -4,6 +4,7 @@ import { Channel, ChannelMember, ChannelRoles, ChannelType, Message } from '../e
 import { UserService } from '../user/user.service';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
+import { CreateChannelDto } from '../dto/createChannel.dto';
 
 @Injectable()
 export class ChannelService {
@@ -17,17 +18,13 @@ export class ChannelService {
 		private readonly userService: UserService,
 	) {}
 
-	async createChannel(creator: User, newName: string, newPassword: string): Promise<Channel> {
-		const newChannel = this.channelRespitory.create({
-			name: newName,
-			password: newPassword,
-			members: [],
-			log: [],
-		});
+	async createChannel(creator: User, createChannelDto: CreateChannelDto): Promise<Channel> {
+		const newChannel = this.channelRespitory.create(createChannelDto);
+
 		try {
 			await this.channelRespitory.save(newChannel);
 		} catch(error) {
-			throw new Error(`Failed to save channel, ${error.message}`);
+			throw new Error(`Failed to save channel: ${error.message}`);
 		}
 
 		const newMember = this.memberRespitory.create({
@@ -39,7 +36,7 @@ export class ChannelService {
 			await this.memberRespitory.save(newMember);
 		} catch(error) {
 			await this.channelRespitory.delete(newChannel.id);
-			throw new Error(`Failed to save owner, ${error.message}`);
+			throw new Error(`Failed to save owner: ${error.message}`);
 		}
 		return (newChannel);
 	}
@@ -52,17 +49,19 @@ export class ChannelService {
 		return (channel);
 	}
 
-	async getAllChannels(user: User): Promise<Channel[]> {
-		let channels: Channel[];
-		user.channels.forEach((channelMembership: ChannelMember) => {
-			channels.push(channelMembership.channel);
-		});
-		return (channels);
+	async getJoinedChannels(user: User): Promise<ChannelMember[]> {
+		const userMemberships = await this.memberRespitory.createQueryBuilder('member')
+		.innerJoin('member.user', 'user')
+		.leftJoinAndSelect('member.channel', 'channel')
+		.where('user.id = :id', { id: user.id })
+		.getMany();
+
+		return (userMemberships);
 	}
 
 	async getPublicChannels(): Promise<Channel[]> {
 		return (await this.channelRespitory.find({
-			where: { type: ChannelType.public },
+			where: { type: 'public' },
 		}));
 	}
 

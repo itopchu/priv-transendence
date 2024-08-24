@@ -1,19 +1,20 @@
-import { Controller, Get, Post, Patch, Res, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Res, Req, UseGuards, Body, UsePipes, ValidationPipe, InternalServerErrorException } from '@nestjs/common';
 import { Request, Response } from 'express'
-import { Channel } from 'src/entities/channel.entity';
+import { Channel, ChannelMember } from 'src/entities/channel.entity';
 import { ChannelService } from './channel.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { CreateChannelDto } from '../dto/createChannel.dto';
 
 @Controller('channel')
 export class ChannelController {
 	constructor(private readonly channelService: ChannelService) {}
 
-	@Get('user')
+	@Get('joined')
 	@UseGuards(AuthGuard)
-	async getUserChannels(@Req() req: Request, @Res() res: Response) {
+	async getUserChannels(@Req() req: Request) {
 		const user = req.authUser;
-		const channels = this.channelService.getAllChannels(user);
-		return (res.json(channels));
+		let channels: ChannelMember[] = await this.channelService.getJoinedChannels(user);
+		return (channels);
 	}
 
 	@Get('public')
@@ -24,20 +25,20 @@ export class ChannelController {
 
 	@Post('create')
 	@UseGuards(AuthGuard)
-	async createChannel(@Req() req: Request, @Res() res: Response) {
+	@UsePipes(new ValidationPipe({ whitelist: true }))
+	async createChannel(
+		@Req() req: Request,
+		@Body() createChannelDto: CreateChannelDto
+	) {
 		const user = req.authUser;
-		const { name, password } = req.body;
-		let newChannel: Channel;
 
 		try {
-			newChannel = await this.channelService.createChannel(user, name, password);
+			const newChannel = await this.channelService.createChannel(user, createChannelDto);
+			return (newChannel);
 		} catch(error) {
-			return (res.status(500).json({
-				message: 'Channel creation failed', 
-				errorMessage: error.message
-			}));
+			console.error('Error creating channel:', error);
+			throw new InternalServerErrorException('Channel creation failed');
 		}
-		return (res.json(newChannel));
 	}
 	
 	@Patch()

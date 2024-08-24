@@ -3,25 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Divider, Typography, Button, IconButton, Container, useTheme, Stack } from '@mui/material';
 import { styled } from '@mui/system';
 import { io, Socket } from 'socket.io-client';
+import ChannelCreateCard from './ChannelCreateCard';
 import {
   Add as AddIcon,
   Group as GroupIcon,
   Cancel as CancelIcon,
   Logout as LogoutIcon,
   Login as LoginIcon,
+	MoreVertSharp as MiscIcon,
 } from '@mui/icons-material';
+import { ChannelMember, ChannelContextProvider, useChannel } from './channels';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
   newColor: string;
+  name: string;
   clickEvent: () => void;
 }
+
+const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
 const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const [showCreateCard, setShowCreateCard] = useState(false);
+  const { memberships, publicChannels } = useChannel();
 
-  const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, clickEvent }) => {
+  const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, name, clickEvent }) => {
     return (
       <Stack
         direction={'row'}
@@ -52,7 +60,7 @@ const ChannelsPage: React.FC = () => {
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap'
         }}>
-          Welcome to the jungle
+          {name}
         </Typography>
         <IconButton
         onClick={(event) => { event.stopPropagation(); clickEvent }}
@@ -70,24 +78,42 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
-  let getAvailableChannels = () => {
+  let generateAvailableChannels = () => {
+		if (!publicChannels.length)
+				return;
+
     return (
       <Stack gap={1}>
-        {Array.from({ length: 5 }, (_, index) => (
-          <ChannelLine key={index} component={<LoginIcon />} newColor={"green"} clickEvent={() => console.log(`Channel ${index + 1} clicked`)} />
+        {Array.from({ length: publicChannels.length }, (_, index) => (
+          <ChannelLine
+			key={index}
+			name={publicChannels[index].name}
+			component={<LoginIcon />}
+			newColor={"green"}
+			clickEvent={() => console.log(`Channel ${index + 1} clicked`)}
+		  />
         ))}
       </Stack>
     );
   };
 
-  let getJoinedChannels = () => {
-    return (
-      <Stack gap={1}>
-        {Array.from({ length: 5 }, (_, index) => (
-          <ChannelLine key={index} component={<LogoutIcon />} newColor={"red"} clickEvent={() => console.log(`Channel ${index + 1} clicked`)} />
-        ))}
-      </Stack>
-    );
+  let generateJoinedChannels = () => {
+		if (!memberships.length)
+				return;
+
+      return (
+        <Stack gap={1}>
+          {Array.from({ length: memberships.length }, (_, index) => (
+			<ChannelLine
+			  key={index}
+			  name={memberships[index].channel.name}
+			  component={<MiscIcon />}
+			  newColor={"white"}
+			  clickEvent={() => console.log(`Channel ${index + 1} clicked`)}
+			/>
+		  ))}
+		</Stack>
+	);
   };
 
   let channelCreationSection = () => {
@@ -119,6 +145,7 @@ const ChannelsPage: React.FC = () => {
             bgcolor: theme.palette.primary.dark,
           },
         }}
+				onClick={() => {setShowCreateCard(true)}}
       >
         <AddIcon />
         <Typography>
@@ -131,6 +158,7 @@ const ChannelsPage: React.FC = () => {
   let pageContainer = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
+			  {showCreateCard && (<ChannelCreateCard setIsVisible={setShowCreateCard} />)}
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}
@@ -152,8 +180,8 @@ const ChannelsPage: React.FC = () => {
               divider={<Divider orientation='horizontal' flexItem />}
               gap={2}
             >
-              {getJoinedChannels()}
-              {getAvailableChannels()}
+              {generateJoinedChannels()}
+              {generateAvailableChannels()}
             </Stack>
           </Stack>
           <Stack
@@ -167,7 +195,7 @@ const ChannelsPage: React.FC = () => {
   };
 
   return (
-    pageContainer()
+      pageContainer()
   );
 };
 
