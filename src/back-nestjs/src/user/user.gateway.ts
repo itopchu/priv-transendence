@@ -202,6 +202,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('move')
   handleMove(client: GameSocket, payload: { userId: number, y: number, roomId: string }): void {
+    console.log('move', payload);
     const room = this.rooms.get(payload.roomId);
     if (room) {
       const player = room.find(player => player.userId === payload.userId);

@@ -1,4 +1,4 @@
-/* import React, { ReactElement, useEffect, useState } from "react";
+import React, { ReactElement, useEffect, useState, useRef } from "react";
 import {
   Container,
   Stack,
@@ -6,11 +6,15 @@ import {
   Typography,
   useTheme,
   useMediaQuery,
+  formGroupClasses,
 } from "@mui/material";
 import { styled } from "@mui/system";
-import { useUser } from "../../Providers/UserContext/User"; */
+import { useUser } from "../../Providers/UserContext/User";
+import "./Game.css";
+import { emit } from "process";
+import { join } from "path";
 
-/* const GameBox = styled(Box)(({ theme }) => ({
+const GameBox = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   width: "100%",
   paddingTop: "56.25%",
@@ -36,12 +40,6 @@ const Game: React.FC = () => {
   const { user, setUser, userSocket } = useUser();
   const [roomId, setRoomId] = useState<string | null>(null);
   const [isJoined, setIsJoined] = useState(false);
-  const [gameState, setGameState] = useState({
-    player1: { y: 150 },
-    player2: { y: 150 },
-    ball: { x: 390, y: 190 },
-    score: { player1: 0, player2: 0 },
-  });
   const [buttonText, setButtonText] = useState("disconnect");
   const [isConnected, setIsConnected] = useState(false);
 
@@ -50,7 +48,7 @@ const Game: React.FC = () => {
       return;
     }
     userSocket.on("state", (state) => {
-      setGameState(state);
+      // setGameState(state);
     });
 
     userSocket.on("startGame", (roomId) => {
@@ -89,101 +87,201 @@ const Game: React.FC = () => {
       setButtonText("connect");
     }
   };
-
+  
   const Play = () => {
-
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-          e.preventDefault(); // Varsayılan davranışı durdur
-          const y = e.key === "ArrowUp" ? -10 : 10;
-          userSocket?.emit("move", { userId: user.id, roomId, y });
-        }
-      };
-      window.addEventListener("keydown", handleKeyDown);
-      return () => {
-        window.removeEventListener("keydown", handleKeyDown);
-      };
-     }, [])
-
-    const joinRoom = () => {
+    const joinQueue = () => {
       userSocket?.emit("joinQueue", user.id);
     };
 
     if (!roomId) {
-      return (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <button onClick={handleConnection}>{buttonText}</button>
-          <h1>Enter Queue</h1>
-          <button onClick={joinRoom}>Odaya Katil</button>
-        </div>
-      );
+      return <div>
+        <button onClick={joinQueue}>Join Queue</button>
+      </div>;
     }
 
-    const ballLeft = (gameState.ball.x / 1920) * 100;
-    const ballTop = (gameState.ball.y / 1080) * 100;
-    const paddleMe = (gameState.player1.y / 1080) * 100;
-    const paddleEnemy = (gameState.player2.y / 1080) * 100;
+    const [gameState, setGameState] = useState({
+      player1: { y: 150 },
+      player2: { y: 150 },
+      ball: { x: 390, y: 190, dx: 2, dy: 2 },
+      score: { player1: 0, player2: 0 },
+      lastScored: null as "player1" | "player2" | null,
+    });
+
+    const width = 800;
+    const height = 500;
+    const requestRef = useRef<number>();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const player1Direction = useRef<number>(0);
+    const player2Direction = useRef<number>(0);
+    const lastFrameTime = useRef<number>(performance.now());
+  
+    const getRandomAngle = () => {
+      const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // Random angle between -22.5 and 22.5 degrees
+      return angle;
+    };
+  
+    const resetBall = (lastScored: "player1" | "player2" | null) => {
+      const angle = getRandomAngle();
+      const speed = 2;
+      const dx = lastScored === "player1" ? -speed * Math.cos(angle) : speed * Math.cos(angle);
+      const dy = speed * Math.sin(angle);
+      return {
+        x: width / 2,
+        y: height / 2,
+        dx,
+        dy,
+      };
+    };
+  
+    const updateBallPosition = (deltaTime: number) => {
+      setGameState((prevState) => {
+        let { x, y, dx, dy } = prevState.ball;
+        const { player1, player2 } = prevState;
+  
+        x += dx * deltaTime * 60; // 60 ile çarparak hızlandırma
+        y += dy * deltaTime * 60; // 60 ile çarparak hızlandırma
+  
+        if (y <= 0) {
+          dy = Math.abs(dy);
+          y = 0;
+        }
+        else if(y >= height - 20) {
+          dy = Math.abs(dy) * -1;
+          y = height - 20;
+        }  
+  
+        const paddleHit = (paddleY: number) => {
+          const paddleCenter = paddleY + 50;
+          const ballCenter = y + 10;
+          const offset = ballCenter - paddleCenter;
+          const normalizedOffset = offset / 50;
+          return normalizedOffset * 5; // Adjust the multiplier for desired bounce angle
+        };
+  
+        if (
+          (x <= 20 && x + 20 >= 10 && y + 20 >= player1.y && y <= player1.y + 100) ||
+          (x >= width - 40 && x <= width - 20 && y + 20 >= player2.y && y <= player2.y + 100)
+        ) {
+          dx = -dx;
+          if (x <= 20) {
+            dy = paddleHit(player1.y);
+          } else {
+            dy = paddleHit(player2.y);
+          }
+        }
+  
+        if (x <= 0) {
+          return {
+            ...prevState,
+            score: { ...prevState.score, player2: prevState.score.player2 + 1 },
+            ball: resetBall("player2"),
+            lastScored: "player2",
+          };
+        } else if (x >= width - 20) {
+          return {
+            ...prevState,
+            score: { ...prevState.score, player1: prevState.score.player1 + 1 },
+            ball: resetBall("player1"),
+            lastScored: "player1",
+          };
+        } else {
+          return {
+            ...prevState,
+            ball: { x, y, dx, dy },
+          };
+        }
+      });
+    };
+  
+    const updatePlayerPosition = (deltaTime: number) => {
+      setGameState((prevState) => {
+        const newPlayer1Y = prevState.player1.y + player1Direction.current * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
+        const newPlayer2Y = prevState.player2.y + player2Direction.current * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
+        return {
+          ...prevState,
+          player1: { y: Math.max(0, Math.min(height - 100, newPlayer1Y)) },
+          player2: { y: Math.max(0, Math.min(height - 100, newPlayer2Y)) },
+        };
+      });
+    };
+  
+    const animate = (time: number) => {
+      const deltaTime = (time - lastFrameTime.current) / 1000; // Geçen süreyi saniye cinsinden hesapla
+      lastFrameTime.current = time;
+  
+      updateBallPosition(deltaTime);
+      updatePlayerPosition(deltaTime);
+      requestRef.current = requestAnimationFrame(animate);
+    };
+  
+    useEffect(() => {
+      requestRef.current = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(requestRef.current!);
+    }, []);
+
+    const emitMove = (direction: boolean, keyPress: boolean) => {
+      userSocket?.emit("move", { userId: user.id, y: direction, roomId });
+    }
+  
+    const [isKeyPressed, setIsKeyPressed] = useState(false);
+  
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key ===  "ArrowUp" || e.key === "ArrowDown" || e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
+        e.preventDefault();
+      } else {return};
+
+      if (e.key === "ArrowUp") {
+        if (isKeyPressed === false) {
+          emitMove(true, true);
+          console.log("up");
+        }
+        player2Direction.current = -1;
+      } else if (e.key === "ArrowDown") {
+        if (isKeyPressed === false) {
+          emitMove(false, true);
+          console.log("down");
+        }
+        player2Direction.current = 1;
+      } else if (e.key === "w" || e.key === "W") {
+        player1Direction.current = -1;
+      } else if (e.key === "s" || e.key === "S") {
+        player1Direction.current = 1;
+      }
+      if (isKeyPressed === false)
+        setIsKeyPressed(true);
+      console.log("key down");
+    };
+  
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        player2Direction.current = 0;
+        // emitMove(true, false);
+      }
+      if (e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
+        player1Direction.current = 0;
+        // emitMove(false, false);
+      }
+      console.log("key up");
+      setIsKeyPressed(false);
+    };
+  
+    useEffect(() => {
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+      };
+    }, []);
+  
     return (
-      <div
-        style={{
-          position: "absolute",
-          width: "100%",
-          height: "100%",
-          border: "3px solid black",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: "3%",
-            top: `${paddleMe}%`,
-            width: "1%",
-            height: "10%",
-            backgroundColor: "blue",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            right: "3%",
-            top: `${paddleEnemy}%`,
-            width: "1%",
-            height: "10%",
-            backgroundColor: "red",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            left: `${ballLeft}%`,
-            top: `${ballTop}%`,
-            width: "1%",
-            height: "1.8%",
-            backgroundColor: "orange",
-            borderRadius: "50%",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            top: "10px",
-            left: "50%",
-            transform: "translateX(-50%)",
-          }}
-        >
-          Score: {gameState.score.player1} - {gameState.score.player2}
+      <div className="container" ref={containerRef}>
+        <div className="score">
+          {gameState.score.player1} - {gameState.score.player2}
         </div>
+        <div className="paddle" style={{ top: `${gameState.player1.y}px`, left: "10px" }} />
+        <div className="paddle" style={{ top: `${gameState.player2.y}px`, right: "10px" }} />
+        <div className="ball" style={{ top: `${gameState.ball.y}px`, left: `${gameState.ball.x}px` }} />
       </div>
     );
   };
@@ -194,7 +292,7 @@ const Game: React.FC = () => {
 
   const stopGame = () => {
     userSocket?.emit("stopGame", roomId);
-  };
+  }; 
 
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
   return (
@@ -376,175 +474,6 @@ const Game: React.FC = () => {
         </HistoryBox>
       </Stack>
     </MainContainer>
-  );
-};
-
-export default Game;
- */
-
-import React, { useState, useEffect, useRef } from "react";
-import "./Game.css";
-
-const Game: React.FC = () => {
-  const [gameState, setGameState] = useState({
-    player1: { y: 150 },
-    player2: { y: 150 },
-    ball: { x: 390, y: 190, dx: 2, dy: 2 },
-    score: { player1: 0, player2: 0 },
-    lastScored: null as "player1" | "player2" | null,
-  });
-
-  const requestRef = useRef<number>();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const player1Direction = useRef<number>(0);
-  const player2Direction = useRef<number>(0);
-  const lastFrameTime = useRef<number>(performance.now());
-
-  const getRandomAngle = () => {
-    const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // Random angle between -22.5 and 22.5 degrees
-    return angle;
-  };
-
-  const resetBall = (lastScored: "player1" | "player2" | null) => {
-    const angle = getRandomAngle();
-    const speed = 2;
-    const dx = lastScored === "player1" ? -speed * Math.cos(angle) : speed * Math.cos(angle);
-    const dy = speed * Math.sin(angle);
-    return {
-      x: containerRef.current!.clientWidth / 2,
-      y: containerRef.current!.clientHeight / 2,
-      dx,
-      dy,
-    };
-  };
-
-  const updateBallPosition = (deltaTime: number) => {
-    setGameState((prevState) => {
-      let { x, y, dx, dy } = prevState.ball;
-      const { player1, player2 } = prevState;
-
-      x += dx * deltaTime * 60; // 60 ile çarparak hızlandırma
-      y += dy * deltaTime * 60; // 60 ile çarparak hızlandırma
-
-      if (y <= 0) {
-        dy = Math.abs(dy);
-        y = 0;
-      }
-      else if(y >= containerRef.current!.clientHeight - 20) {
-        dy = Math.abs(dy) * -1;
-        y = containerRef.current!.clientHeight - 20;
-      }  
-
-      const paddleHit = (paddleY: number) => {
-        const paddleCenter = paddleY + 50;
-        const ballCenter = y;
-        const offset = ballCenter - paddleCenter;
-        const normalizedOffset = offset / 50;
-        return normalizedOffset * 5; // Adjust the multiplier for desired bounce angle
-      };
-
-      if (
-        (x <= 30 && x + 20 >= 10 && y + 20 >= player1.y && y <= player1.y + 100) ||
-        (x >= containerRef.current!.clientWidth - 50 && x <= containerRef.current!.clientWidth - 30 && y + 20 >= player2.y && y <= player2.y + 100)
-      ) {
-        dx = -dx;
-        if (x <= 30) {
-          dy = paddleHit(player1.y);
-        } else {
-          dy = paddleHit(player2.y);
-        }
-      }
-
-      if (x <= 0) {
-        return {
-          ...prevState,
-          score: { ...prevState.score, player2: prevState.score.player2 + 1 },
-          ball: resetBall("player2"),
-          lastScored: "player2",
-        };
-      } else if (x >= containerRef.current!.clientWidth - 20) {
-        return {
-          ...prevState,
-          score: { ...prevState.score, player1: prevState.score.player1 + 1 },
-          ball: resetBall("player1"),
-          lastScored: "player1",
-        };
-      } else {
-        return {
-          ...prevState,
-          ball: { x, y, dx, dy },
-        };
-      }
-    });
-  };
-
-  const updatePlayerPosition = (deltaTime: number) => {
-    setGameState((prevState) => {
-      const newPlayer1Y = prevState.player1.y + player1Direction.current * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
-      const newPlayer2Y = prevState.player2.y + player2Direction.current * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
-      return {
-        ...prevState,
-        player1: { y: Math.max(0, Math.min(containerRef.current!.clientHeight - 100, newPlayer1Y)) },
-        player2: { y: Math.max(0, Math.min(containerRef.current!.clientHeight - 100, newPlayer2Y)) },
-      };
-    });
-  };
-
-  const animate = (time: number) => {
-    const deltaTime = (time - lastFrameTime.current) / 1000; // Geçen süreyi saniye cinsinden hesapla
-    lastFrameTime.current = time;
-
-    updateBallPosition(deltaTime);
-    updatePlayerPosition(deltaTime);
-    requestRef.current = requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    requestRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(requestRef.current!);
-  }, []);
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key ===  "ArrowUp" || e.key === "ArrowDown" || e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
-      e.preventDefault();
-    }
-    if (e.key === "ArrowUp") {
-      player1Direction.current = -1;
-    } else if (e.key === "ArrowDown") {
-      player1Direction.current = 1;
-    } else if (e.key === "w" || e.key === "W") {
-      player2Direction.current = -1;
-    } else if (e.key === "s" || e.key === "S") {
-      player2Direction.current = 1;
-    }
-  };
-
-  const handleKeyUp = (e: KeyboardEvent) => {
-    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-      player1Direction.current = 0;
-    } else if (e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
-      player2Direction.current = 0;
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
-
-  return (
-    <div className="container" ref={containerRef}>
-      <div className="score">
-        {gameState.score.player1} - {gameState.score.player2}
-      </div>
-      <div className="paddle" style={{ top: `${gameState.player1.y}px`, left: "10px" }} />
-      <div className="paddle" style={{ top: `${gameState.player2.y}px`, right: "10px" }} />
-      <div className="ball" style={{ top: `${gameState.ball.y}px`, left: `${gameState.ball.x}px` }} />
-    </div>
   );
 };
 
