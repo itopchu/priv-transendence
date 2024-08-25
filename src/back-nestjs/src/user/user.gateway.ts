@@ -14,6 +14,7 @@ export interface UserSocket extends Socket {
 
 export interface GameSocket extends Socket {
   roomId?: string;
+  position?: boolean;
 }
 
 interface Player {
@@ -153,8 +154,9 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     setInterval(() => {
       this.rooms.forEach((players, roomId) => {
         this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
+        // console.log('state', this.gameService.getGameState(roomId));
       });
-    }, 16);                                                                 // 60 FPS
+    }, 500);                                                                 // 60 FPS
   }
 
   @SubscribeMessage('joinQueue')
@@ -181,37 +183,37 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
         player1.client.roomId = roomId;
         player2.client.roomId = roomId;
 
-        this.server.to(roomId).emit('startGame', roomId);
+        player1.client.position = true;
+        player2.client.position = false;
+
+        player1.client.emit('startGame', true);
+        player2.client.emit('startGame', false);
       }
     }
   }
 
-  @SubscribeMessage('getRoomId')
-  handleGetRoomId(client: GameSocket, userId: number): string | null {
+  @SubscribeMessage('getPosition')
+  handleGetRoomId(client: GameSocket, userId: number): boolean | null {
+    console.log('getPosition', userId);
     for (const [roomId, players] of this.rooms) {
       const player = players.find(player => player.userId === userId);
       if (player) {
         player.clientId = client.id;
         client.join(roomId);
-        console.log('player:', userId, roomId);
-        return roomId;
+        console.log('player:', userId, roomId, player.position);
+        client.roomId = roomId;
+        client.position = player.position;
+        return player.position;
       }
     }
     return null;
   }
 
   @SubscribeMessage('move')
-  handleMove(client: GameSocket, payload: { userId: number, y: number, roomId: string }): void {
-    console.log('move', payload);
-    const room = this.rooms.get(payload.roomId);
-    if (room) {
-      const player = room.find(player => player.userId === payload.userId);
-      if (player) {
-        const position = player.position;
-        this.gameService.updatePlayerPosition(payload.roomId, position, payload.y);
-        this.server.to(payload.roomId).emit('state', this.gameService.getGameState(payload.roomId));
-      }
-    }
+  handleMove(client: GameSocket, direction: number): void {
+    console.log('move', direction);
+    this.gameService.updatePlayerPosition(client.roomId, client.position, direction);
+    this.server.to(client.roomId).emit('state', this.gameService.getGameState(client.roomId));
   }
 
   @SubscribeMessage('info')

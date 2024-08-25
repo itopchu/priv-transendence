@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 
 interface Player {
   y: number;
+  direction: number;
 }
 
 interface Ball {
@@ -16,14 +17,16 @@ interface GameState {
   player2: Player;
   ball: Ball;
   score: { player1: number, player2: number };
+  lastScored: "player1" | "player2" | null;
 }
 
 @Injectable()
 export class GameService implements OnModuleInit, OnModuleDestroy {
   private gameStates: Map<string, GameState> = new Map(); // roomId -> gameState
   private intervalIds: Map<string, NodeJS.Timeout> = new Map(); // roomId -> intervalId
-  private containerWidth = 1920; // Örnek genişlik
-  private containerHeight = 1080; // Örnek yükseklik
+  private containerWidth = 800; // Örnek genişlik
+  private containerHeight = 500; // Örnek yükseklik
+  private paddleSpeed = 5; // Örnek hız
 
   onModuleInit() {
     // Başlangıçta herhangi bir oyun odası yok
@@ -37,27 +40,28 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   getGameState(roomId: string): GameState {
     if (!this.gameStates.has(roomId)) {
       this.gameStates.set(roomId, {
-        player1: { y: 150 },
-        player2: { y: 150 },
-        ball: { x: 390, y: 190, dx: 2, dy: 1.2 },
+        player1: { y: 150 , direction: 0 },
+        player2: { y: 150, direction: 0 },
+        ball: { x: 390, y: 190, dx: 2, dy: 2 },
         score: { player1: 0, player2: 0 },
+        lastScored: null as "player1" | "player2" | null,
       });
 
       const intervalId = setInterval(() => {
         this.updateBallPosition(roomId);
-      }, 16);
+      }, 16); // 60 FPS
       this.intervalIds.set(roomId, intervalId);
     }
     return this.gameStates.get(roomId);
   }
 
-  updatePlayerPosition(roomId: string, position: boolean, y: number): void {
+  updatePlayerPosition(roomId: string, position: boolean, direction: number): void {
     const gameState = this.getGameState(roomId);
 
     if (position) {
-      gameState.player1.y += y;
+      gameState.player1.direction = direction;
     } else if (!position) {
-      gameState.player2.y += y;
+      gameState.player2.direction = direction;
     }
   }
 
@@ -66,8 +70,13 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     let { x, y, dx, dy } = gameState.ball;
     const { player1, player2 } = gameState;
 
-    x += dx * 16 / 1000 * 60; // 16ms aralıklarla güncelleme
-    y += dy * 16 / 1000 * 60;
+    const deltaTime = 16 / 1000 * 60;
+    
+    player1.y = Math.max(0, Math.min(this.containerHeight - 100, player1.y + player1.direction * this.paddleSpeed * deltaTime));
+    player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + player2.direction * this.paddleSpeed * deltaTime));
+
+    x += dx * deltaTime;
+    y += dy * deltaTime;
 
     if (y <= 0) {
       dy = Math.abs(dy);
@@ -82,7 +91,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
       const ballCenter = y + 10;
       const offset = ballCenter - paddleCenter;
       const normalizedOffset = offset / 50;
-      return normalizedOffset * 5;
+      return normalizedOffset * 5; // İstenilen zıplama açısı için çarpanı ayarlayın
     };
 
     if (
@@ -108,13 +117,19 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private resetBall(roomId: string, lastScored: 'player1' | 'player2') {
+  resetBall(roomId: string, lastScored: 'player1' | 'player2'): void {
     const gameState = this.getGameState(roomId);
+    const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // -22.5 ile 22.5 derece arasında rastgele bir açı
+    const speed = 2;
+    const dx = lastScored === 'player1' ? -speed * Math.cos(angle) : speed * Math.cos(angle);
+    const dy = speed * Math.sin(angle);
+
     gameState.ball = {
       x: this.containerWidth / 2,
       y: this.containerHeight / 2,
-      dx: lastScored === 'player1' ? -1 : 1,
-      dy: 1,
+      dx,
+      dy,
     };
+    gameState.lastScored = lastScored;
   }
 }
