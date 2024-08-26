@@ -82,8 +82,8 @@ const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost
 const AllChannelTypes: ChannelType[] = ['private', 'protected', 'public'];
 
 const ChannelCreateCard = ({ setIsVisible }) => {
-  const { user } = useUser();
-	const { triggerRefresh } = useChannel();
+  const { user, userSocket } = useUser();
+  const { triggerRefresh } = useChannel();
 
   const initialChannelData = {
     name: `${user.nameNick || user.nameFirst}'s channel`,

@@ -13,11 +13,13 @@ import {
 	MoreVertSharp as MiscIcon,
 } from '@mui/icons-material';
 import { ChannelMember, ChannelContextProvider, useChannel } from './channels';
+import ChatBox from './chats';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
   newColor: string;
   name: string;
+  isSelected: boolean;
   clickEvent: () => void;
 }
 
@@ -27,16 +29,17 @@ const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [showCreateCard, setShowCreateCard] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<number>(-1);
   const { memberships, publicChannels } = useChannel();
 
-  const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, name, clickEvent }) => {
+  const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, name, isSelected, clickEvent }) => {
     return (
       <Stack
         direction={'row'}
         gap={2}
         paddingX={'0.5em'}
         onClick={clickEvent}
-        bgcolor={theme.palette.primary.main}
+        bgcolor={isSelected ? theme.palette.primary.dark : theme.palette.primary.main}
         justifyContent={'space-between'}
         alignItems={'center'}
         textAlign={'center'}
@@ -45,6 +48,9 @@ const ChannelsPage: React.FC = () => {
           width: '100%',
           cursor: 'pointer',
           transition: 'padding-left ease-in-out 0.3s, padding-right ease-in-out 0.3s, border-radius ease-in-out 0.3s, background-color ease-in-out 0.3s',
+		  paddingLeft: isSelected ? '1em' : '0.5em',
+		  paddingRight: isSelected ? '0.02em' : '0em',
+		  borderRadius: isSelected ? '1.9em' : '0em',
           '&:hover': {
             bgcolor: theme.palette.primary.dark,
             borderRadius: '2em',
@@ -84,13 +90,14 @@ const ChannelsPage: React.FC = () => {
 
     return (
       <Stack gap={1}>
-        {Array.from({ length: publicChannels.length }, (_, index) => (
+        {publicChannels.map((channel, index) => (
           <ChannelLine
 			key={index}
-			name={publicChannels[index].name}
+			name={channel.name}
 			component={<LoginIcon />}
 			newColor={"green"}
-			clickEvent={() => console.log(`Channel ${index + 1} clicked`)}
+			isSelected={false}
+			clickEvent={() => console.log(`Public Channel ${index + 1} clicked`)}
 		  />
         ))}
       </Stack>
@@ -103,38 +110,29 @@ const ChannelsPage: React.FC = () => {
 
       return (
         <Stack gap={1}>
-          {Array.from({ length: memberships.length }, (_, index) => (
+          {memberships.map((membership, index) => (
 			<ChannelLine
 			  key={index}
-			  name={memberships[index].channel.name}
+			  name={membership.channel.name}
 			  component={<MiscIcon />}
 			  newColor={"white"}
-			  clickEvent={() => console.log(`Channel ${index + 1} clicked`)}
+			  isSelected={selectedChannel === index}
+			  clickEvent={() => setSelectedChannel(index)}
 			/>
 		  ))}
 		</Stack>
 	);
   };
 
-  let channelCreationSection = () => {
-    return (
-      <Box
-        height={'80vh'}
-        bgcolor={theme.palette.primary.light}
-      >
-        channel creation part
-      </Box>
-    );
-  };
-
   let createChannelButton = () => {
     return (
       <Stack
+        minWidth={'218px'}
         maxWidth={'100%'}
         height={'48px'}
         direction={'row'}
-        justifyContent={'center'}
         alignItems={'center'}
+		paddingLeft={theme.spacing(3.2)}
         gap={1}
         bgcolor={theme.palette.primary.main}
         sx={{
@@ -158,7 +156,7 @@ const ChannelsPage: React.FC = () => {
   let pageContainer = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
-			  {showCreateCard && (<ChannelCreateCard setIsVisible={setShowCreateCard} />)}
+		{showCreateCard && (<ChannelCreateCard setIsVisible={setShowCreateCard} />)}
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}
@@ -186,8 +184,9 @@ const ChannelsPage: React.FC = () => {
           </Stack>
           <Stack
             width={'100%'}
+			overflow={'auto'}
           >
-            {channelCreationSection()}
+            <ChatBox />
           </Stack>
         </Stack>
       </Container>
