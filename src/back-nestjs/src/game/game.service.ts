@@ -17,7 +17,6 @@ interface GameState {
   player2: Player;
   ball: Ball;
   score: { player1: number, player2: number };
-  lastScored: "player1" | "player2" | null;
 }
 
 @Injectable()
@@ -44,12 +43,11 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
         player2: { y: 150, direction: 0 },
         ball: { x: 390, y: 190, dx: 2, dy: 2 },
         score: { player1: 0, player2: 0 },
-        lastScored: null as "player1" | "player2" | null,
       });
 
       const intervalId = setInterval(() => {
         this.updateBallPosition(roomId);
-      }, 16); // 60 FPS
+      }, 16);
       this.intervalIds.set(roomId, intervalId);
     }
     return this.gameStates.get(roomId);
@@ -130,6 +128,6 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
       dx,
       dy,
     };
-    gameState.lastScored = lastScored;
+    //emit eklenecek
   }
 }

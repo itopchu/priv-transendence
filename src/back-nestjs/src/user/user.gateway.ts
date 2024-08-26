@@ -19,8 +19,6 @@ export interface GameSocket extends Socket {
 
 interface Player {
   userId: number;
-  clientId: string;
-  roomId: string;
   position: boolean;
 }
 
@@ -156,49 +154,43 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
         // console.log('state', this.gameService.getGameState(roomId));
       });
-    }, 500);                                                                 // 60 FPS
+    }, 500);
   }
 
   @SubscribeMessage('joinQueue')
   handleJoinQueue(client: GameSocket, userId: number): void {
+    if (client.roomId) {
+      return console.log('User already in a room', userId);
+    }
     if (this.queue.some(player => player.qUserId === userId)) {
-      return (console.log('User already in queue', userId));
+      return console.log('User already in queue', userId);
     }
-
+  
     this.queue.push({ qUserId: userId, client });
-    if (this.queue.length >= 2) {
-      const player1 = this.queue.shift();
-      const player2 = this.queue.shift();
-      
-      if (player1 && player2) {
-        const roomId = `room-${Date.now()}`;
-        this.rooms.set(roomId, [
-          { userId: player1.qUserId, clientId: player1.client.id, roomId: roomId, position: true },
-          { userId: player2.qUserId, clientId: player2.client.id, roomId: roomId, position: false }
-        ]);
-        
-        player1.client.join(roomId);
-        player2.client.join(roomId);
-
-        player1.client.roomId = roomId;
-        player2.client.roomId = roomId;
-
-        player1.client.position = true;
-        player2.client.position = false;
-
-        player1.client.emit('startGame', true);
-        player2.client.emit('startGame', false);
-      }
-    }
+    if (this.queue.length < 2) return;
+  
+    const [player1, player2] = [this.queue.shift(), this.queue.shift()];
+    if (!player1 || !player2) return;
+  
+    const roomId = `room-${Date.now()}`;
+    this.rooms.set(roomId, [
+      { userId: player1.qUserId, position: true },
+      { userId: player2.qUserId, position: false }
+    ]);
+  
+    [player1, player2].forEach((player, index) => {
+      player.client.join(roomId);
+      player.client.roomId = roomId;
+      player.client.position = index === 0;
+      player.client.emit('startGame', index === 0);
+    });
   }
 
   @SubscribeMessage('getPosition')
   handleGetRoomId(client: GameSocket, userId: number): boolean | null {
-    console.log('getPosition', userId);
     for (const [roomId, players] of this.rooms) {
       const player = players.find(player => player.userId === userId);
       if (player) {
-        player.clientId = client.id;
         client.join(roomId);
         console.log('player:', userId, roomId, player.position);
         client.roomId = roomId;

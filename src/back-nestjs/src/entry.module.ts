@@ -17,6 +17,7 @@ import { join } from 'path';
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UserModule,
+    GameModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/',
@@ -36,7 +37,6 @@ import { join } from 'path';
       })
     }),
     // ChannelsModule,
-    GameModule,
   ],
 })
 

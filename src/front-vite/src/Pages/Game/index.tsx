@@ -14,7 +14,7 @@ import Play from "./Play";
 const GameBox = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   width: "100%",
-  paddingTop: "56.25%",
+  paddingTop: "62.5%",
   position: "relative",
 }));
 

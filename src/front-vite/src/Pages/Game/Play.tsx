@@ -20,11 +20,10 @@ const Play = () => {
       userSocket?.emit("joinQueue", user.id);
     };
 
-    const width = 800;
-    const height = 500;
+    let playerSpeed = 5;
+    const gameWidth = 800;
+    const gameHeight = 500;
     const requestRef = useRef<number>();
-    const player1Direction = useRef<number>(0);
-    const player2Direction = useRef<number>(0);
     const lastFrameTime = useRef<number>(performance.now());
   
     useEffect(() => {
@@ -61,24 +60,9 @@ const Play = () => {
         userSocket.off("disconnect");
       };
     }, [userSocket]);
-
-    const getRandomAngle = () => {
-      const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // Random angle between -22.5 and 22.5 degrees
-      return angle;
-    };
   
-    const resetBall = (lastScored: "player1" | "player2" | null) => {
-      return { x: width / 2, y: height / 2, dx: 0, dy: 0 };
-      const angle = getRandomAngle();
-      const speed = 2;
-      const dx = lastScored === "player1" ? -speed * Math.cos(angle) : speed * Math.cos(angle);
-      const dy = speed * Math.sin(angle);
-      return {
-        x: width / 2,
-        y: height / 2,
-        dx,
-        dy,
-      };
+    const resetBall = () => {
+      return { x: gameWidth / 2, y: gameHeight / 2, dx: 0, dy: 0 };
     };
   
     const updateBallPosition = (deltaTime: number) => {
@@ -93,9 +77,9 @@ const Play = () => {
           dy = Math.abs(dy);
           y = 0;
         }
-        else if(y >= height - 20) {
+        else if(y >= gameHeight - 20) {
           dy = Math.abs(dy) * -1;
-          y = height - 20;
+          y = gameHeight - 20;
         }  
   
         const paddleHit = (paddleY: number) => {
@@ -108,7 +92,7 @@ const Play = () => {
   
         if (
           (x <= 20 && x + 20 >= 10 && y + 20 >= player1.y && y <= player1.y + 100) ||
-          (x >= width - 40 && x <= width - 20 && y + 20 >= player2.y && y <= player2.y + 100)
+          (x >= gameWidth - 40 && x <= gameWidth - 20 && y + 20 >= player2.y && y <= player2.y + 100)
         ) {
           dx = -dx;
           if (x <= 20) {
@@ -122,13 +106,13 @@ const Play = () => {
           return {
             ...prevState,
             score: { ...prevState.score, player2: prevState.score.player2 + 1 },
-            ball: resetBall("player2"),
+            ball: resetBall(),
           };
-        } else if (x >= width - 20) {
+        } else if (x >= gameWidth - 20) {
           return {
             ...prevState,
             score: { ...prevState.score, player1: prevState.score.player1 + 1 },
-            ball: resetBall("player1"),
+            ball: resetBall(),
           };
         } else {
           return {
@@ -140,16 +124,16 @@ const Play = () => {
     };
   
     const updatePlayerPosition = (deltaTime: number) => {
-      setGameState((prevState) => {
-        const newPlayer1Y = prevState.player1.y + prevState.player1.direction * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
-        const newPlayer2Y = prevState.player2.y + prevState.player2.direction * 5 * deltaTime * 60; // 60 ile çarparak hızlandırma
-        return {
-          ...prevState,
-          player1: { ...prevState.player1, y: Math.max(0, Math.min(height - 100, newPlayer1Y)) },
-          player2: { ...prevState.player2, y: Math.max(0, Math.min(height - 100, newPlayer2Y)) },
-        };
-      });
+      const calculateNewY = (player: { y: number; direction: number; }) => 
+        Math.max(0, Math.min(gameHeight - 100, player.y + player.direction * playerSpeed * deltaTime * 60));
+    
+      setGameState((prevState) => ({
+        ...prevState,
+        player1: { ...prevState.player1, y: calculateNewY(prevState.player1) },
+        player2: { ...prevState.player2, y: calculateNewY(prevState.player2) },
+      }));
     };
+    
   
     const animate = (time: number) => {
       const deltaTime = (time - lastFrameTime.current) / 1000; // Geçen süreyi saniye cinsinden hesapla
@@ -211,9 +195,9 @@ const Play = () => {
         <div className="score">
           {gameState.score.player1} - {gameState.score.player2}
         </div>
-        <div className="paddle" style={{ top: `${gameState.player1.y}px`, left: "10px" }} />
-        <div className="paddle" style={{ top: `${gameState.player2.y}px`, right: "10px" }} />
-        <div className="ball" style={{ top: `${gameState.ball.y}px`, left: `${gameState.ball.x}px` }} />
+        <div className="paddle" style={{ top: `${gameState.player1.y/500*100}%`, left: "1.25%" }} />
+        <div className="paddle" style={{ top: `${gameState.player2.y/500*100}%`, right: "1.25%" }} />
+        <div className="ball" style={{ top: `${gameState.ball.y/500*100}%`, left: `${gameState.ball.x/800*100}%` }} />
       </div>
     );
   };
