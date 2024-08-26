@@ -29,7 +29,7 @@ const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState<number>(-1);
+  const [selectedChannel, setSelectedChannel] = useState<number | undefined>(undefined);
   const { memberships, publicChannels } = useChannel();
 
   const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, name, isSelected, clickEvent }) => {
@@ -186,7 +186,10 @@ const ChannelsPage: React.FC = () => {
             width={'100%'}
 			overflow={'auto'}
           >
-            <ChatBox />
+			{selectedChannel !== undefined
+				? <ChatBox channel={memberships[selectedChannel].channel} />
+				: <Typography>Such emptiness</Typography>
+			}
           </Stack>
         </Stack>
       </Container>

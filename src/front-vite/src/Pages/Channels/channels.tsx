@@ -1,5 +1,6 @@
 import axios from "axios";
 import React, { useContext, useEffect, useState, createContext } from "react";
+import { Socket } from "socket.io-client";
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
@@ -44,7 +45,8 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		const getJoinedChannels = async () => {
 			try {
 				const response = await axios.get(`${BACKEND_URL}/channel/joined`, { withCredentials: true });
-				setMemberships(response.data);
+				if (response.data.memberships)
+					setMemberships(response.data.memberships);
 			} catch(error) {
 				console.log(error);
 			}
@@ -53,7 +55,8 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		const getPublicChannels = async () => {
 			try {
 				const response = await axios.get(`${BACKEND_URL}/channel/public`, { withCredentials: true });
-				setPublicChannels(response.data);
+				if (response.data.channels)
+					setPublicChannels(response.data.channels);
 			} catch(error) {
 				console.log(error);
 			}

@@ -1,10 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { User } from './user.entity';
 
-export enum ChannelType {
-	public,
-	private,
-}
+export type ChannelType = 'private' | 'protected' | 'public';
 
 export enum ChannelRoles {
 	admin,
@@ -26,10 +23,14 @@ export class Channel {
 	@Column({ nullable: true, default: null })
 	password: string | null;
 
-	@Column({ default: ChannelType.private })
+	@Column({ default: 'private' })
 	type: ChannelType;
 
-	@OneToMany(() => ChannelMember, members => members.user)
+	@JoinTable()
+	@ManyToMany(() =>  User, banList => banList.bannedChannels)
+	banList: User[];
+
+	@OneToMany(() => ChannelMember, member => member.channel)
 	members: ChannelMember[];
 
 	@OneToMany(() => Message, message => message.channel)
@@ -41,7 +42,7 @@ export class ChannelMember {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@ManyToOne(() => User, user => user.channels)
+	@ManyToOne(() => User, user => user.memberships)
 	user: User;
 
 	@ManyToOne(() => Channel, channel => channel.members)

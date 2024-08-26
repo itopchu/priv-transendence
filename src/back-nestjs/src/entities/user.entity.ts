@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, PrimaryColumn, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, PrimaryColumn, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate, ManyToMany } from 'typeorm';
 import { IsAscii, Length, validateOrReject, IsOptional, IsEmail, IsInt, IsEnum } from 'class-validator';
 import { Channel, ChannelMember, Message } from './channel.entity';
 @Entity()
@@ -51,8 +51,11 @@ export class User {
   @OneToMany(() => Friendship, friendship => friendship.user2)
   friendships2: Friendship[];
 
-  @OneToMany(() => ChannelMember, channel => channel.user)
-  channels: ChannelMember[];
+  @ManyToMany(() => Channel, bannedChannels => bannedChannels.banList)
+  bannedChannels: Channel[];
+
+  @OneToMany(() => ChannelMember, membership => membership.user)
+  memberships: ChannelMember[];
 
   @OneToMany(() => Message, messages => messages.author)
   messages: Message[];

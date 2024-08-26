@@ -9,9 +9,46 @@ import {
   styled,
   IconButton,
 } from '@mui/material';
-import { SendRounded as SendIcon } from '@mui/icons-material';
+import { Message, SendRounded as SendIcon } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
-import { useUser } from '../../Providers/UserContext/User';
+import { User, useUser } from '../../Providers/UserContext/User';
+import { Channel } from './channels';
+import axios from 'axios';
+
+const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+
+const formatDate = (timestamp: Date): string => {
+	const now: Date = new Date();
+	const date: Date = new Date(timestamp);
+	let formattedDate: string;
+
+	const formattedTime = date.toLocaleTimeString([],
+		{ hour: '2-digit', minute: '2-digit' }
+	);
+	formattedDate = date.toLocaleDateString('en-UK', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+	});
+	if (now.getFullYear() === date.getFullYear() && now.getMonth() === date.getMonth()) {
+		const dayNow = now.getDate();
+		const dayDate = date.getDate();
+
+		if (dayNow === dayDate) {
+			formattedDate = 'today at';
+		} else if (dayNow - 1 === dayDate) {
+			formattedDate = 'yesterday at';
+		}
+	}
+	return (`${formattedDate} ${formattedTime}`);
+}
+
+const getTimeDiff = (timestamp1: Date, timestamp2: Date) => {
+	const date1 = new Date(timestamp1);
+	const date2 = new Date(timestamp2);
+
+	return (date1.getTime() - date2.getTime());
+}
 
 const ChatContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -48,20 +85,90 @@ const TextBar = styled(Box)(({ theme }) => ({
   boxShadow: theme.shadows[5],
 }));
 
-const ChatBox: React.FC = () => {
-  const [messages, setMessages] = useState<string[]>([]);
-  const [message, setMessage] = useState('');
-  const { user } = useUser();
+interface ChatBoxType {
+	channel: Channel;
+}
+
+type Message = {
+	id: number,
+	content: string,
+	author: User,
+	timestamp: Date,
+}
+
+const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
+  const [messageLog, setMessageLog] = useState<Message[]>([]);
+  const { userSocket } = useUser();
   const theme = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+	const getMessageLog = async () => {
+		try {
+			const response = await axios.get(`${BACKEND_URL}/channel/messages/${channel.id}`, { withCredentials: true });
+			if (response.data.messages)
+				setMessageLog(response.data.messages.reverse());
+		} catch(error) {
+			console.error(error);
+		}
+
+		const onMessage = (message: Message) => {
+		  setMessageLog((prevMessages) => [...prevMessages, message]);
+		}
+
+		userSocket?.on(`room${channel.id}Message`, onMessage);
+
+		return () => {
+			userSocket?.off(`room${channel.id}Message`, onMessage);
+		}
+	}
+	getMessageLog();
+  }, [channel.id])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end',
+    });
+  }, [messageLog]);
+
+  const onSend = () => {
+    const cleanMessage = inputRef.current?.value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .join('\n');
+
+    if (cleanMessage) {
+	  const payload = {
+		  message: cleanMessage,
+		  channelId: channel.id
+	  };
+	  userSocket?.emit('message', payload);
+    }
+	if (inputRef.current)
+		inputRef.current.value = '';
+  };
 
   const generateMessages = () => {
-    if (!messages.length) return;
+    if (!messageLog.length) return null;
+	const timeLimit = 3 * 60 * 1000; // 5 min in milisecondes
 
     return (
       <ChatMessages>
-        {messages.map((msg, index) => (
-          <>
+        {messageLog.map((msg, index) => {
+				const isFirstMessage = index === 0;
+				const isLastMessage = index + 1 === messageLog.length;
+				const prevIsDiffTime = isFirstMessage || getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeLimit;
+				const isDiffTime = isLastMessage || getTimeDiff(messageLog[index +  1].timestamp, msg.timestamp) > timeLimit;
+				const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
+				const isLastUserMessage = isLastMessage || messageLog[index + 1].author.id !== msg.author.id;
+				const username = msg.author?.nameNick ? msg.author.nameNick : msg.author?.nameFirst;
+				const timestamp = formatDate(msg.timestamp);
+
+		return (
+          <React.Fragment key={index}>
             <Divider
               sx={{
                 alignSelf: 'flex-start',
@@ -72,75 +179,51 @@ const ChatBox: React.FC = () => {
               key={index}
               direction="row"
               spacing={1}
-              paddingLeft={!index ? 0 : 7.3}
+              paddingLeft={isDifferentUser || prevIsDiffTime ? 0 : 7.3}
+			  paddingBottom={isDifferentUser || (isDiffTime && !isLastUserMessage) ? 2 : 0}
               alignItems="flex-start"
             >
-              {!index && (
-                <Avatar sx={{ width: 50, height: 50 }} src={user?.image} />
+              {(isDifferentUser || prevIsDiffTime) && (
+                <Avatar sx={{ width: 50, height: 50 }} src={`${BACKEND_URL}/${msg.author?.image}`} />
               )}
               <Stack>
-                {index === 0 && (
+                {(isDifferentUser || prevIsDiffTime) && (
                   <Typography
-                    key={index}
                     variant="h3"
                     sx={{ fontWeight: 'bold', fontSize: 'medium' }}
                   >
-                    {user?.nameNick ? user.nameNick : user?.nameFirst}
-                    {index === 0 && (
-                      <Typography
-                        key={index}
+                    {username}
+                    <Typography
                         variant="caption"
-                        sx={{ fontSize: '0.7em' }}
+                        sx={{ fontSize: '0.7em', paddingLeft: '1em' }}
                       >
-                        {' timestamp'}
+                        {`${timestamp}`}
                       </Typography>
-                    )}
                   </Typography>
                 )}
 
                 <ChatBubble
                   sx={{
-                    borderTopLeftRadius: !index ? '' : '0.2em',
-                    borderBottomLeftRadius:
-                      index + 1 === messages.length ? '' : '0.2em',
+                    borderTopLeftRadius: isDifferentUser || prevIsDiffTime ? '' : '0.2em',
+                    borderBottomLeftRadius: isLastUserMessage || isDiffTime ? '' : '0.2em',
                   }}
                 >
                   <Typography
-                    key={index}
                     variant="body1"
                     sx={{ whiteSpace: 'pre-line' }}
                   >
-                    {msg}
+                    {msg.content}
                   </Typography>
                 </ChatBubble>
               </Stack>
             </Stack>
-          </>
-        ))}
+          </React.Fragment>
+        )
+		})}
       </ChatMessages>
     );
   };
-
-  const onSend = () => {
-    const cleanMessage = message
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .join('\n');
-
-    if (cleanMessage) {
-      setMessages((prevMessages) => [...prevMessages, cleanMessage]);
-      setMessage('');
-    }
-  };
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'end',
-    });
-  }, [messages]);
-
+	
   return (
     <ChatContainer>
       <TextBar>
@@ -156,8 +239,7 @@ const ChatBox: React.FC = () => {
               padding: '7px',
             },
           }}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          inputRef={inputRef}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();

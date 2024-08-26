@@ -140,7 +140,7 @@ const ChannelCreateCard = ({ setIsVisible }) => {
 			withCredentials: true,
 		});
 		triggerRefresh();
-		console.log(response.data);
+		userSocket?.emit('joinRoom', response.data.channel.id);
 	} catch(error) {
 		setErrorMessage(`${error}, try again later`);
 		console.error(error);
