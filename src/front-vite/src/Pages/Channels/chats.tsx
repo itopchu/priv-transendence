@@ -180,7 +180,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
               direction="row"
               spacing={1}
               paddingLeft={isDifferentUser || prevIsDiffTime ? 0 : 7.3}
-			  paddingBottom={isDifferentUser || (isDiffTime && !isLastUserMessage) ? 2 : 0}
+			  paddingTop={isDifferentUser || prevIsDiffTime ? 2 : 0}
               alignItems="flex-start"
             >
               {(isDifferentUser || prevIsDiffTime) && (

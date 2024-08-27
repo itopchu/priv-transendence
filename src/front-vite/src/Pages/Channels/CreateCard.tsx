@@ -1,94 +1,42 @@
 import React, { useState } from 'react';
 import { useUser } from '../../Providers/UserContext/User';
+import { ChannelType, useChannel } from './channels';
 import { useTheme } from 'styled-components';
 import axios from 'axios';
 import {
+	CenteredCard,
+	LoadingCard,
+	Overlay,
+	CircleAvatar,
+    TextFieldWrapper,
+    CustomFormLabel,
+    ButtonBar,
+} from './CardComponents'
+import {
   Box,
-  Card,
   CardContent,
-  Avatar,
   ButtonGroup,
   Button,
   TextField,
   FormControl,
-  FormLabel,
-  styled,
   CircularProgress,
 } from '@mui/material';
-import { ChannelType, useChannel } from './channels';
-
-// Styled components
-const CenteredCard = styled(Card)(({ theme }) => ({
-  position: 'fixed',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  padding: theme.spacing(1),
-  maxWidth: 500,
-  width: '100%',
-  textAlign: 'center',
-  boxShadow: theme.shadows[5],
-  height: '50%',
-  zIndex: 13000,
-}));
-
-const LoadingCard = styled(Box)(() => ({
-		display: 'flex',
-		justifyContent: 'center',
-		alignItems: 'center',
-		height: '100%'
-}));
-
-const Overlay = styled(Box)(({ theme }) => ({
-  position: 'fixed',
-	top: 0,
-	left: 0,
-	width: '100%',
-	height: '100%',
-	backgroundColor: 'rgba(0, 0, 0, 0.7)',
-	zIndex: 12999,
-}));
-
-const CircleAvatar = styled(Avatar)(({ theme }) => ({
-  width: 180,
-  height: 180,
-  margin: '0 auto',
-  marginBottom: theme.spacing(3),
-  border: '3px solid',
-  borderColor: theme.palette.primary.dark,
-}));
-
-const CustomFormLabel = styled(FormLabel)(() => ({
-  fontSize: '.9rem',
-  fontWeight: 550,
-}));
-
-const ButtonBar = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  width: '90%',
-  position: 'fixed',
-  padding: theme.spacing(1),
-  bottom: 0,
-  borderTop: `1px solid ${theme.palette.divider}`,
-}));
-
-const TextFieldWrapper = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-  textAlign: 'left',
-}));
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 const AllChannelTypes: ChannelType[] = ['private', 'protected', 'public'];
 
-const ChannelCreateCard = ({ setIsVisible }) => {
+interface CreateCardType {
+  setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   const { user, userSocket } = useUser();
   const { triggerRefresh } = useChannel();
 
   const initialChannelData = {
     name: `${user.nameNick || user.nameFirst}'s channel`,
     password: '',
-    avatarSrc: 'https://via.placeholder.com/150',
+    avatarSrc: '',
     type: 'private',
   };
   const [channelData, setChannelData] = useState(initialChannelData);
@@ -256,5 +204,5 @@ const ChannelCreateCard = ({ setIsVisible }) => {
   );
 };
 
-export default ChannelCreateCard;
+export default CreateCard;
 

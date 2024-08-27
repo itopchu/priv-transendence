@@ -18,27 +18,14 @@ export class ChannelService {
 		private readonly userService: UserService,
 	) {}
 
-	async createChannel(creator: User, createChannelDto: CreateChannelDto): Promise<Channel> {
-		const newChannel = this.channelRespitory.create(createChannelDto);
+	async getChannelLog(channelId: number): Promise<Message[]>  {
+		const log = await this.messageRespitory.createQueryBuilder('msg')
+		.innerJoin('msg.channel', 'channel')
+		.leftJoinAndSelect('msg.author', 'author')
+		.where('channel.id =  :id', { id: channelId })
+		.getMany();
 
-		try {
-			await this.channelRespitory.save(newChannel);
-		} catch(error) {
-			throw new Error(`Failed to save channel: ${error.message}`);
-		}
-
-		const newMember = this.memberRespitory.create({
-			role: ChannelRoles.admin,
-			user: creator,
-			channel: newChannel,
-		})
-		try {
-			await this.memberRespitory.save(newMember);
-		} catch(error) {
-			await this.channelRespitory.delete(newChannel.id);
-			throw new Error(`Failed to save owner: ${error.message}`);
-		}
-		return (newChannel);
+		return (log);
 	}
 
 	async getChannelById(channelId: number, requestedRelations: string[] | null): Promise<Channel> {
@@ -61,29 +48,44 @@ export class ChannelService {
 
 	async getPublicChannels(): Promise<Channel[]> {
 		return (await this.channelRespitory.find({
-			where: { type: 'public' },
+			where: [
+				{ type: 'public' },
+				{ type: 'protected' },
+			]
 		}));
 	}
 
-	async createChannelMember(channelId: number, invitorId: number, inviteeId: number): Promise<Channel> {
-		const channel = await this.getChannelById(channelId, ['members', 'members.user']);
-		if (!channel)
-			throw new Error('Channel not found');
+	async createChannel(creator: User, createChannelDto: CreateChannelDto): Promise<Channel> {
+		let newChannel: Channel = this.channelRespitory.create(createChannelDto);
 
-		const invitor = channel.members.find(member => member.user.id === invitorId);
-		if (!invitor || invitor.role > ChannelRoles.moderator)
-			throw new Error('Unauthorized invitor');
+		try {
+			newChannel = await this.channelRespitory.save(newChannel);
 
-		const invitee = await this.userService.getUserById(inviteeId);
-		if (!invitee)
-			throw new Error('user not found');
+			const newMember = this.memberRespitory.create({
+				role: ChannelRoles.admin,
+				user: creator,
+				channel: newChannel
+			})
+			await this.memberRespitory.save(newMember);
+		} catch(error) {
+			if (newChannel.id)
+				await this.channelRespitory.delete(newChannel.id);
+			throw new Error(`Failed to create channel and associate member: ${error.message}`);
+		}
+		return (newChannel);
+	}
 
+
+	async addChannelMember(channel: Channel, user: User): Promise<ChannelMember> {
 		const newMember = this.memberRespitory.create({
-			user: invitee,
+			user: user,
 			channel: channel,
 		})
-		await this.memberRespitory.save(newMember);
-		return (channel);
+		try {
+			return (await this.memberRespitory.save(newMember));
+		} catch(error) {
+			throw new Error('Failed to create new channel member');
+		}
 	}
 
 	async logMessage(channelId: number, author: User, message: string): Promise<Message> {

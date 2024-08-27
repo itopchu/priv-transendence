@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Divider, Typography, Button, IconButton, Container, useTheme, Stack } from '@mui/material';
 import { styled } from '@mui/system';
 import { io, Socket } from 'socket.io-client';
-import ChannelCreateCard from './ChannelCreateCard';
+import CreateCard from './CreateCard';
 import {
   Add as AddIcon,
   Group as GroupIcon,
@@ -14,6 +14,7 @@ import {
 } from '@mui/icons-material';
 import { ChannelMember, ChannelContextProvider, useChannel } from './channels';
 import ChatBox from './chats';
+import { JoinCard } from './JoinCard';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
@@ -29,6 +30,7 @@ const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [showCreateCard, setShowCreateCard] = useState(false);
+  const [showJoinCard, setShowJoinCard] = useState<number | undefined>(undefined);
   const [selectedChannel, setSelectedChannel] = useState<number | undefined>(undefined);
   const { memberships, publicChannels } = useChannel();
 
@@ -85,8 +87,7 @@ const ChannelsPage: React.FC = () => {
   };
 
   let generateAvailableChannels = () => {
-		if (!publicChannels.length)
-				return;
+	if (!publicChannels.length) return;
 
     return (
       <Stack gap={1}>
@@ -97,7 +98,7 @@ const ChannelsPage: React.FC = () => {
 			component={<LoginIcon />}
 			newColor={"green"}
 			isSelected={false}
-			clickEvent={() => console.log(`Public Channel ${index + 1} clicked`)}
+			clickEvent={() => {setShowJoinCard(index)}}
 		  />
         ))}
       </Stack>
@@ -156,7 +157,8 @@ const ChannelsPage: React.FC = () => {
   let pageContainer = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
-		{showCreateCard && (<ChannelCreateCard setIsVisible={setShowCreateCard} />)}
+		{showCreateCard && (<CreateCard setIsVisible={setShowCreateCard} />)}
+		{showJoinCard !== undefined && (<JoinCard setChannel={setShowJoinCard} channel={publicChannels[showJoinCard]}/>)}
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}
