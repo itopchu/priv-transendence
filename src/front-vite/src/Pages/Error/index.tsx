@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Container, useTheme } from '@mui/material';
 import { styled } from '@mui/system';
@@ -22,11 +22,24 @@ const HomeLink = styled(Button)(({ theme }) => ({
 }));
 
 const ErrorPage: React.FC = () => {
+  const [showBlackScreen, setShowBlackScreen] = useState(true);
   const theme = useTheme();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowBlackScreen(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleHomeClick = () => {
     navigate('/');
+  }
+
+  if (showBlackScreen) {
+    return <div style={{ backgroundColor: 'black', height: '100vh', width: '100vw' }} />;
   }
 
   return (
