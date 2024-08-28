@@ -133,7 +133,7 @@ export const HeaderBar: React.FC = () => {
               },
             }}
           />
-          {isFocused && (
+          {isFocused && users.length !== 0 && (
             <Stack
               style={{
                 position: "absolute",
