@@ -30,7 +30,6 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
         setFriends(response.data.friendsDTO);
     }
     getFriends();
-    console.log(friends);
     return () => { setFriends([]) }
   }, [visitedUser])
 

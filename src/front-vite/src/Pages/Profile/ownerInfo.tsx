@@ -63,9 +63,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
 
   async function postStatus(type: FriendshipAttitudeBehaviour) {
     try {
-      console.log('postStatus:', type);
       const response = await axios.post(`${BACKEND_URL}/user/friendship/${visitedUser?.id}`, { type }, { withCredentials: true });
-      console.log('Response.data:', response.data);
       if (response.data.friendshipAttitude)
         setFriendshipAttitude(response.data.friendshipAttitude);
     } catch (error) {

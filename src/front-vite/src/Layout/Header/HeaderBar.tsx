@@ -69,7 +69,6 @@ export const HeaderBar: React.FC = () => {
   };
 
   const askUsers = async (search: string) => {
-    console.log("searching for:", search);
     if (!search) {
       setUsers([]);
       return;

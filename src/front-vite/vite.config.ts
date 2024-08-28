@@ -7,7 +7,6 @@ const safeEnvVars = ['ORIGIN_URL_WEBSOCKET', 'ORIGIN_URL_BACK', 'ORIGIN_URL_FRON
 const envVariables: Record<string, string> = {};
 for (const [key, value] of Object.entries(process.env)) {
 	if (safeEnvVars.includes(key)) {
-		console.log(key, value);
     envVariables[`import.meta.env.${key}`] = JSON.stringify(value);
   }
 }

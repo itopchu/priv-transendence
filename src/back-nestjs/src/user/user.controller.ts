@@ -106,7 +106,6 @@ export class UserController {
     if (!users)
       return res.status(404);
     const usersDTO = users.map(user => new UserPublicDTO(user, null));
-    console.log('searchUsers in get', usersDTO);
     return res.status(200).json(usersDTO);
   }
 
@@ -120,7 +119,6 @@ export class UserController {
     const friendship = await this.userService.getUserFriendship(user, user2);
     if (!friendship)
       return res.status(404);
-    console.log('getUserFriendshipAttitude in get', friendship);
     const friendshipAttitude = friendship.user1.id === user.id ? friendship.user1Attitude : friendship.user2Attitude;
     return res.status(200).json({friendshipAttitude});
   }
