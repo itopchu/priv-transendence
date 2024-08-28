@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { Friendship, FriendshipAttitude, FriendshipAttitudeBehaviour, User } from '../entities/user.entity';
 import { AccessTokenDTO } from '../dto/auth.dto';
 import { Request, Response } from 'express';
@@ -93,6 +93,22 @@ export class UserService {
       return null;
     }
     return updatedUser;
+  }
+
+  async searchUsers(search: string): Promise<User[] | null> {
+    try {
+      const lowerSearch = search.toLowerCase();
+      const users = await this.userRepository.createQueryBuilder('user')
+        .where('LOWER(user.nameFirst) LIKE :search', { search: `%${lowerSearch}%` })
+        .orWhere('LOWER(user.nameLast) LIKE :search', { search: `%${lowerSearch}%` })
+        .orWhere('LOWER(user.nameNick) LIKE :search', { search: `%${lowerSearch}%` })
+        .orWhere("LOWER(CONCAT(user.nameFirst, ' ', user.nameLast)) LIKE :search", { search: `%${lowerSearch}%` })
+        .getMany();
+      return users;
+    } catch (error) {
+      console.error('Error searching users:', error);
+      return null;
+    }
   }
 
   async getUserFriendsById(id: number): Promise<User[] | null> {

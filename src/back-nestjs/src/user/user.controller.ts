@@ -7,7 +7,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { UserGateway } from './user.gateway';
 import * as fs from 'fs';
 import * as path from 'path';
-import { FriendshipAttitude, FriendshipAttitudeBehaviour } from '../entities/user.entity'
+import { FriendshipAttitude, FriendshipAttitudeBehaviour, User } from '../entities/user.entity'
 
 const multerOptions = {
   limits: {
@@ -99,6 +99,17 @@ export class UserController {
     }
   }
   
+  @Get('search/:search')
+  @UseGuards(AuthGuard)
+  async searchUsers(@Res() res: Response, @Param('search') search: string) {
+    const users = await this.userService.searchUsers(search);
+    if (!users)
+      return res.status(404);
+    const usersDTO = users.map(user => new UserPublicDTO(user, null));
+    console.log('searchUsers in get', usersDTO);
+    return res.status(200).json(usersDTO);
+  }
+
   @Get('friendship/:id')
   @UseGuards(AuthGuard)
   async getUserFriendshipAttitude(@Res() res: Response, @Req() req: Request, @Param('id', ParseIntPipe) id: number) {
