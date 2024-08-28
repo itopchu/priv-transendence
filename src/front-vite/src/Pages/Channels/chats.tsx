@@ -107,8 +107,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 	const getMessageLog = async () => {
 		try {
 			const response = await axios.get(`${BACKEND_URL}/channel/messages/${channel.id}`, { withCredentials: true });
-			if (response.data.messages)
-				setMessageLog(response.data.messages.reverse());
+			if (response.data?.messages) {
+				response.data.messages.sort((a: Message, b: Message) => a.id > b.id);
+				setMessageLog(response.data.messages);
+			}
 		} catch(error) {
 			console.error(error);
 		}

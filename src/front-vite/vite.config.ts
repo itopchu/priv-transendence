@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // Define which environment variables are safe to expose
-const safeEnvVars = ['PORT_WEBSOCKET', 'ORIGIN_URL_BACK', 'ORIGIN_URL_FRONT', 'PORT_BACKEND', 'PORT_FRONTEND'];
+const safeEnvVars = ['ORIGIN_URL_WEBSOCKET', 'PORT_WEBSOCKET', 'ORIGIN_URL_BACK', 'ORIGIN_URL_FRONT', 'PORT_BACKEND', 'PORT_FRONTEND'];
 
 const envVariables: Record<string, string> = {};
 for (const [key, value] of Object.entries(process.env)) {

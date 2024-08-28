@@ -48,6 +48,9 @@ export class ChannelMember {
 	@ManyToOne(() => Channel, channel => channel.members)
 	channel: Channel;
 
+	@Column({ default: false })
+	muted: boolean;
+
 	@Column({
 		type: 'enum',
 		enum: ChannelRoles,

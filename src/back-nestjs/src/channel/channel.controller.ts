@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Patch, Res, Req, UseGuards, Body, UsePipes, ValidationPipe, InternalServerErrorException, Param, ParseIntPipe, NotFoundException, ForbiddenException, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Res, Req, UseGuards, Body, UsePipes, ValidationPipe, InternalServerErrorException, Param, ParseIntPipe, NotFoundException, ForbiddenException, BadRequestException, UnauthorizedException, Delete } from '@nestjs/common';
 import { Request, Response } from 'express'
-import { Channel, ChannelMember } from 'src/entities/channel.entity';
+import { Channel, ChannelMember, ChannelRoles } from 'src/entities/channel.entity';
 import { ChannelService } from './channel.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CreateChannelDto } from '../dto/createChannel.dto';
+import { UpdateChannelMemberDto } from 'src/dto/channel.dto';
+import { waitForDebugger } from 'inspector';
 
 @Controller('channel')
 export class ChannelController {
@@ -37,8 +39,8 @@ export class ChannelController {
 	async getUserChannels(@Req() req: Request) {
 		const user = req.authUser;
 
-		const channels = await this.channelService.getJoinedChannels(user);
-		return ({ memberships: channels });
+		const memberships = await this.channelService.getMemberships(user);
+		return ({ memberships: memberships });
 	}
 
 	@Get('public')
@@ -55,38 +57,14 @@ export class ChannelController {
 	@UseGuards(AuthGuard)
 	async joinChannel(@Req() req: Request, @Body('channelId', ParseIntPipe) channelId: number, @Body() password?: string | null) {
 		const user = req.authUser;
-		let channel: Channel;
 
-		try {
-			channel = await this.channelService.getChannelById(channelId, ['members.user']);
-		} catch(error) {
-			throw new InternalServerErrorException(error.message);
-		}
-		if (!channel)
-			throw new NotFoundException(`channel id ${channelId} not found`);
-
-		if (channel.type === 'private')
-			throw new UnauthorizedException('This channel is private');
-		const isMember = channel.members.some(member => member.user.id === user.id);
-		if (isMember)
-			throw new BadRequestException(`User is already in channel`);
-		if (channel.type === 'protected' && password !== channel.password)
-			throw new BadRequestException('Wrong password');
-
-		try {
-			return (await this.channelService.addChannelMember(channel, user));
-		} catch(error) {
-			throw new InternalServerErrorException(error.message);
-		}
+		return (await this.channelService.joinChannel(user, channelId, password));
 	}
 
 	@Post('create')
 	@UseGuards(AuthGuard)
 	@UsePipes(new ValidationPipe({ whitelist: true }))
-	async createChannel(
-		@Req() req: Request,
-		@Body() createChannelDto: CreateChannelDto
-	) {
+	async createChannel(@Req() req: Request, @Body() createChannelDto: CreateChannelDto) {
 		const user = req.authUser;
 
 		try {
@@ -98,7 +76,52 @@ export class ChannelController {
 		}
 	}
 
-	@Patch()
-	async updateChannel() {
+	@Delete('kick')
+	@UseGuards(AuthGuard)
+	async kickUser(@Req() req: Request, @Body('kickeeId', ParseIntPipe) kickeeId: number, @Body('channelId', ParseIntPipe) channelId: number) {
+		const user = req.authUser;
+		if (user.id === kickeeId) {
+			throw new BadRequestException('Kicking yourself.., realy?');
+		}
+
+		return (await this.channelService.kickMember(user, kickeeId, channelId));
+	}
+
+	@Delete('ban')
+	@UseGuards(AuthGuard)
+	async banUser(@Req() req: Request, @Body('baneeId', ParseIntPipe) baneeId: number, @Body('channelId', ParseIntPipe) channelId: number) {
+		const user = req.authUser;
+		if (user.id === baneeId) {
+			throw new BadRequestException('Banning yourself.., realy?');
+		}
+
+		return (this.channelService.banUser(user, baneeId, channelId));
+	}
+
+	@Delete('leave')
+	@UseGuards(AuthGuard)
+	async leaveChannel(@Req() req: Request, @Body('channelId', ParseIntPipe) memberId: number) {
+		const user = req.authUser;
+
+		const memberships = await this.channelService.getMemberships(user);
+		const hasMembership = memberships.some((membership) => membership.id == memberId);
+		if (!hasMembership) {
+			throw new BadRequestException('Membership not found');
+		}
+
+		return (await this.channelService.deleteMember(memberId));
+	}
+
+	@Patch('update/membership')
+	@UseGuards(AuthGuard)
+	@UsePipes(new ValidationPipe({ whitelist: true }))
+	async updateMember(
+		@Req() req: Request,
+		@Body('memberId', ParseIntPipe) memberId: number,
+		@Body() UpdateChannelMemberDto: UpdateChannelMemberDto
+	) {
+		const user = req.authUser;
+
+		return (await this.channelService.updateMember(user, memberId, UpdateChannelMemberDto));
 	}
 }
