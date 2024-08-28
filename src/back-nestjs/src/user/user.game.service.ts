@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { UserGateway } from './user.gateway';
 
 interface Player {
   y: number;
@@ -15,6 +16,7 @@ interface Ball {
 interface GameState {
   player1: Player;
   player2: Player;
+  bot: boolean;
   ball: Ball;
   score: { player1: number, player2: number };
 }
@@ -41,6 +43,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
       this.gameStates.set(roomId, {
         player1: { y: 150 , direction: 0 },
         player2: { y: 150, direction: 0 },
+        bot: false,
         ball: { x: 390, y: 190, dx: 2, dy: 2 },
         score: { player1: 0, player2: 0 },
       });
@@ -67,14 +70,15 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     const gameState = this.getGameState(roomId);
     let { x, y, dx, dy } = gameState.ball;
     const { player1, player2 } = gameState;
-
-    const deltaTime = 16 / 1000 * 60;
     
-    player1.y = Math.max(0, Math.min(this.containerHeight - 100, player1.y + player1.direction * this.paddleSpeed * deltaTime));
-    player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + player2.direction * this.paddleSpeed * deltaTime));
+    player1.y = Math.max(0, Math.min(this.containerHeight - 100, player1.y + player1.direction * this.paddleSpeed));
+    if (gameState.bot)
+      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + ((y - player2.y - 50) )));
+    else
+      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + player2.direction * this.paddleSpeed));  
 
-    x += dx * deltaTime;
-    y += dy * deltaTime;
+    x += dx;
+    y += dy;
 
     if (y <= 0) {
       dy = Math.abs(dy);

@@ -6,7 +6,7 @@ import { UserGateway } from './user.gateway';
 import { User, Friendship } from '../entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
 import { WSAuthGuard } from '../auth/auth.ws.guard';
-import { GameService } from '../game/game.service';
+import { GameService } from './user.game.service';
 
 @Module({
   imports: [

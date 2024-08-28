@@ -6,13 +6,13 @@ import { UnauthorizedException } from '@nestjs/common';
 import { User } from '../entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserPublicDTO } from '../dto/user.dto';
-import { GameService } from '../game/game.service';
+import { GameService } from './user.game.service';
 
 export interface UserSocket extends Socket {
   authUser?: User;
 }
 
-export interface GameSocket extends Socket {
+export interface GameSocket extends UserSocket {
   roomId?: string;
   position?: boolean;
 }
@@ -154,7 +154,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
         // console.log('state', this.gameService.getGameState(roomId));
       });
-    }, 500);
+    }, 16);
   }
 
   @SubscribeMessage('joinQueue')
@@ -187,12 +187,12 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('getPosition')
-  handleGetRoomId(client: GameSocket, userId: number): boolean | null {
+  handleGetRoomId(client: GameSocket): boolean | null {
     for (const [roomId, players] of this.rooms) {
-      const player = players.find(player => player.userId === userId);
+      const player = players.find(player => player.userId === client.authUser.id);
       if (player) {
         client.join(roomId);
-        console.log('player:', userId, roomId, player.position);
+        console.log('player:', client.authUser.nameFirst, roomId, player.position);
         client.roomId = roomId;
         client.position = player.position;
         return player.position;
@@ -213,5 +213,25 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.rooms.forEach((players, roomId) => {
       console.log(`Room ${roomId} has ${players.length} players: ${players.map(player => player.userId).join(' - ')}`);
     });
+  }
+
+  @SubscribeMessage('leaveGame')
+  handleDisconnectGame(client: GameSocket): void {
+    console.log('disconnect', client.authUser.nameFirst);
+    const roomId = client.roomId;
+    if (!roomId) return;
+    client.leave(roomId);
+    client.roomId = undefined;
+    client.position = undefined;
+    
+    const players = this.rooms.get(roomId);
+    if (players) {
+      const remainingPlayers = players.filter(player => player.userId !== client.authUser.id);
+      if (remainingPlayers.length === 0) {
+        this.rooms.delete(roomId);
+      } else {
+        this.rooms.set(roomId, remainingPlayers);
+      }
+    }
   }
 }

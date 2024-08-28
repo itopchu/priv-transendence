@@ -7,7 +7,6 @@ import { AuthModule } from './auth/auth.module';
 import { User, Friendship } from './entities/user.entity';
 import { UserModule } from './user/user.module';
 // import { ChannelsModule } from './channels/channels.module';
-import { GameModule } from './game/game.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -17,7 +16,6 @@ import { join } from 'path';
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UserModule,
-    GameModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/',
