@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Inject } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
 
 interface Player {
@@ -23,7 +23,7 @@ interface GameState {
 
 @Injectable()
 export class GameService implements OnModuleInit, OnModuleDestroy {
-  constructor(private readonly gateway: UserGateway) { }
+  // constructor(private readonly gateway: UserGateway) { }
   private gameStates: Map<string, GameState> = new Map(); // roomId -> gameState
   private intervalIds: Map<string, NodeJS.Timeout> = new Map(); // roomId -> intervalId
   private containerWidth = 800; // Örnek genişlik
@@ -165,8 +165,8 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     this.gameStates.delete(roomId);
   }
 
-  finishGame(roomId: string, win: boolean): void {
-    // const player = this.gateway.rooms.get(roomId).find(player => { player.position === win })
-    // this.gateway.handleLeaveGame(player.client);
+  finishGame(roomId: string, loser: boolean): void {
+    // const player = this.gateway.rooms.get(roomId).find(player => { player.position === loser })
+    // this.gateway.dene();
   } 
 }

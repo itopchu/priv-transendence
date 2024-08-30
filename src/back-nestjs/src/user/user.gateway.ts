@@ -150,7 +150,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //game
   //game
   //game
-  public rooms: Map<string, Player[]> = new Map();
+  private rooms: Map<string, Player[]> = new Map();
   private queue: { userId: number, client: GameSocket }[] = [];
   private timeId: Map<string, NodeJS.Timeout> = new Map();
 
