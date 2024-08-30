@@ -23,11 +23,14 @@ interface GameState {
 
 @Injectable()
 export class GameService implements OnModuleInit, OnModuleDestroy {
+  constructor(private readonly gateway: UserGateway) { }
   private gameStates: Map<string, GameState> = new Map(); // roomId -> gameState
   private intervalIds: Map<string, NodeJS.Timeout> = new Map(); // roomId -> intervalId
   private containerWidth = 800; // Örnek genişlik
   private containerHeight = 500; // Örnek yükseklik
   private paddleSpeed = 5; // Örnek hız
+  private lastLogTime = 0;
+
 
   onModuleInit() {
     // Başlangıçta herhangi bir oyun odası yok
@@ -38,7 +41,16 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     this.intervalIds.forEach(intervalId => clearInterval(intervalId));
   }
 
+  setGameInterval(roomId: string): void {
+    if (this.intervalIds.has(roomId)) return;
+    const intervalId = setInterval(() => {
+      this.updateBallPosition(roomId);
+    }, 16);
+    this.intervalIds.set(roomId, intervalId);
+  }
+
   getGameState(roomId: string): GameState {
+    if (!roomId) return;
     if (!this.gameStates.has(roomId)) {
       this.gameStates.set(roomId, {
         player1: { y: 150 , direction: 0 },
@@ -47,18 +59,14 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
         ball: { x: 390, y: 190, dx: 2, dy: 2 },
         score: { player1: 0, player2: 0 },
       });
-
-      const intervalId = setInterval(() => {
-        this.updateBallPosition(roomId);
-      }, 16);
-      this.intervalIds.set(roomId, intervalId);
+      this.setGameInterval(roomId);
     }
     return this.gameStates.get(roomId);
   }
 
   updatePlayerPosition(roomId: string, position: boolean, direction: number): void {
     const gameState = this.getGameState(roomId);
-
+    if (!gameState) return;
     if (position) {
       gameState.player1.direction = direction;
     } else if (!position) {
@@ -109,21 +117,31 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (x <= 0) {
-      gameState.score.player2 += 1;
-      this.resetBall(roomId, 'player2');
+      if (++gameState.score.player2 >= 5) {
+        this.finishGame(roomId, true);
+      }
+      this.resetBall(roomId, false);
     } else if (x >= this.containerWidth - 20) {
-      gameState.score.player1 += 1;
-      this.resetBall(roomId, 'player1');
+      if (++gameState.score.player1 >= 5) {
+        this.finishGame(roomId, false);
+      }
+      this.resetBall(roomId, true);
     } else {
       gameState.ball = { x, y, dx, dy };
     }
+
+    const currentTime = Date.now();
+    if (currentTime - this.lastLogTime > 1000) {
+      console.log('Game running:', roomId);
+      this.lastLogTime = currentTime;
+    }
   }
 
-  resetBall(roomId: string, lastScored: 'player1' | 'player2'): void {
+  resetBall(roomId: string, lastScored: boolean): void {
     const gameState = this.getGameState(roomId);
     const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // -22.5 ile 22.5 derece arasında rastgele bir açı
     const speed = 2;
-    const dx = lastScored === 'player1' ? -speed * Math.cos(angle) : speed * Math.cos(angle);
+    const dx = lastScored ? -speed * Math.cos(angle) : speed * Math.cos(angle);
     const dy = speed * Math.sin(angle);
 
     gameState.ball = {
@@ -132,6 +150,23 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
       dx,
       dy,
     };
-    //emit eklenecek
   }
+
+  pauseGame(roomId: string): void {
+    if (roomId === undefined) return;
+    console.log('Game paused:', roomId);
+    clearInterval(this.intervalIds.get(roomId));
+    this.intervalIds.delete(roomId);
+  }
+
+  deleteGame(roomId: string): void {
+    console.log('Game deleted:', roomId);
+    this.pauseGame(roomId);
+    this.gameStates.delete(roomId);
+  }
+
+  finishGame(roomId: string, win: boolean): void {
+    // const player = this.gateway.rooms.get(roomId).find(player => { player.position === win })
+    // this.gateway.handleLeaveGame(player.client);
+  } 
 }

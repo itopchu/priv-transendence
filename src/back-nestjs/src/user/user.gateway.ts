@@ -7,6 +7,7 @@ import { User } from '../entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserPublicDTO } from '../dto/user.dto';
 import { GameService } from './user.game.service';
+import { subscribe } from 'diagnostics_channel';
 
 export interface UserSocket extends Socket {
   authUser?: User;
@@ -20,6 +21,7 @@ export interface GameSocket extends UserSocket {
 interface Player {
   userId: number;
   position: boolean;
+  client: GameSocket;
 }
 
 export async function authenticateUser(
@@ -62,7 +64,7 @@ export async function authenticateUser(
 export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly userService: UserService,
     private readonly configService: ConfigService,
-    private readonly gameService: GameService) { }
+    private readonly gameService: GameService) {}
 
   @WebSocketServer()
   server: Server;
@@ -85,7 +87,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return (true);
   }
 
-  handleDisconnect(client: UserSocket) {
+  handleDisconnect(client: GameSocket) {
     const user = client.authUser;
     console.log('Client disconnected:', user?.nameFirst, client.id);//kontrol icin
     if (user) {
@@ -101,6 +103,10 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.connectedUsers.delete(user.id);
         this.server.to(String(user.id)).emit('profileStatus', new UserPublicDTO(user, 'offline'));
       }
+    }
+    if (client.roomId) {
+      this.handlePauseGame(client);
+      client.leave(client.roomId);
     }
   }
 
@@ -144,8 +150,9 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //game
   //game
   //game
-  private rooms: Map<string, Player[]> = new Map();
-  private queue: { qUserId: number, client: GameSocket }[] = [];
+  public rooms: Map<string, Player[]> = new Map();
+  private queue: { userId: number, client: GameSocket }[] = [];
+  private timeId: Map<string, NodeJS.Timeout> = new Map();
 
   afterInit(server: Server) {
     console.log('WebSocket server initialized');
@@ -158,15 +165,15 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('joinQueue')
-  handleJoinQueue(client: GameSocket, userId: number): void {
+  handleJoinQueue(client: GameSocket): void {
     if (client.roomId) {
-      return console.log('User already in a room', userId);
+      return console.log('User already in a room', client.authUser.id);
     }
-    if (this.queue.some(player => player.qUserId === userId)) {
-      return console.log('User already in queue', userId);
+    if (this.queue.some(player => player.userId === client.authUser.id)) {
+      return console.log('User already in queue', client.authUser.id);
     }
   
-    this.queue.push({ qUserId: userId, client });
+    this.queue.push({ userId: client.authUser.id, client });
     if (this.queue.length < 2) return;
   
     const [player1, player2] = [this.queue.shift(), this.queue.shift()];
@@ -174,8 +181,8 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   
     const roomId = `room-${Date.now()}`;
     this.rooms.set(roomId, [
-      { userId: player1.qUserId, position: true },
-      { userId: player2.qUserId, position: false }
+      { userId: player1.userId, position: true, client: player1.client },
+      { userId: player2.userId, position: false, client: player2.client },
     ]);
   
     [player1, player2].forEach((player, index) => {
@@ -186,23 +193,33 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  @SubscribeMessage('getPosition')
-  handleGetRoomId(client: GameSocket): boolean | null {
+  @SubscribeMessage('getPlayerState')
+  handleGetRoomId(client: GameSocket): number {
+    const inQueue = this.queue.find(player => player.userId === client.authUser.id);
+    if (inQueue) {
+      inQueue.client = client;
+      return 3;
+    }
     for (const [roomId, players] of this.rooms) {
       const player = players.find(player => player.userId === client.authUser.id);
       if (player) {
-        client.join(roomId);
-        console.log('player:', client.authUser.nameFirst, roomId, player.position);
-        client.roomId = roomId;
-        client.position = player.position;
-        return player.position;
+        if (player.client.id !== client.id) {
+          client.join(roomId);
+          console.log('player:', client.authUser.nameFirst, roomId, player.position);
+          client.roomId = roomId;
+          client.position = player.position;
+          player.client = client;
+        }
+        this.handleResumeGame(client);
+        return player.position ? 1 : 2;
       }
     }
-    return null;
+    return 0;
   }
 
   @SubscribeMessage('move')
   handleMove(client: GameSocket, direction: number): void {
+    if (!client.roomId || client.position === undefined) return
     console.log('move', direction);
     this.gameService.updatePlayerPosition(client.roomId, client.position, direction);
     this.server.to(client.roomId).emit('state', this.gameService.getGameState(client.roomId));
@@ -215,23 +232,57 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  @SubscribeMessage('playWithBot')
+  handlePlayWithBot(client: GameSocket): void {
+    console.log('playWithBot', client.authUser.nameFirst);
+    const roomId = `room-${Date.now()}`;
+    this.rooms.set(roomId, [
+      { userId: client.authUser.id, position: true, client },
+    ]);
+    this.gameService.getGameState(roomId).bot = true;
+    client.join(roomId);
+    client.roomId = roomId;
+    client.position = true;
+    client.emit('startGame', 1);
+  }
+
   @SubscribeMessage('leaveGame')
-  handleDisconnectGame(client: GameSocket): void {
-    console.log('disconnect', client.authUser.nameFirst);
+  public handleLeaveGame(client: GameSocket): void {
     const roomId = client.roomId;
     if (!roomId) return;
-    client.leave(roomId);
-    client.roomId = undefined;
-    client.position = undefined;
-    
-    const players = this.rooms.get(roomId);
-    if (players) {
-      const remainingPlayers = players.filter(player => player.userId !== client.authUser.id);
-      if (remainingPlayers.length === 0) {
-        this.rooms.delete(roomId);
+    console.log('leave', client.authUser.nameFirst);
+    this.rooms.get(roomId).forEach(player => {
+      player.client.leave(roomId);
+      player.client.roomId = undefined;
+      player.client.position = undefined;
+      if (player.client.authUser.id === client.authUser.id) {
+        player.client.emit('gameOver', false);
       } else {
-        this.rooms.set(roomId, remainingPlayers);
+        player.client.emit('gameOver', true);
       }
-    }
+      console.log('gameOver', player.client.authUser.nameFirst);
+    });
+    this.rooms.delete(roomId);
+    this.gameService.deleteGame(roomId);
+  }
+
+  @SubscribeMessage('pauseGame')
+  handlePauseGame(client: GameSocket): void {
+    if (!client.roomId) return;
+    if (this.timeId.get(client.roomId)) return;
+    this.gameService.pauseGame(client.roomId);
+    this.timeId.set(client.roomId, setTimeout(() => {this.handleLeaveGame(client)}, 10000));
+    console.log('pause', client.id, this.timeId.get(client.roomId), client.roomId);
+  }
+
+  @SubscribeMessage('resumeGame')
+  handleResumeGame(client: GameSocket): void {
+    if (!client.roomId) return;
+    const timeId = this.timeId.get(client.roomId);
+    if (!timeId) return;
+    console.log('resume', client.id, timeId, client.roomId);
+    clearTimeout(timeId);
+    this.timeId.delete(client.roomId);
+    this.gameService.setGameInterval(client.roomId);
   }
 }
