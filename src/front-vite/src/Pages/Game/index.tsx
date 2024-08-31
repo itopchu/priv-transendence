@@ -15,6 +15,7 @@ const GameBox = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   width: "100%",
   paddingTop: "62.5%",
+  borderRadius: "1em",
   position: "relative",
 }));
 

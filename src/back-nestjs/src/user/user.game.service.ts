@@ -29,7 +29,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   private containerWidth = 800; // Örnek genişlik
   private containerHeight = 500; // Örnek yükseklik
   private paddleSpeed = 5; // Örnek hız
-  private lastLogTime = 0;
+  // private lastLogTime = 0;
 
 
   onModuleInit() {
@@ -81,7 +81,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     
     player1.y = Math.max(0, Math.min(this.containerHeight - 100, player1.y + player1.direction * this.paddleSpeed));
     if (gameState.bot)
-      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + ((y - player2.y - 50) )));
+      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + 50 > y ? player2.y - 1 : player2.y + 1 ));
     else
       player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + player2.direction * this.paddleSpeed));  
 
@@ -101,7 +101,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
       const ballCenter = y + 10;
       const offset = ballCenter - paddleCenter;
       const normalizedOffset = offset / 50;
-      return normalizedOffset * 5; // İstenilen zıplama açısı için çarpanı ayarlayın
+      return normalizedOffset * 5;
     };
 
     if (
@@ -130,16 +130,16 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
       gameState.ball = { x, y, dx, dy };
     }
 
-    const currentTime = Date.now();
+/*     const currentTime = Date.now();
     if (currentTime - this.lastLogTime > 1000) {
       console.log('Game running:', roomId);
       this.lastLogTime = currentTime;
-    }
+    } */
   }
 
   resetBall(roomId: string, lastScored: boolean): void {
     const gameState = this.getGameState(roomId);
-    const angle = Math.random() * Math.PI / 4 - Math.PI / 8; // -22.5 ile 22.5 derece arasında rastgele bir açı
+    const angle = Math.random() * Math.PI / 4 - Math.PI / 8;
     const speed = 2;
     const dx = lastScored ? -speed * Math.cos(angle) : speed * Math.cos(angle);
     const dy = speed * Math.sin(angle);

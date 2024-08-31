@@ -10,20 +10,20 @@ enum PlayerStates {
 }
 
 const Play = () => {
-    const { user, userSocket } = useUser();
-    const [playerState, setPlayerState] = useState<PlayerStates>(PlayerStates.notInGame);
-    const [isJoined, setIsJoined] = useState(false);
-    const [isConnected, setIsConnected] = useState(false);
-    const [gameState, setGameState] = useState({
-      player1: { y: 150, direction: 0 },
-      player2: { y: 150, direction: 0 },
-      ball: { x: 390, y: 190, dx: 0, dy: 0 },
-      bot: false,
-      score: { player1: 0, player2: 0 },
-      lastScored: null as "player1" | "player2" | null,
-    });
+  const { user, userSocket } = useUser();
+  const [playerState, setPlayerState] = useState<PlayerStates>(PlayerStates.notInGame);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [mePaused, setMePaused] = useState(false);
+  const [countDown, setCountDown] = useState(0);
+  const [gameState, setGameState] = useState({
+    player1: { y: 150, direction: 0 },
+    player2: { y: 150, direction: 0 },
+    ball: { x: 390, y: 190, dx: 0, dy: 0 },
+    bot: false,
+    score: { player1: 0, player2: 0 },
+    lastScored: null as "player1" | "player2" | null,
+  });
 
-    
     useEffect(() => {
       if (!userSocket) {
         return;
@@ -34,16 +34,18 @@ const Play = () => {
       
       userSocket.on("startGame", (playerState: number) => {
         setPlayerState(playerState);
+        setIsPlaying(true);
       });
       
-      userSocket.on("connect", () => {
-        setIsConnected(true);
+      userSocket.on("isGamePlaying", (playing: boolean) => {
+        setIsPlaying(playing);
+        if (playing) {
+          setCountDown(0);
+        } else {
+          setCountDown(10);
+        }
       });
       
-      userSocket.on("disconnect", () => {
-        setIsConnected(false);
-      });
-
       userSocket.on("gameOver", (win: boolean) => {
         if (win) {
           alert("You win!");
@@ -54,21 +56,33 @@ const Play = () => {
       });
       
       userSocket.emit("getPlayerState", (playerState: number) => {
-        console.log("playerState:", playerState);
         setPlayerState(playerState);
       });
-      
-      console.log("position old:", playerState);
       
       return () => {
         userSocket.off("state");
         userSocket.off("startGame");
-        userSocket.off("connect");
-        userSocket.off("disconnect");
+        userSocket.off("isGamePlaying");
         userSocket.off("gameOver");
-        pasueGame();
+        userSocket.emit("pauseGame");
       };
     }, [userSocket]);
+
+    useEffect(() => {
+      if (countDown <= 0) return;
+      const interval = setInterval(() => {
+        setCountDown(countDown - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    } , [countDown]);
+
+    useEffect(() => {
+      if (playerState === PlayerStates.notInGame || playerState === PlayerStates.inQueue) {
+        setMePaused(false);
+        setIsPlaying(false);
+        setCountDown(0);
+      }
+    }, [playerState]);
     
     const emitMove = (direction: number) => {
       userSocket?.emit("move", direction);
@@ -114,31 +128,47 @@ const Play = () => {
       userSocket?.emit("joinQueue");
       setPlayerState(PlayerStates.inQueue);
     };
-
+    
     const playWithBot = () => {
       userSocket?.emit("playWithBot");
       setPlayerState(PlayerStates.player1_left);
     };
-
-    const pasueGame = () => {
+    
+    const pauseGame = () => {
+      if (!isPlaying) return;
       userSocket?.emit("pauseGame");
+      setMePaused(true);
     };
-
+    
     const resumeGame = () => {
-      if ( playerState === PlayerStates.player1_left || playerState === PlayerStates.player2_right)
+      if (!isPlaying && mePaused) {
         userSocket?.emit("resumeGame");
+        setMePaused(false);
+      }
     };
-
+    
     const leave = () => {
       userSocket?.emit("leaveGame");
-      console.log("leave");
       setPlayerState(PlayerStates.notInGame);
     };
 
+    const leaveQueue = () => {
+      userSocket?.emit("leaveQueue");
+      setPlayerState(PlayerStates.notInGame);
+    };
+
+    const togglePlayPause = () => {
+      if (isPlaying)
+        pauseGame();
+      else
+        resumeGame();
+    }
+
     const Loader = () => {
       return (
-        <div className="loader-container">
+        <div className="loader-container" style={{position: "absolute", left:"50%", top:"50%", transform: "translate(-50%, -50%)"}}>
           <div className="loader"></div>
+          <button className= "retro-button" onClick={leaveQueue} style={{marginTop: "50px"}}>Cancel</button>
         </div>
       );
     }; 
@@ -146,19 +176,23 @@ const Play = () => {
     return (
       <div className="container">
         {playerState === PlayerStates.notInGame ? (
-          <div style={{position: "absolute", left:"50%", top:"50%", transform: "translate(-50%, -50%)"}}>
-          <button onClick={joinQueue}>Join</button>
-          <button onClick = {playWithBot}>Play with Bot</button>
+          <div style={{position: "absolute", left:"50%", top:"50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px"}}>
+          <button className= "retro-button" onClick={joinQueue}>Join</button>
+          <button className= "retro-button" onClick = {playWithBot}>Play with Bot</button>
         </div>) : playerState === PlayerStates.inQueue ? (
           <Loader />
         ) : (
           <div>
-          <button onClick={leave}>leave</button>
-          <button onClick={pasueGame}>pause</button>
-          <button onClick={resumeGame}>resume</button>
+          <button className="exit-button" onClick={leave} style={{position: "absolute", left: "10px", top: "10px"}}>
+            <div className="exit-icon"></div>
+          </button>
+          <button className="play-pause-button" onClick={togglePlayPause} style={{position: "absolute", left: "40px", top: "10px"}}>
+            <div className={isPlaying ? "pause-icon" : "play-icon"}></div>
+          </button>
           <h1 className="score">
             {gameState.score.player1} - {gameState.score.player2}
           </h1>
+          {countDown > 0 && <h1 className="countdown" style={{position: "absolute", top: "30px", [playerState === PlayerStates.player1_left ? (mePaused ? "left" : "right") : (mePaused ? "right" : "left")]: "100px"}}>{countDown}</h1>}
           <div className="paddle" style={{ top: `${gameState.player1.y/500*100}%`, left: "1.25%" }} />
           <div className="paddle" style={{ top: `${gameState.player2.y/500*100}%`, right: "1.25%" }} />
           <div className="ball" style={{ top: `${gameState.ball.y/500*100}%`, left: `${gameState.ball.x/800*100}%` }} />

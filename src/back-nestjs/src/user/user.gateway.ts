@@ -24,6 +24,11 @@ interface Player {
   client: GameSocket;
 }
 
+interface timePause {
+  userId: number;
+  timeId: NodeJS.Timeout;
+}
+
 export async function authenticateUser(
   client: UserSocket,
   configService: ConfigService,
@@ -152,14 +157,13 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //game
   private rooms: Map<string, Player[]> = new Map();
   private queue: { userId: number, client: GameSocket }[] = [];
-  private timeId: Map<string, NodeJS.Timeout> = new Map();
+  private timeId: Map<string, timePause> = new Map();
 
   afterInit(server: Server) {
     console.log('WebSocket server initialized');
     setInterval(() => {
       this.rooms.forEach((players, roomId) => {
         this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
-        // console.log('state', this.gameService.getGameState(roomId));
       });
     }, 16);
   }
@@ -189,12 +193,18 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       player.client.join(roomId);
       player.client.roomId = roomId;
       player.client.position = index === 0;
-      player.client.emit('startGame', index === 0);
+      player.client.emit('startGame', index + 1);
     });
+  }
+
+  @SubscribeMessage('leaveQueue')
+  handleLeaveQueue(client: GameSocket): void {
+    this.queue = this.queue.filter(player => player.userId !== client.authUser.id);
   }
 
   @SubscribeMessage('getPlayerState')
   handleGetRoomId(client: GameSocket): number {
+    console.log('getPlayerState', client.authUser.nameFirst);
     const inQueue = this.queue.find(player => player.userId === client.authUser.id);
     if (inQueue) {
       inQueue.client = client;
@@ -205,7 +215,6 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (player) {
         if (player.client.id !== client.id) {
           client.join(roomId);
-          console.log('player:', client.authUser.nameFirst, roomId, player.position);
           client.roomId = roomId;
           client.position = player.position;
           player.client = client;
@@ -219,8 +228,8 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('move')
   handleMove(client: GameSocket, direction: number): void {
-    if (!client.roomId || client.position === undefined) return
     console.log('move', direction);
+    if (!client.roomId || client.position === undefined) return
     this.gameService.updatePlayerPosition(client.roomId, client.position, direction);
     this.server.to(client.roomId).emit('state', this.gameService.getGameState(client.roomId));
   }
@@ -247,10 +256,10 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('leaveGame')
-  public handleLeaveGame(client: GameSocket): void {
+  handleLeaveGame(client: GameSocket): void {
+    console.log('leave', client.authUser.nameFirst);
     const roomId = client.roomId;
     if (!roomId) return;
-    console.log('leave', client.authUser.nameFirst);
     this.rooms.get(roomId).forEach(player => {
       player.client.leave(roomId);
       player.client.roomId = undefined;
@@ -262,27 +271,36 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       console.log('gameOver', player.client.authUser.nameFirst);
     });
+    this.clearTimeId(roomId);
     this.rooms.delete(roomId);
     this.gameService.deleteGame(roomId);
   }
 
   @SubscribeMessage('pauseGame')
   handlePauseGame(client: GameSocket): void {
+    console.log('pause', client.authUser.nameFirst, client.roomId);
     if (!client.roomId) return;
     if (this.timeId.get(client.roomId)) return;
     this.gameService.pauseGame(client.roomId);
-    this.timeId.set(client.roomId, setTimeout(() => {this.handleLeaveGame(client)}, 10000));
-    console.log('pause', client.id, this.timeId.get(client.roomId), client.roomId);
+    this.timeId.set(client.roomId, {timeId: setTimeout(() => {this.handleLeaveGame(client)}, 10000), userId: client.authUser.id});
+    this.server.to(client.roomId).emit('isGamePlaying', false);
   }
-
+  
   @SubscribeMessage('resumeGame')
   handleResumeGame(client: GameSocket): void {
+    console.log('resume', client.authUser.nameFirst, client.roomId);
     if (!client.roomId) return;
-    const timeId = this.timeId.get(client.roomId);
-    if (!timeId) return;
-    console.log('resume', client.id, timeId, client.roomId);
-    clearTimeout(timeId);
-    this.timeId.delete(client.roomId);
+    if (client.authUser.id !== this.timeId.get(client.roomId)?.userId) return;
+    if (!this.clearTimeId(client.roomId)) return;
     this.gameService.setGameInterval(client.roomId);
+    this.server.to(client.roomId).emit('isGamePlaying', true);
+  }
+
+  clearTimeId(roomId: string): boolean {
+    const timeId = this.timeId.get(roomId)?.timeId;
+    if (!timeId) return false;
+    clearTimeout(timeId);
+    this.timeId.delete(roomId);
+    return true;
   }
 }
