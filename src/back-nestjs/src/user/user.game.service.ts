@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
 
 interface Player {
@@ -23,17 +23,17 @@ interface GameState {
 
 @Injectable()
 export class GameService implements OnModuleInit, OnModuleDestroy {
-  // constructor(private readonly gateway: UserGateway) { }
+  constructor(
+    @Inject(forwardRef(() => UserGateway))
+    private readonly gateway: UserGateway
+  ) {}
   private gameStates: Map<string, GameState> = new Map(); // roomId -> gameState
   private intervalIds: Map<string, NodeJS.Timeout> = new Map(); // roomId -> intervalId
-  private containerWidth = 800; // Örnek genişlik
-  private containerHeight = 500; // Örnek yükseklik
-  private paddleSpeed = 5; // Örnek hız
-  // private lastLogTime = 0;
-
+  private containerWidth = 800;
+  private containerHeight = 500;
+  private paddleSpeed = 5;
 
   onModuleInit() {
-    // Başlangıçta herhangi bir oyun odası yok
   }
 
   onModuleDestroy() {
@@ -45,7 +45,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     if (this.intervalIds.has(roomId)) return;
     const intervalId = setInterval(() => {
       this.updateBallPosition(roomId);
-    }, 16);
+    }, 5);
     this.intervalIds.set(roomId, intervalId);
   }
 
@@ -118,23 +118,17 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
 
     if (x <= 0) {
       if (++gameState.score.player2 >= 5) {
-        this.finishGame(roomId, true);
+        this.finishGame(roomId, false);
       }
       this.resetBall(roomId, false);
     } else if (x >= this.containerWidth - 20) {
       if (++gameState.score.player1 >= 5) {
-        this.finishGame(roomId, false);
+        this.finishGame(roomId, true);
       }
       this.resetBall(roomId, true);
     } else {
       gameState.ball = { x, y, dx, dy };
     }
-
-/*     const currentTime = Date.now();
-    if (currentTime - this.lastLogTime > 1000) {
-      console.log('Game running:', roomId);
-      this.lastLogTime = currentTime;
-    } */
   }
 
   resetBall(roomId: string, lastScored: boolean): void {
@@ -165,8 +159,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     this.gameStates.delete(roomId);
   }
 
-  finishGame(roomId: string, loser: boolean): void {
-    // const player = this.gateway.rooms.get(roomId).find(player => { player.position === loser })
-    // this.gateway.dene();
+  finishGame(roomId: string, winner: boolean): void {
+    this.gateway.gameOver(roomId, winner);
   } 
 }

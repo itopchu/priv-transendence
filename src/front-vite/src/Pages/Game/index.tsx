@@ -37,10 +37,6 @@ const Game: React.FC = () => {
   const theme = useTheme();
   const { user, setUser, userSocket } = useUser();
 
-  const getInfo = () => {
-    userSocket?.emit("info");
-  };
-
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
   return (
     <MainContainer>
@@ -62,20 +58,6 @@ const Game: React.FC = () => {
           >
             Pong Game
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            backgroundColor: theme.palette.primary.main,
-            padding: theme.spacing(2),
-            borderRadius: theme.shape.borderRadius,
-          }}
-        >
-          <button
-            onClick={getInfo}
-            style={{ fontSize: "24px" }}
-          >
-            info
-          </button>
         </Box>
         <GameBox>
           <Play />

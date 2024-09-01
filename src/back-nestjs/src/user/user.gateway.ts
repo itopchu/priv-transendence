@@ -2,7 +2,7 @@ import { WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, 
 import { Server, Socket } from 'socket.io';
 import { verify, JwtPayload } from 'jsonwebtoken';
 import { UserService } from '../user/user.service';
-import { UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { User } from '../entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserPublicDTO } from '../dto/user.dto';
@@ -246,7 +246,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('playWithBot', client.authUser.nameFirst);
     const roomId = `room-${Date.now()}`;
     this.rooms.set(roomId, [
-      { userId: client.authUser.id, position: true, client },
+      { userId: client.authUser.id, position: true, client }
     ]);
     this.gameService.getGameState(roomId).bot = true;
     client.join(roomId);
@@ -257,13 +257,10 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('leaveGame')
   handleLeaveGame(client: GameSocket): void {
-    console.log('leave', client.authUser.nameFirst);
     const roomId = client.roomId;
     if (!roomId) return;
     this.rooms.get(roomId).forEach(player => {
-      player.client.leave(roomId);
-      player.client.roomId = undefined;
-      player.client.position = undefined;
+      this.resetClient(player.client);
       if (player.client.authUser.id === client.authUser.id) {
         player.client.emit('gameOver', false);
       } else {
@@ -271,9 +268,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       console.log('gameOver', player.client.authUser.nameFirst);
     });
-    this.clearTimeId(roomId);
-    this.rooms.delete(roomId);
-    this.gameService.deleteGame(roomId);
+    this.cleanUp(roomId);
   }
 
   @SubscribeMessage('pauseGame')
@@ -302,5 +297,32 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     clearTimeout(timeId);
     this.timeId.delete(roomId);
     return true;
+  }
+  
+  cleanUp(roomId: string): void {
+    this.clearTimeId(roomId);
+    this.rooms.delete(roomId);
+    this.gameService.deleteGame(roomId);
+  }
+
+  resetClient(client: GameSocket): void {
+    client.leave(client.roomId);
+    client.roomId = undefined;
+    client.position = undefined;
+  }
+
+  gameOver(roomId: string, winner: boolean): void {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+    const loser = room.find(player => player.position !== winner);
+    if (!loser) {
+      const player = room.find(player => player.position === true);
+      if (!winner) return;
+      player.client.emit('gameOver', true);
+      this.resetClient(player.client);
+      this.cleanUp(roomId);
+    }
+    else
+      this.handleLeaveGame(loser.client);
   }
 }

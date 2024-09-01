@@ -21,7 +21,6 @@ const Play = () => {
     ball: { x: 390, y: 190, dx: 0, dy: 0 },
     bot: false,
     score: { player1: 0, player2: 0 },
-    lastScored: null as "player1" | "player2" | null,
   });
 
     useEffect(() => {
@@ -136,20 +135,20 @@ const Play = () => {
     
     const pauseGame = () => {
       if (!isPlaying) return;
-      userSocket?.emit("pauseGame");
       setMePaused(true);
+      userSocket?.emit("pauseGame");
     };
     
     const resumeGame = () => {
       if (!isPlaying && mePaused) {
-        userSocket?.emit("resumeGame");
+        setCountDown(0);
         setMePaused(false);
+        userSocket?.emit("resumeGame");
       }
     };
     
     const leave = () => {
       userSocket?.emit("leaveGame");
-      setPlayerState(PlayerStates.notInGame);
     };
 
     const leaveQueue = () => {
@@ -183,9 +182,7 @@ const Play = () => {
           <Loader />
         ) : (
           <div>
-          <button className="exit-button" onClick={leave} style={{position: "absolute", left: "10px", top: "10px"}}>
-            <div className="exit-icon"></div>
-          </button>
+          <button className="exit" name="Leave Game" onClick={leave} style={{position: "absolute", left: "10px", top: "10px"}}></button>
           <button className="play-pause-button" onClick={togglePlayPause} style={{position: "absolute", left: "40px", top: "10px"}}>
             <div className={isPlaying ? "pause-icon" : "play-icon"}></div>
           </button>
