@@ -160,6 +160,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   }
 
   finishGame(roomId: string, winner: boolean): void {
+    return;
     this.gateway.gameOver(roomId, winner);
   } 
 }

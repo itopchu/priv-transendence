@@ -52,7 +52,7 @@ export async function authenticateUser(
     if (typeof decoded !== 'object' || !decoded.intraId || isNaN(Number(decoded.intraId))) {
       throw new UnauthorizedException('Unauthorized: Invalid token structure');
     }
-
+ 
     const user = await userService.getUserByIntraId(Number(decoded.intraId));
     if (!user) {
       throw new UnauthorizedException('Unauthorized: User not found');
@@ -159,7 +159,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private queue: { userId: number, client: GameSocket }[] = [];
   private timeId: Map<string, timePause> = new Map();
 
-  afterInit(server: Server) {
+  afterInit() {
     console.log('WebSocket server initialized');
     setInterval(() => {
       this.rooms.forEach((players, roomId) => {
@@ -170,20 +170,23 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('joinQueue')
   handleJoinQueue(client: GameSocket): void {
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      client.emit('playerState', 4);
+      return;
+    }
     if (client.roomId) {
       return console.log('User already in a room', client.authUser.id);
     }
     if (this.queue.some(player => player.userId === client.authUser.id)) {
       return console.log('User already in queue', client.authUser.id);
     }
-  
     this.queue.push({ userId: client.authUser.id, client });
     if (this.queue.length < 2) return;
   
     const [player1, player2] = [this.queue.shift(), this.queue.shift()];
     if (!player1 || !player2) return;
   
-    const roomId = `room-${Date.now()}`;
+    const roomId = `GameRoom-${Date.now()}`;
     this.rooms.set(roomId, [
       { userId: player1.userId, position: true, client: player1.client },
       { userId: player2.userId, position: false, client: player2.client },
@@ -202,9 +205,31 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.queue = this.queue.filter(player => player.userId !== client.authUser.id);
   }
 
+  isUserInGameRoom(userId: number): boolean {
+    const rooms = this.server.sockets.adapter.rooms;
+    for (const [roomId, room] of rooms) {
+      if (roomId.startsWith('GameRoom-')) {
+        for (const clientId of room.keys()) {
+          const client = this.server.of('/').sockets.get(clientId) as GameSocket;
+          if (client && client.authUser.id === userId) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   @SubscribeMessage('getPlayerState')
   handleGetRoomId(client: GameSocket): number {
     console.log('getPlayerState', client.authUser.nameFirst);
+    if (client.roomId) {
+      this.handleResumeGame(client);
+      return client.position ? 1 : 2;
+    }
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      return 4;
+    }
     const inQueue = this.queue.find(player => player.userId === client.authUser.id);
     if (inQueue) {
       inQueue.client = client;
@@ -243,8 +268,12 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('playWithBot')
   handlePlayWithBot(client: GameSocket): void {
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      client.emit('playerState', 4);
+      return;
+    }
     console.log('playWithBot', client.authUser.nameFirst);
-    const roomId = `room-${Date.now()}`;
+    const roomId = `GameRoom-${Date.now()}`;
     this.rooms.set(roomId, [
       { userId: client.authUser.id, position: true, client }
     ]);
@@ -255,11 +284,24 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('startGame', 1);
   }
 
+  leaveGameId(userId: number): string | undefined {
+    for (const [roomId, players] of this.rooms) {
+      if (players.some(player => player.userId === userId)) {
+        return roomId;
+      }
+    }
+  }
+
   @SubscribeMessage('leaveGame')
   handleLeaveGame(client: GameSocket): void {
-    const roomId = client.roomId;
-    if (!roomId) return;
-    this.rooms.get(roomId).forEach(player => {
+    let roomId = client.roomId;
+    if (!roomId) {
+      roomId = this.leaveGameId(client.authUser.id);
+      if (!roomId) return;
+    }
+    const room = this.rooms.get(roomId)
+    if (!room) return;
+    room.forEach(player => {
       this.resetClient(player.client);
       if (player.client.authUser.id === client.authUser.id) {
         player.client.emit('gameOver', false);

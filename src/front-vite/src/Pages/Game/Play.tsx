@@ -7,6 +7,7 @@ enum PlayerStates {
   player1_left = 1,
   player2_right = 2,
   inQueue = 3,
+  inGame = 4,
 }
 
 const Play = () => {
@@ -53,6 +54,10 @@ const Play = () => {
         }
         setPlayerState(PlayerStates.notInGame);
       });
+
+      userSocket.on("playerState", (playerState: number) => {
+        setPlayerState(playerState);
+      });
       
       userSocket.emit("getPlayerState", (playerState: number) => {
         setPlayerState(playerState);
@@ -62,6 +67,7 @@ const Play = () => {
         userSocket.off("state");
         userSocket.off("startGame");
         userSocket.off("isGamePlaying");
+        userSocket.off("playerState");
         userSocket.off("gameOver");
         userSocket.emit("pauseGame");
       };
@@ -148,6 +154,9 @@ const Play = () => {
     };
     
     const leave = () => {
+      if (playerState === PlayerStates.inGame) {
+        setPlayerState(PlayerStates.notInGame);
+      }
       userSocket?.emit("leaveGame");
     };
 
@@ -163,23 +172,27 @@ const Play = () => {
         resumeGame();
     }
 
-    const Loader = () => {
-      return (
-        <div className="loader-container" style={{position: "absolute", left:"50%", top:"50%", transform: "translate(-50%, -50%)"}}>
-          <div className="loader"></div>
-          <button className= "retro-button" onClick={leaveQueue} style={{marginTop: "50px"}}>Cancel</button>
-        </div>
-      );
-    }; 
-    
+    const invate = () => {
+      // userSocket?.emit("invitePlayer");
+    }
+
     return (
       <div className="container">
-        {playerState === PlayerStates.notInGame ? (
+        {playerState === PlayerStates.inGame ? (
+         <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)"}}>
+           <h1>You are already in game...</h1>
+           <button className="retro-button" onClick={leave} style={{position: "absolute", left: "50%", transform: "translate(-50%, -50%)"}}>Leave</button>
+         </div>
+        ) :  playerState === PlayerStates.notInGame ? (
           <div style={{position: "absolute", left:"50%", top:"50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px"}}>
           <button className= "retro-button" onClick={joinQueue}>Join</button>
           <button className= "retro-button" onClick = {playWithBot}>Play with Bot</button>
+          <button className= "retro-button" onClick={invate}>Invite Player</button>
         </div>) : playerState === PlayerStates.inQueue ? (
-          <Loader />
+          <div className="loader-container" style={{position: "absolute", left:"50%", top:"50%", transform: "translate(-50%, -50%)"}}>
+          <div className="loader"></div>
+          <button className= "retro-button" onClick={leaveQueue} style={{marginTop: "50px"}}>Cancel</button>
+          </div>
         ) : (
           <div>
           <button className="exit" name="Leave Game" onClick={leave} style={{position: "absolute", left: "10px", top: "10px"}}></button>
