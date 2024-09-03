@@ -178,7 +178,8 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return console.log('User already in a room', client.authUser.id);
     }
     if (this.queue.some(player => player.userId === client.authUser.id)) {
-      return console.log('User already in queue', client.authUser.id);
+      client.emit('playerState', 4);
+      return;
     }
     this.queue.push({ userId: client.authUser.id, client });
     if (this.queue.length < 2) return;
