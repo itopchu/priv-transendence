@@ -145,7 +145,7 @@
 }
 
 .play-icon:hover {
-	border-color: transparent transparent transparent #0f3a8f;
+	border-color: transparent transparent transparent #3769ce;
 }
 
 .pause-icon {
@@ -158,12 +158,12 @@
 }
 
 .pause-icon:hover {
-	border-color: #0f3a8f;
+	border-color: #2b5cbd;
 }
 
 .exit::before, .exit::after {
 	width: 23px;
-	height: 4px;
+	height: 5px;
 	background-color: #fff;
 	border-radius: 10px;
 	transition: background-color 0.2s ease-in-out;

@@ -31,7 +31,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   private intervalIds: Map<string, NodeJS.Timeout> = new Map(); // roomId -> intervalId
   private containerWidth = 800;
   private containerHeight = 500;
-  private paddleSpeed = 5;
+  private paddleSpeed = 3;
 
   onModuleInit() {
   }
