@@ -1,4 +1,4 @@
-import React, { ReactElement, useEffect, useState } from "react";
+import React from "react";
 import {
   Container,
   Stack,
@@ -9,11 +9,13 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { useUser } from "../../Providers/UserContext/User";
+import Play from "./Play";
 
 const GameBox = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   width: "100%",
-  paddingTop: "56.25%",
+  paddingTop: "62.5%",
+  borderRadius: "1em",
   position: "relative",
 }));
 
@@ -34,151 +36,6 @@ const MainContainer = styled(Container)(({ theme }) => ({
 const Game: React.FC = () => {
   const theme = useTheme();
   const { user, setUser, userSocket } = useUser();
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const [gameState, setGameState] = useState({
-    player1: { y: 150 },
-    player2: { y: 150 },
-    ball: { x: 390, y: 190 },
-    score: { player1: 0, player2: 0 },
-  });
-  const [buttonText, setButtonText] = useState("disconnect");
-  const [isConnected, setIsConnected] = useState(false);
-
-  useEffect(() => {
-    if (!userSocket) {
-      return;
-    }
-    userSocket.on("state", (state) => {
-      setGameState(state);
-    });
-
-    userSocket.on("startGame", (roomId) => {
-      setRoomId(roomId);
-    });
-
-    userSocket.on("connect", () => {
-      setIsConnected(true);
-    });
-
-    userSocket.on("disconnect", () => {
-      setIsConnected(false);
-    });
-
-    userSocket.emit("getRoomId", user.id, (roomId: string | null) => {
-      console.log("roomId", roomId);
-      setRoomId(roomId);
-    });
-    
-    console.log(roomId);
-
-    return () => {
-      userSocket.off("state");
-      userSocket.off("startGame");
-      userSocket.off("connect");
-      userSocket.off("disconnect");
-    };
-  }, [userSocket]);
-
-  const handleConnection = () => {
-    if (buttonText === "connect") {
-      userSocket?.connect();
-      setButtonText("disconnect");
-    } else if (buttonText === "disconnect") {
-      userSocket?.disconnect();
-      setButtonText("connect");
-    }
-  };
-
-  const Play = () => {
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!roomId) return;
-      const y: number = e.pageY - 300;
-      userSocket?.emit("move", { userId: user.id, roomId, y });
-    };
-
-    const joinRoom = () => {
-      userSocket?.emit("joinQueue", user.id);
-    };
-
-    if (!roomId) {
-      return (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <button onClick={handleConnection}>{buttonText}</button>
-          <h1>Enter Queue</h1>
-          <button onClick={joinRoom}>Odaya Katil</button>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        onMouseMove={handleMouseMove}
-        style={{
-          position: "absolute",
-          width: "100%",
-          height: "100%",
-          border: "3px solid black",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: "10px",
-            top: `${gameState.player1.y}px`,
-            width: "1%",
-            height: "10%",
-            backgroundColor: "blue",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            right: "10px",
-            top: `${gameState.player2.y}px`,
-            width: "10px",
-            height: "100px",
-            backgroundColor: "red",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            left: `${gameState.ball.x}px`,
-            top: `${gameState.ball.y}px`,
-            width: "10px",
-            height: "10px",
-            backgroundColor: "green",
-            borderRadius: "50%",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            top: "10px",
-            left: "50%",
-            transform: "translateX(-50%)",
-          }}
-        >
-          Score: {gameState.score.player1} - {gameState.score.player2}
-        </div>
-      </div>
-    );
-  };
-
-  const getInfo = () => {
-    userSocket?.emit("info");
-  };
 
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
   return (
@@ -201,20 +58,6 @@ const Game: React.FC = () => {
           >
             Pong Game
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            backgroundColor: theme.palette.primary.main,
-            padding: theme.spacing(2),
-            borderRadius: theme.shape.borderRadius,
-          }}
-        >
-          <button
-            onClick={getInfo}
-            style={{ fontSize: "24px" }}
-          >
-            info
-          </button>
         </Box>
         <GameBox>
           <Play />

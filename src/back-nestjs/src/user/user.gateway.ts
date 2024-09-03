@@ -2,21 +2,31 @@ import { WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, 
 import { Server, Socket } from 'socket.io';
 import { verify, JwtPayload } from 'jsonwebtoken';
 import { UserService } from '../user/user.service';
-import { UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { User } from '../entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserPublicDTO } from '../dto/user.dto';
-import { GameService } from '../game/game.service';
+import { GameService } from './user.game.service';
+import { subscribe } from 'diagnostics_channel';
 
 export interface UserSocket extends Socket {
   authUser?: User;
 }
 
+export interface GameSocket extends UserSocket {
+  roomId?: string;
+  position?: boolean;
+}
+
 interface Player {
   userId: number;
-  clientId: string;
-  roomId: string;
   position: boolean;
+  client: GameSocket;
+}
+
+interface timePause {
+  userId: number;
+  timeId: NodeJS.Timeout;
 }
 
 export async function authenticateUser(
@@ -42,7 +52,7 @@ export async function authenticateUser(
     if (typeof decoded !== 'object' || !decoded.intraId || isNaN(Number(decoded.intraId))) {
       throw new UnauthorizedException('Unauthorized: Invalid token structure');
     }
-
+ 
     const user = await userService.getUserByIntraId(Number(decoded.intraId));
     if (!user) {
       throw new UnauthorizedException('Unauthorized: User not found');
@@ -59,7 +69,7 @@ export async function authenticateUser(
 export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly userService: UserService,
     private readonly configService: ConfigService,
-    private readonly gameService: GameService) { }
+    private readonly gameService: GameService) {}
 
   @WebSocketServer()
   server: Server;
@@ -82,7 +92,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return (true);
   }
 
-  handleDisconnect(client: UserSocket) {
+  handleDisconnect(client: GameSocket) {
     const user = client.authUser;
     console.log('Client disconnected:', user?.nameFirst, client.id);//kontrol icin
     if (user) {
@@ -98,6 +108,10 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.connectedUsers.delete(user.id);
         this.server.to(String(user.id)).emit('profileStatus', new UserPublicDTO(user, 'offline'));
       }
+    }
+    if (client.roomId) {
+      this.handlePauseGame(client);
+      client.leave(client.roomId);
     }
   }
 
@@ -142,9 +156,10 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //game
   //game
   private rooms: Map<string, Player[]> = new Map();
-  private queue: { qUserId: number, client: Socket }[] = [];
+  private queue: { userId: number, client: GameSocket }[] = [];
+  private timeId: Map<string, timePause> = new Map();
 
-  afterInit(server: Server) {
+  afterInit() {
     console.log('WebSocket server initialized');
     setInterval(() => {
       this.rooms.forEach((players, roomId) => {
@@ -154,62 +169,203 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('joinQueue')
-  handleJoinQueue(client: Socket, userId: number): void {
-    if (this.queue.some(player => player.qUserId === userId)) {
-      return (console.log('User already in queue', userId));
+  handleJoinQueue(client: GameSocket): void {
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      client.emit('playerState', 4);
+      return;
     }
-
-    this.queue.push({ qUserId: userId, client });
-    if (this.queue.length >= 2) {
-      const player1 = this.queue.shift();
-      const player2 = this.queue.shift();
-      
-      if (player1 && player2) {
-        const roomId = `room-${Date.now()}`;
-        this.rooms.set(roomId, [
-          { userId: player1.qUserId, clientId: player1.client.id, roomId: roomId, position: true },
-          { userId: player2.qUserId, clientId: player2.client.id, roomId: roomId, position: false }
-        ]);
-        
-        player1.client.join(roomId);
-        player2.client.join(roomId);
-        
-        this.server.to(roomId).emit('startGame', roomId);
-      }
+    if (client.roomId) {
+      return console.log('User already in a room', client.authUser.id);
     }
+    if (this.queue.some(player => player.userId === client.authUser.id)) {
+      client.emit('playerState', 4);
+      return;
+    }
+    this.queue.push({ userId: client.authUser.id, client });
+    if (this.queue.length < 2) return;
+  
+    const [player1, player2] = [this.queue.shift(), this.queue.shift()];
+    if (!player1 || !player2) return;
+  
+    const roomId = `GameRoom-${Date.now()}`;
+    this.rooms.set(roomId, [
+      { userId: player1.userId, position: true, client: player1.client },
+      { userId: player2.userId, position: false, client: player2.client },
+    ]);
+  
+    [player1, player2].forEach((player, index) => {
+      player.client.join(roomId);
+      player.client.roomId = roomId;
+      player.client.position = index === 0;
+      player.client.emit('startGame', index + 1);
+    });
   }
 
-  @SubscribeMessage('getRoomId')
-  handleGetRoomId(client: Socket, userId: number): string | null {
-    for (const [roomId, players] of this.rooms) {
-      const player = players.find(player => player.userId === userId);
-      if (player) {
-        player.clientId = client.id;
-        client.join(roomId);
-        console.log('player:', userId, roomId);
-        return roomId;
+  @SubscribeMessage('leaveQueue')
+  handleLeaveQueue(client: GameSocket): void {
+    this.queue = this.queue.filter(player => player.userId !== client.authUser.id);
+  }
+
+  isUserInGameRoom(userId: number): boolean {
+    const rooms = this.server.sockets.adapter.rooms;
+    for (const [roomId, room] of rooms) {
+      if (roomId.startsWith('GameRoom-')) {
+        for (const clientId of room.keys()) {
+          const client = this.server.of('/').sockets.get(clientId) as GameSocket;
+          if (client && client.authUser.id === userId) {
+            return true;
+          }
+        }
       }
     }
-    return null;
+    return false;
+  }
+
+  @SubscribeMessage('getPlayerState')
+  handleGetRoomId(client: GameSocket): number {
+    console.log('getPlayerState', client.authUser.nameFirst);
+    if (client.roomId) {
+      this.handleResumeGame(client);
+      return client.position ? 1 : 2;
+    }
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      return 4;
+    }
+    const inQueue = this.queue.find(player => player.userId === client.authUser.id);
+    if (inQueue) {
+      inQueue.client = client;
+      return 3;
+    }
+    for (const [roomId, players] of this.rooms) {
+      const player = players.find(player => player.userId === client.authUser.id);
+      if (player) {
+        if (player.client.id !== client.id) {
+          client.join(roomId);
+          client.roomId = roomId;
+          client.position = player.position;
+          player.client = client;
+        }
+        this.handleResumeGame(client);
+        return player.position ? 1 : 2;
+      }
+    }
+    return 0;
   }
 
   @SubscribeMessage('move')
-  handleMove(client: Socket, payload: { userId: number, y: number, roomId: string }): void {
-    const room = this.rooms.get(payload.roomId);
-    if (room) {
-      const player = room.find(player => player.userId === payload.userId);
-      if (player) {
-        const position = player.position;
-        this.gameService.updatePlayerPosition(payload.roomId, position, payload.y);
-        this.server.to(payload.roomId).emit('state', this.gameService.getGameState(payload.roomId));
+  handleMove(client: GameSocket, direction: number): void {
+    console.log('move', direction);
+    if (!client.roomId || client.position === undefined) return
+    this.gameService.updatePlayerPosition(client.roomId, client.position, direction);
+    this.server.to(client.roomId).emit('state', this.gameService.getGameState(client.roomId));
+  }
+
+  @SubscribeMessage('info')
+  changeSpeed(client: GameSocket): void {
+    this.rooms.forEach((players, roomId) => {
+      console.log(`Room ${roomId} has ${players.length} players: ${players.map(player => player.userId).join(' - ')}`);
+    });
+  }
+
+  @SubscribeMessage('playWithBot')
+  handlePlayWithBot(client: GameSocket): void {
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      client.emit('playerState', 4);
+      return;
+    }
+    console.log('playWithBot', client.authUser.nameFirst);
+    const roomId = `GameRoom-${Date.now()}`;
+    this.rooms.set(roomId, [
+      { userId: client.authUser.id, position: true, client }
+    ]);
+    this.gameService.getGameState(roomId).bot = true;
+    client.join(roomId);
+    client.roomId = roomId;
+    client.position = true;
+    client.emit('startGame', 1);
+  }
+
+  leaveGameId(userId: number): string | undefined {
+    for (const [roomId, players] of this.rooms) {
+      if (players.some(player => player.userId === userId)) {
+        return roomId;
       }
     }
   }
 
-  @SubscribeMessage('info')
-  changeSpeed(client: Socket): void {
-    this.rooms.forEach((players, roomId) => {
-      console.log(`Room ${roomId} has ${players.length} players: ${players.map(player => player.userId).join(' - ')}`);
+  @SubscribeMessage('leaveGame')
+  handleLeaveGame(client: GameSocket): void {
+    let roomId = client.roomId;
+    if (!roomId) {
+      roomId = this.leaveGameId(client.authUser.id);
+      if (!roomId) return;
+    }
+    const room = this.rooms.get(roomId)
+    if (!room) return;
+    room.forEach(player => {
+      this.resetClient(player.client);
+      if (player.client.authUser.id === client.authUser.id) {
+        player.client.emit('gameOver', false);
+      } else {
+        player.client.emit('gameOver', true);
+      }
+      console.log('gameOver', player.client.authUser.nameFirst);
     });
+    this.cleanUp(roomId);
+  }
+
+  @SubscribeMessage('pauseGame')
+  handlePauseGame(client: GameSocket): void {
+    console.log('pause', client.authUser.nameFirst, client.roomId);
+    if (!client.roomId) return;
+    if (this.timeId.get(client.roomId)) return;
+    this.gameService.pauseGame(client.roomId);
+    this.timeId.set(client.roomId, {timeId: setTimeout(() => {this.handleLeaveGame(client)}, 10000), userId: client.authUser.id});
+    this.server.to(client.roomId).emit('isGamePlaying', false);
+  }
+  
+  @SubscribeMessage('resumeGame')
+  handleResumeGame(client: GameSocket): void {
+    console.log('resume', client.authUser.nameFirst, client.roomId);
+    if (!client.roomId) return;
+    if (client.authUser.id !== this.timeId.get(client.roomId)?.userId) return;
+    if (!this.clearTimeId(client.roomId)) return;
+    this.gameService.setGameInterval(client.roomId);
+    this.server.to(client.roomId).emit('isGamePlaying', true);
+  }
+
+  clearTimeId(roomId: string): boolean {
+    const timeId = this.timeId.get(roomId)?.timeId;
+    if (!timeId) return false;
+    clearTimeout(timeId);
+    this.timeId.delete(roomId);
+    return true;
+  }
+  
+  cleanUp(roomId: string): void {
+    this.clearTimeId(roomId);
+    this.rooms.delete(roomId);
+    this.gameService.deleteGame(roomId);
+  }
+
+  resetClient(client: GameSocket): void {
+    client.leave(client.roomId);
+    client.roomId = undefined;
+    client.position = undefined;
+  }
+
+  gameOver(roomId: string, winner: boolean): void {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+    const loser = room.find(player => player.position !== winner);
+    if (!loser) {
+      const player = room.find(player => player.position === true);
+      if (!winner) return;
+      player.client.emit('gameOver', true);
+      this.resetClient(player.client);
+      this.cleanUp(roomId);
+    }
+    else
+      this.handleLeaveGame(loser.client);
   }
 }
