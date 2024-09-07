@@ -3,19 +3,24 @@ import {
   Box,
   TextField,
   Divider,
-  Avatar,
   Typography,
   Stack,
   styled,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
-import { Message, SendRounded as SendIcon } from '@mui/icons-material';
+import {
+  Message,
+  SendRounded as SendIcon,
+  CancelScheduleSendRounded as MutedIcon,
+} from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
-import { Channel } from './channels';
+import { Channel, useChannel } from './channels';
 import axios from 'axios';
 import { ButtonAvatar, ClickTypography } from './Components';
 import { useNavigate } from 'react-router-dom';
+import { LoadingBox } from './CardComponents';
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
@@ -102,11 +107,15 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const { userSocket } = useUser();
+  const { memberships } = useChannel();
 
   const [messageLog, setMessageLog] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const isMuted = memberships.find((membership) => membership.channel.id === channel.id)?.muted;
 
   useEffect(() => {
 	const onMessage = (message: Message) => {
@@ -126,6 +135,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 	}
 	getMessageLog();
 	userSocket?.on(`room${channel.id}Message`, onMessage);
+	setLoading(false);
 	return () => {
 		userSocket?.off(`room${channel.id}Message`, onMessage);
 	}
@@ -242,34 +252,43 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 	
   return (
     <ChatContainer>
-      <TextBar>
-        <TextField
-          variant="standard"
-          fullWidth
-          multiline
-          maxRows={4}
-          InputProps={{
-            disableUnderline: true,
-            sx: {
-              color: 'white',
-              padding: '7px',
-            },
-          }}
-          inputRef={inputRef}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              onSend();
-            }
-          }}
-          placeholder="Type a message..."
-        />
-        <IconButton onClick={onSend}>
-          <SendIcon />
-        </IconButton>
-      </TextBar>
-      {generateMessages()}
-      <div ref={messagesEndRef} />
+	  {loading ? (
+		<LoadingBox>
+			<CircularProgress size={100} />
+		</LoadingBox>
+	  ) : (
+	  <>
+		  <TextBar>
+			<TextField
+			  variant="standard"
+			  fullWidth
+			  multiline
+			  maxRows={4}
+			  disabled={isMuted}
+			  InputProps={{
+				disableUnderline: true,
+				sx: {
+				  color: 'white',
+				  padding: '7px',
+				},
+			  }}
+			  inputRef={inputRef}
+			  onKeyDown={(e) => {
+				if (e.key === 'Enter' && !e.shiftKey) {
+				  e.preventDefault();
+				  onSend();
+				}
+			  }}
+			  placeholder={isMuted ? "You are muted..." : "Type a message..."}
+			/>
+			<IconButton disabled={isMuted} onClick={onSend}>
+			  {isMuted ? <MutedIcon /> : <SendIcon />}
+			</IconButton>
+		  </TextBar>
+		  {generateMessages()}
+		  <div ref={messagesEndRef} />
+	  </>
+	  )}
     </ChatContainer>
   );
 };

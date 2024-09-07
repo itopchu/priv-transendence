@@ -7,11 +7,11 @@ import {
   ButtonBar,
   CenteredCard,
   CustomFormLabel,
-  LoadingCard,
   Overlay,
   TextFieldWrapper,
   DescriptionBox,
   CustomCardContent,
+  LoadingBox,
 } from './CardComponents';
 import {
   Button,
@@ -39,7 +39,9 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const alreadyJoined = memberships.some((member) => member.channel.id === channel.id);
-  const isBanned = false //channel?.banList.some((bannedUser) => bannedUser.id === user.id);
+  const isBanned = channel.banList
+		? channel.banList.some((bannedUser) => bannedUser.id === user.id)
+		: false;
   const joinDisabled = alreadyJoined || isBanned;
 
   const onCancel = () => {
@@ -50,13 +52,12 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
     setLoading(true);
 
     const payload = {
-      channelId: channel.id,
       password:
         channel.type === 'protected' ? passwordInputRef.current?.value : null,
     };
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/channel/join`, payload,
+      const response = await axios.post(`${BACKEND_URL}/channel/join/${channel.id}`, payload,
         {
           withCredentials: true,
         }
@@ -77,9 +78,9 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
       <Overlay onClick={onCancel} />
       <CenteredCard sx={{ overflow: 'auto' }}>
         {loading ? (
-          <LoadingCard>
+          <LoadingBox>
             <CircularProgress size={80} />
-          </LoadingCard>
+          </LoadingBox>
         ) : (
           <CustomCardContent>
 			<Stack spacing={1.6} alignItems={'center'} >

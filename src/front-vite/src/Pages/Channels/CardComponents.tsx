@@ -34,11 +34,16 @@ export const CenteredCard = styled(Card)(({ theme }) => ({
   zIndex: 13000,
 }));
 
-export const LoadingCard = styled(Box)(() => ({
+export const LoadingBox = styled(Box)(() => ({
+	position: 'absolute',
+	top: 0,
+	left: 0,
 	display: 'flex',
 	justifyContent: 'center',
 	alignItems: 'center',
-	height: '100%'
+	height: '100%',
+	width: '100%',
+	overflow: 'visible',
 }));
 
 export const Overlay = styled(Box)(({}) => ({

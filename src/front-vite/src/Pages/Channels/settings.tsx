@@ -108,6 +108,8 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 
 	const channel = membership.channel;
 	const members = channel.members;
+
+	const initialAvatarSrc = `${BACKEND_URL}/${channel.image}`;
 	const initialChannelData: ChannelDataType = {
 		type: channel.type,
 		image: undefined,
@@ -117,18 +119,27 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 	const isMod = membership.role === ChannelRole.moderator || isAdmin;
 
 	const [editMode, setEditMode] = useState(false);
-	const [avatarSrc, setAvatarSrc] = useState(`${BACKEND_URL}/${channel.image}`);
+	const [avatarSrc, setAvatarSrc] = useState(initialAvatarSrc);
 	const [channelData, setChannelData] = useState(initialChannelData);
 
 	useEffect(() => {
-		if (!nameRef.current || !descriptionRef.current) return;
+		if (editMode) {
+			setEditMode(false);
+		}
+		if (channelData !== initialChannelData || avatarSrc !== initialAvatarSrc) {
+			reset();
+		}
+	}, [membership.id]);
+
+	useEffect(() => {
+		if (!editMode || !nameRef.current || !descriptionRef.current) return;
 
 		nameRef.current.value = channel.name;
 		descriptionRef.current.value = channel.description;
 	}, [editMode]);
 
 	const reset = () => {
-		setAvatarSrc(`${BACKEND_URL}/${channel.image}`);
+		setAvatarSrc(initialAvatarSrc);
 		setChannelData(initialChannelData);
 	}
 
@@ -383,15 +394,21 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 							<MenuItem onClick={handleMenuClose}>{`Block ${membername}`}</MenuItem>
 							{isMod && ([
 									<Divider />,
-									ModerateOptions.map((option, index) => (
+									ModerateOptions.map((option, index) => {
+										const capitalizedOption = member.muted && option === 'mute'
+										? option.charAt(0).toUpperCase() + option.slice(1)
+										: 'unmute';
+
+										return (
 											<MenuItem
 												key={index}
 												onClick={() => onModerate(member, option)}
 												sx={{ color: 'red' }}
 											>
-												{`${option.charAt(0).toUpperCase() + option.slice(1)} ${membername}`}
+												{`${capitalizedOption} ${membername}`}
 											</MenuItem>
-									))
+										);
+									})
 							])}
 						  </Menu>
 						  </Box>

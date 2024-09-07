@@ -4,12 +4,12 @@ import { ChannelType, ChannelTypeValues, useChannel } from './channels';
 import axios from 'axios';
 import {
   CenteredCard,
-  LoadingCard,
   Overlay,
   TextFieldWrapper,
   CustomFormLabel,
   ButtonBar,
   CustomCardContent,
+  LoadingBox,
 } from './CardComponents';
 import {
   ButtonGroup,
@@ -104,11 +104,11 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 	if (channelData.image) {
 		payload.append('image', channelData.image);
 	}
-	if (channelData.type === 'protected' && passwordRef.current?.value) {
-		payload.append('password', passwordRef.current?.value);
+	if (channelData.type === 'protected' && passwordRef.current) {
+		payload.append('password', passwordRef.current.value);
 	}
 	if  (nameRef.current) {
-		payload.append('name', nameRef.current?.value);
+		payload.append('name', nameRef.current.value);
 	}
 
     try {
@@ -122,8 +122,8 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
       triggerRefresh();
       userSocket?.emit('joinRoom', response.data.channel.id);
     } catch (error: any) {
-      alert(error?.response?.data?.message);
       setLoading(false);
+      alert(error?.response?.data?.message);
       return;
     }
     setLoading(false);
@@ -134,12 +134,16 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
     <>
       <Overlay onClick={onCancel} />
       <CenteredCard sx={{ display: 'flex', flexDirection: 'column' }}>
-        {loading ? (
-          <LoadingCard>
-            <CircularProgress size={80} />
-          </LoadingCard>
-        ) : (
-		<CustomCardContent>
+        {loading &&
+			<LoadingBox>
+				<CircularProgress size={80} />
+			</LoadingBox>
+		}
+		<CustomCardContent 
+			sx={{
+				visibility: loading ? 'hidden' : 'visible',
+			}}
+		>
           <Stack spacing={2}>
 			<UploadAvatar
 				src={avatarSrc}
@@ -150,7 +154,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 			  <ImageInput onFileInput={onFileUpload} />
 			</UploadAvatar>
 
-            {generateButtonGroup()}
+            {!loading && generateButtonGroup()}
 
             <TextFieldWrapper>
               <FormControl fullWidth variant="outlined">
@@ -213,11 +217,9 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
               </Button>
             </ButtonBar>
 		</CustomCardContent>
-        )}
       </CenteredCard>
     </>
   );
 };
 
 export default CreateCard;
-

@@ -32,6 +32,7 @@ export type ChannelMember = {
 	id: number;
 	user: User;
 	channel: Channel;
+	muted: boolean;
 	role: ChannelRole;
 }
 
@@ -39,7 +40,7 @@ export interface Channel {
 	id: number;
 	image?: string;
 	name: string;
-	banList: User[];
+	banList?: User[];
 	members: ChannelMember[];
 	type: ChannelType;
 	description: string;

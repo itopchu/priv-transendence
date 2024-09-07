@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Res, Req, UseGuards, Body, UsePipes, ValidationPipe, InternalServerErrorException, Param, ParseIntPipe, NotFoundException, ForbiddenException, BadRequestException, UnauthorizedException, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { Request, Response } from 'express'
-import { Channel, ChannelMember, ChannelRoles } from '../entities/channel.entity';
+import { Channel, ChannelMember, ChannelRoles, ChannelType } from '../entities/channel.entity';
 import { ChannelService } from './channel.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CreateChannelDto, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
@@ -53,9 +53,13 @@ export class ChannelController {
 		}
 	}
 
-	@Post('join')
+	@Post('join/:id')
 	@UseGuards(AuthGuard)
-	async joinChannel(@Req() req: Request, @Body('channelId', ParseIntPipe) channelId: number, @Body() password?: string | null) {
+	async joinChannel(
+		@Req() req: Request,
+		@Param('id', ParseIntPipe) channelId: number,
+		@Body('password') password?: string | null
+	) {
 		const user = req.authUser;
 
 		return (await this.channelService.joinChannel(user, channelId, password));
@@ -68,6 +72,9 @@ export class ChannelController {
 	async createChannel(@Req() req: Request, @UploadedFile() image: Express.Multer.File, @Body() createChannelDto: CreateChannelDto) {
 		const user = req.authUser;
 
+		if (createChannelDto.type === ChannelType.protected  && !createChannelDto.password) {
+			throw new BadRequestException('No password provided');
+		}
 		try {
 			const newChannel = await this.channelService.createChannel(user, createChannelDto, image);
 			return ({ channel: newChannel });
@@ -86,6 +93,20 @@ export class ChannelController {
 		}
 
 		return (await this.channelService.kickMember(user, victimId, channelId));
+	}
+
+	@Patch('mute/:id')
+	@UseGuards(AuthGuard)
+	async muteMember(@Req() req: Request,
+		@Param('id', ParseIntPipe) channelId: number,
+		@Body('victimId', ParseIntPipe) victimId: number
+	) {
+		const user = req.authUser;
+		if (user.id === victimId) {
+			throw new BadRequestException("Muting yourself..? Just shut up...");
+		}
+
+		return (await this.channelService.muteMember(user, victimId, channelId));
 	}
 
 	@Patch('ban/:id')

@@ -63,6 +63,7 @@ export class ChannelService {
 		const userMemberships = await this.memberRespitory.createQueryBuilder('membership')
 		.innerJoin('membership.user', 'user')
 		.leftJoinAndSelect('membership.channel', 'channel')
+		.leftJoinAndSelect('channel.banList', 'banList')
 		.leftJoinAndSelect('channel.members', 'members')
 		.leftJoinAndSelect('members.user', 'users')
 		.where('user.id = :id', { id: user.id })
@@ -115,7 +116,7 @@ export class ChannelService {
 	async joinChannel(user: User, channelId: number, password?: string | null): Promise<ChannelMember> {
 		const channel = await this.getChannelById(channelId, ['members.user', 'banList']);
 		if (!channel) {
-			throw new NotFoundException(`channel id ${channelId} not found`);
+			throw new NotFoundException(`Channel not found`);
 		}
 
 		if (channel.type === 'private') {
@@ -127,10 +128,12 @@ export class ChannelService {
 		}
 
 		const isMember = channel.members.some(member => member.user.id === user.id);
-		if (isMember)
+		if (isMember) {
 			throw new BadRequestException(`User is already in channel`);
-		if (channel.type === 'protected' && password !== channel.password)
-			throw new BadRequestException('Wrong password');
+		}
+		if (channel.type === 'protected' && password !== channel.password) {
+			throw new BadRequestException('Incorrect password');
+		}
 
 		return (await this.addChannelMember(channel, user));
 	}
@@ -173,6 +176,7 @@ export class ChannelService {
 			}
 			channel = await this.channelRespitory.remove(channel);
 			if (channel.image) {
+				console.log('image deleted');
 				const imagePath = path.join('/app/uploads', channel.image);
 				unlinkSync(imagePath);
 			}
@@ -196,14 +200,28 @@ export class ChannelService {
 			throw new InternalServerErrorException('Could not delete membership');
 		}
 	}
+
+	async muteMember(muter: User, victimId: number, channelId: number): Promise<UpdateResult> {
+		const muterMembership = await this.getMembershipByChannel(channelId, muter.id);
+		if (!muterMembership)
+			throw new NotFoundException('User or Channel not found');
+		const victimMembership = await this.getMembershipByChannel(channelId, victimId);
+		if (!victimMembership)
+			throw new NotFoundException('Victim not found');
+
+		if (muterMembership.role > victimMembership.role)
+			throw new UnauthorizedException('Unauthorized user')
+
+		return (await this.memberRespitory.update(victimId, { muted: !victimMembership.muted }));
+	}
 	
 	async kickMember(kicker: User, victimId: number, channelId: number): Promise<ChannelMember> {
 		const kickerMembership = await this.getMembershipByChannel(channelId, kicker.id);
 		if (!kickerMembership)
-			throw new NotFoundException('User not found');
+			throw new NotFoundException('User or Channel not found');
 		const victimMembership = await this.getMembershipByChannel(channelId, victimId);
 		if (!victimMembership)
-			throw new NotFoundException('Kickee not found');
+			throw new NotFoundException('Victim not found');
 
 		if (kickerMembership.role > victimMembership.role)
 			throw new UnauthorizedException('Unauthorized user')
@@ -222,7 +240,7 @@ export class ChannelService {
 		}
 		const victimMembership = channel.members.find((membership) => membership.user.id === victimId)
 		if (!victimMembership) {
-			throw new NotFoundException('Banee not found');
+			throw new NotFoundException('Victim not found');
 		}
 
 		if (userMembership.role > victimMembership.role) {
