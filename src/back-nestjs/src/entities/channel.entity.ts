@@ -1,7 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { User } from './user.entity';
 
-export type ChannelType = 'private' | 'protected' | 'public';
+export enum ChannelType {
+	private = 'private',
+	protected = 'protected',
+	public = 'public',
+}
 
 export enum ChannelRoles {
 	admin,
@@ -20,20 +24,27 @@ export class Channel {
 	@Column()
 	name: string;
 
+	@Column({ default: 'This is a channel for nerds' })
+	description: string;
+
 	@Column({ nullable: true, default: null })
 	password: string | null;
 
-	@Column({ default: 'private' })
+	@Column({
+		type: 'enum',
+		enum: ChannelType,
+		default: ChannelType.private,
+	})
 	type: ChannelType;
 
 	@JoinTable()
 	@ManyToMany(() =>  User, banList => banList.bannedChannels)
 	banList: User[];
 
-	@OneToMany(() => ChannelMember, member => member.channel)
+	@OneToMany(() => ChannelMember, member => member.channel, { cascade: ['remove'], })
 	members: ChannelMember[];
 
-	@OneToMany(() => Message, message => message.channel)
+	@OneToMany(() => Message, message => message.channel, { cascade: ['remove'], })
 	log: Message[];
 }
 

@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Patch, Res, Req, UseGuards, Body, UsePipes, ValidationPipe, InternalServerErrorException, Param, ParseIntPipe, NotFoundException, ForbiddenException, BadRequestException, UnauthorizedException, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Res, Req, UseGuards, Body, UsePipes, ValidationPipe, InternalServerErrorException, Param, ParseIntPipe, NotFoundException, ForbiddenException, BadRequestException, UnauthorizedException, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { Request, Response } from 'express'
-import { Channel, ChannelMember, ChannelRoles } from 'src/entities/channel.entity';
+import { Channel, ChannelMember, ChannelRoles } from '../entities/channel.entity';
 import { ChannelService } from './channel.service';
 import { AuthGuard } from '../auth/auth.guard';
-import { CreateChannelDto } from '../dto/createChannel.dto';
-import { UpdateChannelMemberDto } from 'src/dto/channel.dto';
-import { waitForDebugger } from 'inspector';
+import { CreateChannelDto, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerOptions } from '../user/user.controller';
 
 @Controller('channel')
 export class ChannelController {
@@ -63,12 +63,13 @@ export class ChannelController {
 
 	@Post('create')
 	@UseGuards(AuthGuard)
+	@UseInterceptors(FileInterceptor('image', multerOptions))
 	@UsePipes(new ValidationPipe({ whitelist: true }))
-	async createChannel(@Req() req: Request, @Body() createChannelDto: CreateChannelDto) {
+	async createChannel(@Req() req: Request, @UploadedFile() image: Express.Multer.File, @Body() createChannelDto: CreateChannelDto) {
 		const user = req.authUser;
 
 		try {
-			const newChannel = await this.channelService.createChannel(user, createChannelDto);
+			const newChannel = await this.channelService.createChannel(user, createChannelDto, image);
 			return ({ channel: newChannel });
 		} catch(error) {
 			console.error('Error creating channel:', error);
@@ -76,52 +77,96 @@ export class ChannelController {
 		}
 	}
 
-	@Delete('kick')
+	@Patch('kick/:id')
 	@UseGuards(AuthGuard)
-	async kickUser(@Req() req: Request, @Body('kickeeId', ParseIntPipe) kickeeId: number, @Body('channelId', ParseIntPipe) channelId: number) {
+	async kickUser(@Req() req: Request, @Param('id', ParseIntPipe) channelId: number, @Body('victimId', ParseIntPipe) victimId: number) {
 		const user = req.authUser;
-		if (user.id === kickeeId) {
-			throw new BadRequestException('Kicking yourself.., realy?');
+		if (user.id === victimId) {
+			throw new BadRequestException('Kicking yourself.. Really?');
 		}
 
-		return (await this.channelService.kickMember(user, kickeeId, channelId));
+		return (await this.channelService.kickMember(user, victimId, channelId));
 	}
 
-	@Delete('ban')
+	@Patch('ban/:id')
 	@UseGuards(AuthGuard)
-	async banUser(@Req() req: Request, @Body('baneeId', ParseIntPipe) baneeId: number, @Body('channelId', ParseIntPipe) channelId: number) {
+	async banUser(@Req() req: Request, @Param('id', ParseIntPipe) channelId: number, @Body('victimId', ParseIntPipe) victimId: number) {
 		const user = req.authUser;
-		if (user.id === baneeId) {
-			throw new BadRequestException('Banning yourself.., realy?');
+		if (user.id === victimId) {
+			throw new BadRequestException("Banning yourself..? Now that's going to far");
 		}
 
-		return (this.channelService.banUser(user, baneeId, channelId));
+		return (await this.channelService.banUser(user, victimId, channelId));
 	}
 
-	@Delete('leave')
+	@Patch('transfer/:id')
 	@UseGuards(AuthGuard)
-	async leaveChannel(@Req() req: Request, @Body('channelId', ParseIntPipe) memberId: number) {
+	async transferOwnership(
+		@Req() req: Request,
+		@Param('id', ParseIntPipe) channelId: number,
+		@Body('victimId', ParseIntPipe) victimId: number)
+	{
 		const user = req.authUser;
-
-		const memberships = await this.channelService.getMemberships(user);
-		const hasMembership = memberships.some((membership) => membership.id == memberId);
-		if (!hasMembership) {
-			throw new BadRequestException('Membership not found');
+		if (user.id === victimId) {
+			throw new BadRequestException("You are already THE admin FOOL");
 		}
 
-		return (await this.channelService.deleteMember(memberId));
+		return (await this.channelService.transferOwnership(user, victimId, channelId));
+	}
+	
+	@Delete(':id')
+	@UseGuards(AuthGuard)
+	async deleteChannel(@Req() req: Request, @Param('id', ParseIntPipe) channelId: number) {
+		const user = req.authUser;
+		const channel = await this.channelService.getChannelById(channelId, ['members', 'members.user']);
+		if (!channel) {
+			throw new NotFoundException('Channel not found');
+		}
+		
+		const membership = channel.members.find((member) => member.user.id === user.id);
+		if (!membership || membership.role !== ChannelRoles.admin) {
+			throw new UnauthorizedException('Unauthorized user');
+		}
+		return (await this.channelService.removeChannel(channelId));
+	}
+	
+	@Delete('leave/:id')
+	@UseGuards(AuthGuard)
+	async leaveChannel(@Req() req: Request, @Param('id', ParseIntPipe) membershipId: number) {
+		const user = req.authUser;
+
+		return (await this.channelService.leaveChannel(user, membershipId));
 	}
 
-	@Patch('update/membership')
+	@Patch(':id')
+	@UseGuards(AuthGuard)
+	@UsePipes(new ValidationPipe({ whitelist:  true }))
+	@UseInterceptors(FileInterceptor('image', multerOptions))
+	async updateChannel(
+		@Req() req: Request,
+		@UploadedFile() image: Express.Multer.File,
+		@Param('id', ParseIntPipe) channelId: number,
+		@Body() UpdateChannelDto: UpdateChannelDto,
+	) {
+		const user = req.authUser;
+
+		return  (await this.channelService.updateChannel(user, channelId, UpdateChannelDto, image));
+	}
+
+	@Patch('/member/:id')
 	@UseGuards(AuthGuard)
 	@UsePipes(new ValidationPipe({ whitelist: true }))
 	async updateMember(
 		@Req() req: Request,
-		@Body('memberId', ParseIntPipe) memberId: number,
-		@Body() UpdateChannelMemberDto: UpdateChannelMemberDto
+		@Param('id', ParseIntPipe) memberId: number,
+		@Body() UpdateMemberDto: UpdateMemberDto
 	) {
 		const user = req.authUser;
 
-		return (await this.channelService.updateMember(user, memberId, UpdateChannelMemberDto));
+		if (UpdateMemberDto.role === ChannelRoles.admin)  {
+			throw new BadRequestException('Unable to promote to admin');
+		}
+
+		return (await this.channelService.updateMember(user, memberId, UpdateMemberDto));
 	}
 }

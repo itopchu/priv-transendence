@@ -1,53 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useUser } from '../../Providers/UserContext/User';
-import { ChannelType, useChannel } from './channels';
-import { useTheme } from 'styled-components';
+import { ChannelType, ChannelTypeValues, useChannel } from './channels';
 import axios from 'axios';
 import {
-	CenteredCard,
-	LoadingCard,
-	Overlay,
-	CircleAvatar,
-    TextFieldWrapper,
-    CustomFormLabel,
-    ButtonBar,
-} from './CardComponents'
+  CenteredCard,
+  LoadingCard,
+  Overlay,
+  TextFieldWrapper,
+  CustomFormLabel,
+  ButtonBar,
+  CustomCardContent,
+} from './CardComponents';
 import {
-  Box,
-  CardContent,
   ButtonGroup,
   Button,
   TextField,
   FormControl,
   CircularProgress,
+  Stack,
 } from '@mui/material';
+import { ButtonAvatar, AvatarUploadIcon, ImageInput, UploadAvatar } from './Components';
+import { validateFile } from './settings';
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
-const AllChannelTypes: ChannelType[] = ['private', 'protected', 'public'];
 
 interface CreateCardType {
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+type ChannelDataType = {
+  image: File | undefined;
+  type: ChannelType;
+}
+
+const initialChannelData: ChannelDataType = {
+  image: undefined,
+  type: ChannelType.private,
+};
+
 const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   const { user, userSocket } = useUser();
   const { triggerRefresh } = useChannel();
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
 
-  const initialChannelData = {
-    name: `${user.nameNick || user.nameFirst}'s channel`,
-    password: '',
-    avatarSrc: '',
-    type: 'private',
-  };
-  const [channelData, setChannelData] = useState(initialChannelData);
+  const [channelData, setChannelData] = useState<ChannelDataType>(initialChannelData);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [avatarSrc, setAvatarSrc] = useState('');
 
-  const onTypeClick = (newType: ChannelType) => {
+  useEffect(() => {
+	if (nameRef.current) {
+		nameRef.current.value = `${user.nameNick || user.nameFirst}'s Channel`;
+	}
+  }, []);
+
+  const changeChannelData = (newData: Partial<ChannelDataType>) => {
     setChannelData((prevData) => ({
       ...prevData,
-      type: newType,
+      ...newData,
     }));
+  };
+
+  const onFileUpload = (file: File) => {
+	if (!validateFile(file)) return;
+
+    changeChannelData({ image: file });
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarSrc(reader?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const generateButtonGroup = () => {
@@ -55,15 +77,15 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
       <ButtonGroup fullWidth sx={{ mb: 2 }}>
         {Array.from({ length: 3 }, (_, index) => (
           <Button
-		    key={index}
+            key={index}
             variant={
-              channelData.type === AllChannelTypes[index]
+              channelData.type === ChannelTypeValues[index]
                 ? 'contained'
                 : 'outlined'
             }
-            onClick={() => onTypeClick(AllChannelTypes[index])}
+            onClick={() => changeChannelData({ type: ChannelTypeValues[index] })}
           >
-            {AllChannelTypes[index]}
+            {ChannelTypeValues[index]}
           </Button>
         ))}
       </ButtonGroup>
@@ -75,70 +97,91 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   };
 
   const onCreate = async () => {
-	setLoading(true);
+    setLoading(true);
 
-	const payload = {
-		name: channelData.name,
-		type: channelData.type,
-		password: channelData.type === 'protected' ? channelData.password : null
+    const payload = new FormData();
+	payload.append('type', channelData.type);
+	if (channelData.image) {
+		payload.append('image', channelData.image);
+	}
+	if (channelData.type === 'protected' && passwordRef.current?.value) {
+		payload.append('password', passwordRef.current?.value);
+	}
+	if  (nameRef.current) {
+		payload.append('name', nameRef.current?.value);
 	}
 
-	try {
-		const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
-			withCredentials: true,
-		});
-		triggerRefresh();
-		userSocket?.emit('joinRoom', response.data.channel.id);
-	} catch(error) {
-		setErrorMessage(`${error}, try again later`);
-		console.error(error);
-		setLoading(false);
-		return;
-	}
-	setLoading(false);
-	onCancel();
+    try {
+      const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
+          withCredentials: true,
+		  headers: {
+		    'Content-Type': 'multipart/form-data',
+		  },
+        }
+      );
+      triggerRefresh();
+      userSocket?.emit('joinRoom', response.data.channel.id);
+    } catch (error: any) {
+      alert(error?.response?.data?.message);
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    onCancel();
   };
-
-  const onAvatarClick = () => {
-    document.getElementById('avatar-upload')?.click();
-  };
-
-  const onImageUpload = (event) => {};
 
   return (
-        <>
-					<Overlay onClick={onCancel} />
-					<CenteredCard>
-					{loading ? (<LoadingCard> <CircularProgress size={80} /> </LoadingCard>) :
-            (<CardContent>
-              <Box
-                onClick={onAvatarClick}
-                sx={{ position: 'relative', display: 'inline-block', cursor: 'pointer', }}
-              >
-                <CircleAvatar src={channelData.avatarSrc} />
-              </Box>
-              <input
-                type="file"
-                id="avatar-upload"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={onImageUpload}
-              />
+    <>
+      <Overlay onClick={onCancel} />
+      <CenteredCard sx={{ display: 'flex', flexDirection: 'column' }}>
+        {loading ? (
+          <LoadingCard>
+            <CircularProgress size={80} />
+          </LoadingCard>
+        ) : (
+		<CustomCardContent>
+          <Stack spacing={2}>
+			<UploadAvatar
+				src={avatarSrc}
+				avatarSx={{ width: 170, height: 170 }}
+				sx={{ alignSelf: 'center' }}
+			>
+			  <AvatarUploadIcon className="hidden-icon" />
+			  <ImageInput onFileInput={onFileUpload} />
+			</UploadAvatar>
 
-						  {generateButtonGroup()}
+            {generateButtonGroup()}
 
+            <TextFieldWrapper>
+              <FormControl fullWidth variant="outlined">
+                <CustomFormLabel>Channel Name</CustomFormLabel>
+                <TextField
+                  variant="outlined"
+				  inputRef={nameRef}
+                  InputProps={{
+                    style: {
+                      padding: '4px 4px',
+                      fontSize: '1rem',
+                    },
+                  }}
+                  sx={{
+                    height: '25px',
+                    '& .MuiInputBase-input': {
+                      padding: '2px 4px',
+                    },
+                  }}
+                />
+              </FormControl>
+            </TextFieldWrapper>
+
+            {channelData.type === 'protected' && (
               <TextFieldWrapper>
                 <FormControl fullWidth variant="outlined">
-                  <CustomFormLabel>Channel Name</CustomFormLabel>
+                  <CustomFormLabel>Channel Password</CustomFormLabel>
                   <TextField
+					inputRef={passwordRef}
                     variant="outlined"
-                    value={channelData.name}
-                    onChange={(event) => {
-                      setChannelData((prevData) => ({
-                        ...prevData,
-                        name: event.target.value,
-                      }));
-                    }}
+                    type="password"
                     InputProps={{
                       style: {
                         padding: '4px 4px',
@@ -154,53 +197,25 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
                   />
                 </FormControl>
               </TextFieldWrapper>
+            )}
+          </Stack>
 
-              {channelData.type === 'protected' && (<TextFieldWrapper>
-                <FormControl fullWidth variant="outlined">
-                  <CustomFormLabel>Channel Password</CustomFormLabel>
-                  <TextField
-                    variant="outlined"
-                    type="password"
-                    onChange={(event) => {
-                      setChannelData((prevData) => ({
-                        ...prevData,
-                        password: event.target.value,
-                      }));
-                    }}
-                    InputProps={{
-                      style: {
-                        padding: '4px 4px',
-                        fontSize: '1rem',
-                      },
-                    }}
-                    sx={{
-                      height: '25px',
-                      '& .MuiInputBase-input': {
-                        padding: '2px 4px',
-                      },
-                    }}
-                  />
-                </FormControl>
-              </TextFieldWrapper>)}
-
-              <ButtonBar>
-                <Button
-                  onClick={onCancel}
-                  sx={{ minWidth: 100, height: 40 }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={onCreate}
-                  sx={{ minWidth: 100, height: 40 }}
-                >
-                  Create
-                </Button>
-              </ButtonBar>
-            </CardContent>)}
-          </CenteredCard>
-        </>
+            <ButtonBar>
+              <Button onClick={onCancel} sx={{ minWidth: 100, height: 40 }}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={onCreate}
+                sx={{ minWidth: 100, height: 40 }}
+              >
+                Create
+              </Button>
+            </ButtonBar>
+		</CustomCardContent>
+        )}
+      </CenteredCard>
+    </>
   );
 };
 

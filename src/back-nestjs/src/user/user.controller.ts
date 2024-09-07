@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FriendshipAttitude, FriendshipAttitudeBehaviour } from '../entities/user.entity'
 
-const multerOptions = {
+export const multerOptions = {
   limits: {
     fileSize: 5 * 1024 * 1024, // 5 MB
   },

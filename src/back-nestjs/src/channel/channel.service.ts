@@ -3,8 +3,20 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Channel, ChannelMember, ChannelRoles, ChannelType, Message } from '../entities/channel.entity';
 import { UserService } from '../user/user.service';
 import { DeleteResult, Not, Repository, UpdateResult } from 'typeorm';
-import { User } from 'src/entities/user.entity';
-import { CreateChannelDto, UpdateChannelMemberDto } from '../dto/channel.dto';
+import { User } from '../entities/user.entity';
+import { CreateChannelDto, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
+import path from 'path';
+import { unlinkSync, writeFileSync } from 'fs';
+
+const createImage = (channelId: number, image: Express.Multer.File) => {
+	const timestamp = Date.now();
+	const fileExtension = path.extname(image.originalname);
+	const fileName = `${timestamp}_channel${channelId}${fileExtension}`;
+	const uploadPath = path.join('/app/uploads', fileName);
+
+	writeFileSync(uploadPath, image.buffer);
+	return ({ fileName: fileName, path: uploadPath });
+}
 
 @Injectable()
 export class ChannelService {
@@ -36,40 +48,65 @@ export class ChannelService {
 		return (channel);
 	}
 
+	async getMembershipByChannel(channelId: number, userId: number): Promise<ChannelMember> {
+		const membership = await this.memberRespitory.createQueryBuilder('membership')
+		.innerJoin('membership.user', 'user')
+		.leftJoinAndSelect('membership.channel', 'channel')
+		.where('channel.id = :id', { id: channelId })
+		.where('user.id = :id', { id: userId })
+		.getOne()
+
+		return (membership);
+	}
+
 	async getMemberships(user: User): Promise<ChannelMember[]> {
-		const userMemberships = await this.memberRespitory.createQueryBuilder('member')
-		.innerJoin('member.user', 'user')
-		.leftJoinAndSelect('member.channel', 'channel')
+		const userMemberships = await this.memberRespitory.createQueryBuilder('membership')
+		.innerJoin('membership.user', 'user')
+		.leftJoinAndSelect('membership.channel', 'channel')
+		.leftJoinAndSelect('channel.members', 'members')
+		.leftJoinAndSelect('members.user', 'users')
 		.where('user.id = :id', { id: user.id })
 		.getMany();
-
+		
 		return (userMemberships);
 	}
 
 	async getPublicChannels(): Promise<Channel[]> {
 		return (await this.channelRespitory.find({
 			where: [
-				{ type: 'public' },
-				{ type: 'protected' },
+				{ type: ChannelType.public },
+				{ type: ChannelType.protected },
 			]
 		}));
 	}
 
-	async createChannel(creator: User, createChannelDto: CreateChannelDto): Promise<Channel> {
+	async createChannel(creator: User, createChannelDto: CreateChannelDto, image: Express.Multer.File): Promise<Channel> {
 		let newChannel: Channel = this.channelRespitory.create(createChannelDto);
+		let newMember: ChannelMember;
 
 		try {
 			newChannel = await this.channelRespitory.save(newChannel);
 
-			const newMember = this.memberRespitory.create({
+			newMember = this.memberRespitory.create({
 				role: ChannelRoles.admin,
 				user: creator,
 				channel: newChannel
 			})
 			await this.memberRespitory.save(newMember);
+
+			if (image) {
+				const { fileName } = createImage(newChannel.id, image);
+
+				newChannel.image = fileName;
+				await this.channelRespitory.save(newChannel);
+			}
 		} catch(error) {
-			if (newChannel.id)
+			if (newChannel.id) {
 				await this.channelRespitory.delete(newChannel.id);
+			}
+			if (newMember.id) {
+				await this.memberRespitory.delete(newMember.id);
+			}
 			throw new Error(`Failed to create channel and associate member: ${error.message}`);
 		}
 		return (newChannel);
@@ -98,6 +135,135 @@ export class ChannelService {
 		return (await this.addChannelMember(channel, user));
 	}
 
+	async leaveChannel(user: User, membershipId: number): Promise<Channel | ChannelMember> {
+		const memberships = await this.getMemberships(user);
+		const membership = memberships.find((membership) => membership.id == membershipId);
+		if (!membership) {
+			throw new NotFoundException('Membership not found');
+		}
+
+		if (membership.role  === ChannelRoles.admin) {
+			const channel = membership.channel;
+
+			if (channel.members.length === 1) {
+				return (await this.removeChannel(channel.id));
+			}
+
+			let candidate = channel.members.find((member) => member.role === ChannelRoles.moderator);
+			if (!candidate) {
+				candidate = channel.members[1];
+			}
+			await this.transferOwnership(user, candidate.user.id, channel.id);
+		}
+		return (await this.removeMember(membership));
+	}
+
+	async removeChannel(channelId: number) {
+		let channel = await this.getChannelById(channelId, ['members', 'log', 'banList']);
+		if (!channel) {
+			throw new NotFoundException('Channel not found');
+		}
+
+		try {
+			if (channel.log) {
+				await this.messageRespitory.remove(channel.log);
+			}
+			if (channel.members) {
+				await this.memberRespitory.remove(channel.members);
+			}
+			channel = await this.channelRespitory.remove(channel);
+			if (channel.image) {
+				const imagePath = path.join('/app/uploads', channel.image);
+				unlinkSync(imagePath);
+			}
+		} catch(error) {
+			throw new InternalServerErrorException(`Could not delete channel: ${error.message}`);
+		}
+		return (channel);
+	}
+
+	async removeMember(member: number | ChannelMember): Promise<ChannelMember> {
+		if (typeof(member) === 'number') {
+			member = await this.memberRespitory.findOne({ where: { id: member } });
+			if (!member) {
+				throw new BadRequestException('Member not found');
+			}
+		}
+
+		try {
+			return (await this.memberRespitory.remove(member));
+		} catch(error) {
+			throw new InternalServerErrorException('Could not delete membership');
+		}
+	}
+	
+	async kickMember(kicker: User, victimId: number, channelId: number): Promise<ChannelMember> {
+		const kickerMembership = await this.getMembershipByChannel(channelId, kicker.id);
+		if (!kickerMembership)
+			throw new NotFoundException('User not found');
+		const victimMembership = await this.getMembershipByChannel(channelId, victimId);
+		if (!victimMembership)
+			throw new NotFoundException('Kickee not found');
+
+		if (kickerMembership.role > victimMembership.role)
+			throw new UnauthorizedException('Unauthorized user')
+		return (await this.removeMember(victimMembership));
+	}
+
+	async banUser(user: User, victimId: number, channelId: number): Promise<ChannelMember> {
+		let result: ChannelMember;
+
+		const channel = await this.getChannelById(channelId, ['members', 'members.user', 'banList']);
+		if (!channel)
+			throw new NotFoundException('Channel not found');
+		const userMembership = channel.members.find((membership) => membership.user.id === user.id)
+		if (!userMembership) {
+			throw new NotFoundException('User not found');
+		}
+		const victimMembership = channel.members.find((membership) => membership.user.id === victimId)
+		if (!victimMembership) {
+			throw new NotFoundException('Banee not found');
+		}
+
+		if (userMembership.role > victimMembership.role) {
+			throw new UnauthorizedException('Unauthorized user');
+		}
+
+		const alreadyBanned = channel.banList.some((user) => user.id === victimId)
+		if (alreadyBanned) {
+			throw new BadRequestException(`${victimMembership.user.nameFirst} is already banned from this channel`);
+		}
+
+		try {
+			result = await this.removeMember(victimMembership)
+			channel.banList.push(victimMembership.user);
+			await this.channelRespitory.save(channel);
+		} catch(error) {
+			throw new InternalServerErrorException(`Banning ${victimMembership.user.nameFirst} failed`);
+		}
+		return (result);
+	}
+
+	async transferOwnership(user: User, newOwnerId: number, channelId: number): Promise<ChannelMember[]> {
+		const admin = await this.getMembershipByChannel(channelId, user.id);
+		const newAdmin = await this.getMembershipByChannel(channelId, newOwnerId);
+		if (!admin || newAdmin) {
+			throw new NotFoundException('User(s) not found');
+		}
+
+		if (admin.role !== ChannelRoles.admin) {
+			throw new UnauthorizedException('Unauthorized user');
+		}
+
+		admin.role = ChannelRoles.moderator;
+		newAdmin.role = ChannelRoles.admin;
+		try {
+			const members = [admin, newAdmin];
+			return (await this.memberRespitory.save(members));
+		} catch (error) {
+			throw new InternalServerErrorException(`Could not transfer ownership: ${error.message}`);
+		}
+	}
 
 	async addChannelMember(channel: Channel, user: User): Promise<ChannelMember> {
 		const newMember = this.memberRespitory.create({
@@ -107,71 +273,44 @@ export class ChannelService {
 		try {
 			return (await this.memberRespitory.save(newMember));
 		} catch(error) {
-			throw new Error('Failed to create new channel member');
+			throw new InternalServerErrorException('Failed to create new channel member');
 		}
 	}
 
-	async deleteMember(memberId: number) {
-		try {
-			return (await this.memberRespitory.delete(memberId));
-		} catch(error) {
-			throw new InternalServerErrorException('Could not delete membership');
-		}
-	}
-	
-	async kickMember(kicker: User, kickeeId: number, channelId: number): Promise<DeleteResult> {
-		const channel = await this.getChannelById(channelId, ['members', 'members.user']);
-		if (!channel)
-			throw new NotFoundException('Channel not found');
-
-		const kickerMembership = channel.members.find((membership) => membership.user.id === kicker.id)
-		if (!kickerMembership)
-			throw new NotFoundException('User not found');
-		const kickeeMembership = channel.members.find((membership) => membership.user.id === kickeeId)
-		if (!kickeeMembership)
-			throw new NotFoundException('Kickee not found');
-
-		if (kickerMembership.role > kickeeMembership.role)
-			throw new UnauthorizedException('Unauthorized user')
-		return (await this.deleteMember(kickeeMembership.id));
-	}
-
-	async banUser(user: User, baneeId: number, channelId: number): Promise<DeleteResult> {
-		let result: DeleteResult;
-
-		const channel = await this.getChannelById(channelId, ['members', 'members.user', 'banList']);
-		if (!channel)
-			throw new NotFoundException('Channel not found');
-
-		const userMembership = channel.members.find((membership) => membership.user.id === user.id)
-		if (!userMembership) {
-			throw new NotFoundException('User not found');
-		}
-		const baneeMembership = channel.members.find((membership) => membership.user.id === baneeId)
-		if (!baneeMembership) {
-			throw new NotFoundException('Banee not found');
-		}
-
-		if (userMembership.role > baneeMembership.role) {
+	async updateChannel(user: User, channelId: number, UpdateChannelDto: UpdateChannelDto, image: Express.Multer.File): Promise<UpdateResult> {
+		const membership = await this.getMembershipByChannel(channelId, user.id);
+		if (!membership) {
 			throw new UnauthorizedException('Unauthorized user');
 		}
 
-		const alreadyBanned = channel.banList.some((user) => user.id === baneeId)
-		if (alreadyBanned) {
-			throw new BadRequestException(`${baneeMembership.user.nameFirst} is already banned from this channel`);
+		const isMod = membership.role < ChannelRoles.member;
+		const isAdmin = membership.role === ChannelRoles.admin;
+		if (!isMod || ((UpdateChannelDto.type || UpdateChannelDto.password) && !isAdmin)) {
+			throw new UnauthorizedException('Unauthorized user');
 		}
 
-		try {
-			result = await this.deleteMember(baneeMembership.id)
-			channel.banList.push(baneeMembership.user);
-			await this.channelRespitory.save(channel);
-		} catch(error) {
-			throw new InternalServerErrorException(`Banning ${baneeMembership.user.nameFirst} failed`);
+		if (image) {
+			const channel  = membership.channel;
+			let newImage: string = undefined;
+			let uploadPath: string;
+
+			try {
+				const { fileName, path } = createImage(channel.id, image);
+				newImage = fileName;
+				uploadPath = path;
+				await this.channelRespitory.update(channelId, { image: newImage });
+			} catch (error) {
+				if (newImage) {
+					unlinkSync(uploadPath);
+				}
+				throw new InternalServerErrorException(`Updating channel failed: ${error.message}`);
+			}
 		}
-		return (result);
+
+		return (await this.channelRespitory.update(channelId, UpdateChannelDto));
 	}
 
-	async updateMember(user: User, memberId: number, UpdateChannelMemberDto: UpdateChannelMemberDto): Promise<UpdateResult> {
+	async updateMember(user: User, memberId: number, UpdateMemberDto: UpdateMemberDto): Promise<UpdateResult> {
 		const selectedMember = await this.memberRespitory.findOne({
 			where: { id: memberId },
 			relations: ['channel', 'channel.members'],
@@ -180,8 +319,7 @@ export class ChannelService {
 			throw new NotFoundException('Member not found');
 		}
 
-		const memberships = await this.getMemberships(user);
-		const userMembership = memberships.find((membership) => membership.channel.id === selectedMember.channel.id);
+		const userMembership = await this.getMembershipByChannel(selectedMember.channel.id, user.id);
 		if (!userMembership) {
 			throw new NotFoundException('User membership not found');
 		}
@@ -193,7 +331,8 @@ export class ChannelService {
 		if (userMembership.role > selectedMember.role) {
 			throw new UnauthorizedException('Unauthorized user');
 		}
-		return (this.memberRespitory.update(memberId, UpdateChannelMemberDto));
+
+		return (this.memberRespitory.update(memberId, UpdateMemberDto));
 	}
 
 	async logMessage(channelId: number, author: User, message: string): Promise<Message> {

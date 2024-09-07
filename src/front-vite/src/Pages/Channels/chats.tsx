@@ -14,6 +14,8 @@ import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
 import { Channel } from './channels';
 import axios from 'axios';
+import { ButtonAvatar, ClickTypography } from './Components';
+import { useNavigate } from 'react-router-dom';
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
@@ -61,7 +63,7 @@ const ChatContainer = styled(Box)(({ theme }) => ({
 
 const ChatBubble = styled(Box)(({ theme }) => ({
   display: 'inline-block',
-  backgroundColor: theme.palette.secondary.dark,
+  backgroundColor: theme.palette.primary.main,
   borderRadius: '1.5em',
   alignSelf: 'flex-start',
   padding: '6px 1em',
@@ -97,35 +99,36 @@ type Message = {
 }
 
 const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
-  const [messageLog, setMessageLog] = useState<Message[]>([]);
-  const { userSocket } = useUser();
+  const navigate = useNavigate();
   const theme = useTheme();
+  const { userSocket } = useUser();
+
+  const [messageLog, setMessageLog] = useState<Message[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+	const onMessage = (message: Message) => {
+	  setMessageLog((prevMessages) => [...prevMessages, message]);
+	}
+
 	const getMessageLog = async () => {
 		try {
 			const response = await axios.get(`${BACKEND_URL}/channel/messages/${channel.id}`, { withCredentials: true });
 			if (response.data?.messages) {
-				response.data.messages.sort((a: Message, b: Message) => a.id > b.id);
+				response.data.messages.sort((a: Message, b: Message) => a.id - b.id);
 				setMessageLog(response.data.messages);
 			}
-		} catch(error) {
-			console.error(error);
-		}
-
-		const onMessage = (message: Message) => {
-		  setMessageLog((prevMessages) => [...prevMessages, message]);
-		}
-
-		userSocket?.on(`room${channel.id}Message`, onMessage);
-
-		return () => {
-			userSocket?.off(`room${channel.id}Message`, onMessage);
+		} catch(error: any) {
+			alert(error?.response?.data?.message);
 		}
 	}
 	getMessageLog();
+	userSocket?.on(`room${channel.id}Message`, onMessage);
+	return () => {
+		userSocket?.off(`room${channel.id}Message`, onMessage);
+	}
   }, [channel.id])
 
   useEffect(() => {
@@ -149,8 +152,9 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 	  };
 	  userSocket?.emit('message', payload);
     }
-	if (inputRef.current)
+	if (inputRef.current) {
 		inputRef.current.value = '';
+	}
   };
 
   const generateMessages = () => {
@@ -166,7 +170,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 				const isDiffTime = isLastMessage || getTimeDiff(messageLog[index +  1].timestamp, msg.timestamp) > timeLimit;
 				const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
 				const isLastUserMessage = isLastMessage || messageLog[index + 1].author.id !== msg.author.id;
-				const username = msg.author?.nameNick ? msg.author.nameNick : msg.author?.nameFirst;
+				const username = msg.author?.nameNick ? msg.author.nameNick : `${msg.author?.nameFirst} ${msg.author?.nameLast}`;
 				const timestamp = formatDate(msg.timestamp);
 
 		return (
@@ -186,22 +190,32 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
               alignItems="flex-start"
             >
               {(isDifferentUser || prevIsDiffTime) && (
-                <Avatar sx={{ width: 50, height: 50 }} src={`${BACKEND_URL}/${msg.author?.image}`} />
+                <ButtonAvatar
+					clickEvent={() => {navigate(`/profile/${msg.author.id}`)}}
+					avatarSx={{ width: 50, height: 50, border: '0px' }}
+					sx={{ boxShadow: theme.shadows[5], }}
+					src={`${BACKEND_URL}/${msg.author?.image}`}
+				/>
               )}
-              <Stack>
+              <Stack spacing={.4} >
                 {(isDifferentUser || prevIsDiffTime) && (
-                  <Typography
-                    variant="h3"
-                    sx={{ fontWeight: 'bold', fontSize: 'medium' }}
-                  >
-                    {username}
-                    <Typography
-                        variant="caption"
-                        sx={{ fontSize: '0.7em', paddingLeft: '1em' }}
-                      >
-                        {`${timestamp}`}
-                      </Typography>
-                  </Typography>
+					<Stack flexDirection='row' >
+					  <ClickTypography
+						paddingLeft={2}
+						variant="h3"
+						onClick={() => {navigate(`/profile/${msg.author.id}`)}}
+						sx={{ fontWeight: 'bold', fontSize: 'medium' }}
+					  >
+						{username}
+					  </ClickTypography>
+					  <Typography
+						variant="caption"
+						color={'textSecondary'}
+						sx={{ fontSize: '0.7em', paddingLeft: '1em' }}
+				      >
+						{`${timestamp}`}
+					  </Typography>
+					</Stack>
                 )}
 
                 <ChatBubble

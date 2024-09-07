@@ -20,7 +20,7 @@ export class ChannelGateway {
 	async handleConnection(client: Socket) {
 		try {
 			const	user = await authenticateUser(client, this.configService, this.userService);
-			const	memberships = await this.channelService.getJoinedChannels(user);
+			const	memberships = await this.channelService.getMemberships(user);
 
 			memberships?.forEach((userChannel: ChannelMember) => {
 				client.join(`channel#${userChannel.channel.id}`);
@@ -86,6 +86,5 @@ export class ChannelGateway {
 			console.log(error.message);
 			return;
 		}
-		console.log(`${user.nameFirst} said "${message.content}"`);
 	}
 }
