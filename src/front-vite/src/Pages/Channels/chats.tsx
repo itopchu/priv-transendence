@@ -106,7 +106,7 @@ type Message = {
 const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { userSocket } = useUser();
+  const { user, userSocket } = useUser();
   const { memberships } = useChannel();
 
   const [messageLog, setMessageLog] = useState<Message[]>([]);
@@ -119,6 +119,9 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 
   useEffect(() => {
 	const onMessage = (message: Message) => {
+	  //if (user.blockList.includes(message.author.id)) {
+	  //    return;
+	  //}
 	  setMessageLog((prevMessages) => [...prevMessages, message]);
 	}
 
@@ -126,7 +129,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 		try {
 			const response = await axios.get(`${BACKEND_URL}/channel/messages/${channel.id}`, { withCredentials: true });
 			if (response.data?.messages) {
-				response.data.messages.sort((a: Message, b: Message) => a.id - b.id);
+				response.data.messages
+					.sort((a: Message, b: Message) => a.id - b.id)
+					//.filter((message: Message) => !user.blockList.includes(message.author.id));
+
 				setMessageLog(response.data.messages);
 			}
 		} catch(error: any) {

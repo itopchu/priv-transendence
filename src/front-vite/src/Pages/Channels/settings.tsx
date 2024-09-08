@@ -1,5 +1,5 @@
 import { Avatar, Box, Divider, Stack, styled, useTheme, Typography, Card, IconButton, Menu, MenuItem, Button, TextField, ButtonGroup, linearProgressClasses, Select, FormControl, capitalize } from "@mui/material";
-import { ChannelMember, ChannelRole, ChannelRoleValues, ChannelType, ChannelTypeValues, useChannel } from "./channels";
+import { Channel, ChannelMember, ChannelRole, ChannelRoleValues, ChannelType, ChannelTypeValues, useChannel } from "./channels";
 import React, { useEffect, useRef, useState } from "react";
 import {
 	MoreVert as UserMenuIcon,
@@ -24,7 +24,7 @@ const ModerateOptions: string[] = [
 
 type ChannelDataType = {
   image: File | undefined;
-  type: ChannelType;
+  type: ChannelType | undefined;
 };
 
 export const validateFile = (file: File): boolean => {
@@ -111,12 +111,12 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 
 	const initialAvatarSrc = `${BACKEND_URL}/${channel.image}`;
 	const initialChannelData: ChannelDataType = {
-		type: channel.type,
+		type: undefined,
 		image: undefined,
 	}
 
 	const isAdmin = membership.role === ChannelRole.admin;
-	const isMod = membership.role === ChannelRole.moderator || isAdmin;
+	const isMod = membership.role < ChannelRole.member;
 
 	const [editMode, setEditMode] = useState(false);
 	const [avatarSrc, setAvatarSrc] = useState(initialAvatarSrc);
@@ -166,21 +166,21 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 	}
 
 	const onApply = async () => {
-		const cleanName = nameRef.current?.value.trim();
+		const cleanName = nameRef.current?.value;
 		const password = passwordRef.current?.value;
 		const description  = descriptionRef.current?.value;
 
 		const payload = new FormData();
-		if (channelData.type !== channel.type) {
+		if (channelData.type && channelData.type !== channel.type) {
 			payload.append('type', channelData.type);
 		}
 		if (channelData.image) {
 			payload.append('image', channelData.image);
 		}
-		if (cleanName) {
+		if (cleanName && cleanName !== channel.name) {
 			payload.append('name', cleanName);
 		}
-		if (password && password !== '') {
+		if (channelData.type === 'protected' && password) {
 			payload.append('password', password);
 		}
 		if (description && description !== channel.description)  {
@@ -272,7 +272,7 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			  <Button
 				key={index}
 				variant={
-				  channelData.type === ChannelTypeValues[index]
+				  (channelData.type ? channelData.type : channel.type === ChannelTypeValues[index])
 					? 'contained'
 					: 'outlined'
 				}
@@ -395,18 +395,22 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 							{isMod && ([
 									<Divider />,
 									ModerateOptions.map((option, index) => {
-										const capitalizedOption = member.muted && option === 'mute'
-										? option.charAt(0).toUpperCase() + option.slice(1)
-										: 'unmute';
+										const isMuteOption = option === 'mute';
+										const capitalizedOption = member.muted && isMuteOption
+											? 'Unmute'
+											: option.charAt(0).toUpperCase() + option.slice(1);
 
 										return (
-											<MenuItem
-												key={index}
-												onClick={() => onModerate(member, option)}
-												sx={{ color: 'red' }}
-											>
-												{`${capitalizedOption} ${membername}`}
-											</MenuItem>
+											<>
+												<MenuItem
+													key={index}
+													onClick={() => onModerate(member, option)}
+													sx={{ color: isMuteOption ? '' : 'red' }}
+												>
+													{`${capitalizedOption} ${membername}`}
+												</MenuItem>
+												{isMuteOption && <Divider key={index} />}
+											</>
 										);
 									})
 							])}

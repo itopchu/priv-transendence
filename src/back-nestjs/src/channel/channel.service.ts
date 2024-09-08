@@ -51,9 +51,9 @@ export class ChannelService {
 	async getMembershipByChannel(channelId: number, userId: number): Promise<ChannelMember> {
 		const membership = await this.memberRespitory.createQueryBuilder('membership')
 		.innerJoin('membership.user', 'user')
+		.where('user.id = :id', { id: userId })
 		.leftJoinAndSelect('membership.channel', 'channel')
 		.where('channel.id = :id', { id: channelId })
-		.where('user.id = :id', { id: userId })
 		.getOne()
 
 		return (membership);
@@ -85,6 +85,7 @@ export class ChannelService {
 		let newChannel: Channel = this.channelRespitory.create(createChannelDto);
 		let newMember: ChannelMember;
 
+		newChannel.name = newChannel.name.replace(/\s+/g, ' ').trim();
 		try {
 			newChannel = await this.channelRespitory.save(newChannel);
 
@@ -108,7 +109,7 @@ export class ChannelService {
 			if (newMember.id) {
 				await this.memberRespitory.delete(newMember.id);
 			}
-			throw new Error(`Failed to create channel and associate member: ${error.message}`);
+			throw new InternalServerErrorException(`Failed to create channel and associate member: ${error.message}`);
 		}
 		return (newChannel);
 	}
@@ -295,7 +296,7 @@ export class ChannelService {
 		}
 	}
 
-	async updateChannel(user: User, channelId: number, UpdateChannelDto: UpdateChannelDto, image: Express.Multer.File): Promise<UpdateResult> {
+	async updateChannel(user: User, channelId: number, updateChannelDto: UpdateChannelDto, image: Express.Multer.File): Promise<UpdateResult> {
 		const membership = await this.getMembershipByChannel(channelId, user.id);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized user');
@@ -303,7 +304,7 @@ export class ChannelService {
 
 		const isMod = membership.role < ChannelRoles.member;
 		const isAdmin = membership.role === ChannelRoles.admin;
-		if (!isMod || ((UpdateChannelDto.type || UpdateChannelDto.password) && !isAdmin)) {
+		if (!isMod || ((updateChannelDto.type || updateChannelDto.password) && !isAdmin)) {
 			throw new UnauthorizedException('Unauthorized user');
 		}
 
@@ -325,10 +326,13 @@ export class ChannelService {
 			}
 		}
 
-		return (await this.channelRespitory.update(channelId, UpdateChannelDto));
+		if (updateChannelDto.name) {
+			updateChannelDto.name = updateChannelDto?.name.replace(/\s+/g, ' ').trim();
+		}
+		return (await this.channelRespitory.update(channelId, updateChannelDto));
 	}
 
-	async updateMember(user: User, memberId: number, UpdateMemberDto: UpdateMemberDto): Promise<UpdateResult> {
+	async updateMember(user: User, memberId: number, updateMemberDto: UpdateMemberDto): Promise<UpdateResult> {
 		const selectedMember = await this.memberRespitory.findOne({
 			where: { id: memberId },
 			relations: ['channel', 'channel.members'],
@@ -350,7 +354,7 @@ export class ChannelService {
 			throw new UnauthorizedException('Unauthorized user');
 		}
 
-		return (this.memberRespitory.update(memberId, UpdateMemberDto));
+		return (this.memberRespitory.update(memberId, updateMemberDto));
 	}
 
 	async logMessage(channelId: number, author: User, message: string): Promise<Message> {

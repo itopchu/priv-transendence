@@ -134,6 +134,48 @@ export class ChannelController {
 
 		return (await this.channelService.transferOwnership(user, victimId, channelId));
 	}
+
+	@Patch(':id')
+	@UseGuards(AuthGuard)
+	@UsePipes(new ValidationPipe({ whitelist:  true }))
+	@UseInterceptors(FileInterceptor('image', multerOptions))
+	async updateChannel(
+		@Req() req: Request,
+		@UploadedFile() image: Express.Multer.File,
+		@Param('id', ParseIntPipe) channelId: number,
+		@Body() updateChannelDto: UpdateChannelDto,
+	) {
+		const user = req.authUser;
+
+		if (!Object.keys(updateChannelDto).length) {
+			return;
+		}
+		if (updateChannelDto.type && updateChannelDto.type === 'protected' && !updateChannelDto.password) {
+			throw new BadRequestException('Password required');
+		}
+
+		return (await this.channelService.updateChannel(user, channelId, updateChannelDto, image));
+	}
+
+	@Patch('/member/:id')
+	@UseGuards(AuthGuard)
+	@UsePipes(new ValidationPipe({ whitelist: true }))
+	async updateMember(
+		@Req() req: Request,
+		@Param('id', ParseIntPipe) memberId: number,
+		@Body() updateMemberDto: UpdateMemberDto
+	) {
+		const user = req.authUser;
+
+		if (!Object.keys(updateMemberDto).length) {
+			return;
+		}
+		if (updateMemberDto.role === ChannelRoles.admin)  {
+			throw new BadRequestException('Unable to promote to admin');
+		}
+
+		return (await this.channelService.updateMember(user, memberId, updateMemberDto));
+	}
 	
 	@Delete(':id')
 	@UseGuards(AuthGuard)
@@ -157,37 +199,5 @@ export class ChannelController {
 		const user = req.authUser;
 
 		return (await this.channelService.leaveChannel(user, membershipId));
-	}
-
-	@Patch(':id')
-	@UseGuards(AuthGuard)
-	@UsePipes(new ValidationPipe({ whitelist:  true }))
-	@UseInterceptors(FileInterceptor('image', multerOptions))
-	async updateChannel(
-		@Req() req: Request,
-		@UploadedFile() image: Express.Multer.File,
-		@Param('id', ParseIntPipe) channelId: number,
-		@Body() UpdateChannelDto: UpdateChannelDto,
-	) {
-		const user = req.authUser;
-
-		return  (await this.channelService.updateChannel(user, channelId, UpdateChannelDto, image));
-	}
-
-	@Patch('/member/:id')
-	@UseGuards(AuthGuard)
-	@UsePipes(new ValidationPipe({ whitelist: true }))
-	async updateMember(
-		@Req() req: Request,
-		@Param('id', ParseIntPipe) memberId: number,
-		@Body() UpdateMemberDto: UpdateMemberDto
-	) {
-		const user = req.authUser;
-
-		if (UpdateMemberDto.role === ChannelRoles.admin)  {
-			throw new BadRequestException('Unable to promote to admin');
-		}
-
-		return (await this.channelService.updateMember(user, memberId, UpdateMemberDto));
 	}
 }

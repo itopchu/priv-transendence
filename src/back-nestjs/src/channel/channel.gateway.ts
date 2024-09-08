@@ -1,5 +1,4 @@
-import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, ConnectedSocket } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, ConnectedSocket } from '@nestjs/websockets'; import { Server, Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
 import { ChannelService } from './channel.service';
 import { UserService } from '../user/user.service';
@@ -74,13 +73,12 @@ export class ChannelGateway {
 	async onMessage(@MessageBody() data: { message: string, channelId: number }, @ConnectedSocket() client: UserSocket) {
 		const user = client.authUser;
 		if (!user) {
-			console.log('unknown user');
+			console.log('Unknown user');
 			return;
 		}
 
-		let message: Message;
 		try {
-			message = await this.channelService.logMessage(data.channelId, user, data.message);
+			const message = await this.channelService.logMessage(data.channelId, user, data.message);
 			this.server.to(`channel#${data.channelId}`).emit(`room${data.channelId}Message`, message);
 		} catch (error) {
 			console.log(error.message);

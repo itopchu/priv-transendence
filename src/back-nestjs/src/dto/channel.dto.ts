@@ -18,7 +18,7 @@ export class CreateChannelDto {
   type: ChannelType;
 }
 
-export class UpdateChannelDto extends PartialType(PickType(Channel, ['type', 'name', 'password', 'image', 'description'] as const)) {
+export class UpdateChannelDto extends PartialType(PickType(Channel, ['type', 'name', 'password', 'description'] as const)) {
 	@IsEnum(ChannelType)
 	@IsOptional()
 	@IsNotEmpty()

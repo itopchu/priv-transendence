@@ -71,6 +71,9 @@ export const ButtonAvatar: React.FC<AvatarButtonType> = ({ children, src, clickE
 			minWidth: 0,
 			width: 'fit-content',
 			height: 'fit-content',
+			'.image-profile': {
+			  transition: 'filter 0.3s ease',
+			},
 			...sx
 		  }}
 		>
@@ -91,9 +94,6 @@ export const UploadAvatar: React.FC<AvatarButtonType> = ({ children, src, clickE
 			},
 			'&:hover .hidden-icon': {
 			  visibility: 'visible',
-			},
-			'.image-profile': {
-			  transition: 'filter 0.3s ease',
 			},
 			...sx
 		}}
