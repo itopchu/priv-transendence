@@ -16,7 +16,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
-import { Channel, useChannel } from './channels';
+import { Channel, handleError, retryOperation, useChannel } from './channels';
 import axios from 'axios';
 import { ButtonAvatar, ClickTypography } from './Components';
 import { useNavigate } from 'react-router-dom';
@@ -106,7 +106,7 @@ type Message = {
 const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { user, userSocket } = useUser();
+  const { userSocket } = useUser();
   const { memberships } = useChannel();
 
   const [messageLog, setMessageLog] = useState<Message[]>([]);
@@ -127,25 +127,26 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 
 	const getMessageLog = async () => {
 		try {
-			const response = await axios.get(`${BACKEND_URL}/channel/messages/${channel.id}`, { withCredentials: true });
-			if (response.data?.messages) {
-				response.data.messages
-					.sort((a: Message, b: Message) => a.id - b.id)
-					//.filter((message: Message) => !user.blockList.includes(message.author.id));
+			const fetchedMessageLog = await retryOperation(async () => {
+			  const response = await axios.get(`${BACKEND_URL}/channel/messages/${channel.id}`, { withCredentials: true });
+			  return (response.data.messages || []);
+			});
+			fetchedMessageLog.sort((a: Message, b: Message) => a.id - b.id)
+				//.filter((message: Message) => !user.blockList.includes(message.author.id));
 
-				setMessageLog(response.data.messages);
-			}
+			setMessageLog(fetchedMessageLog);
 		} catch(error: any) {
-			alert(error?.response?.data?.message);
+			handleError('Unable to fetch message log:', error);
 		}
 	}
+
 	getMessageLog();
-	userSocket?.on(`room${channel.id}Message`, onMessage);
+	userSocket?.on(`channel#${channel.id}Message`, onMessage);
 	setLoading(false);
 	return () => {
-		userSocket?.off(`room${channel.id}Message`, onMessage);
+		userSocket?.off(`channel#${channel.id}Message`, onMessage);
 	}
-  }, [channel.id])
+  }, [channel.id, userSocket])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -175,15 +176,15 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 
   const generateMessages = () => {
     if (!messageLog.length) return null;
-	const timeLimit = 3 * 60 * 1000; // 5 min in milisecondes
+	const timeSeparation = 3 * 60 * 1000; // 5 min in milisecondes
 
     return (
       <ChatMessages>
         {messageLog.map((msg, index) => {
 				const isFirstMessage = index === 0;
 				const isLastMessage = index + 1 === messageLog.length;
-				const prevIsDiffTime = isFirstMessage || getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeLimit;
-				const isDiffTime = isLastMessage || getTimeDiff(messageLog[index +  1].timestamp, msg.timestamp) > timeLimit;
+				const prevIsDiffTime = isFirstMessage || getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeSeparation;
+				const isDiffTime = isLastMessage || getTimeDiff(messageLog[index +  1].timestamp, msg.timestamp) > timeSeparation;
 				const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
 				const isLastUserMessage = isLastMessage || messageLog[index + 1].author.id !== msg.author.id;
 				const username = msg.author?.nameNick ? msg.author.nameNick : `${msg.author?.nameFirst} ${msg.author?.nameLast}`;

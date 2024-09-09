@@ -1,5 +1,5 @@
 import { Avatar, Box, Divider, Stack, styled, useTheme, Typography, Card, IconButton, Menu, MenuItem, Button, TextField, ButtonGroup, linearProgressClasses, Select, FormControl, capitalize } from "@mui/material";
-import { Channel, ChannelMember, ChannelRole, ChannelRoleValues, ChannelType, ChannelTypeValues, useChannel } from "./channels";
+import { Channel, ChannelMember, ChannelRole, ChannelRoleValues, ChannelType, ChannelTypeValues } from "./channels";
 import React, { useEffect, useRef, useState } from "react";
 import {
 	MoreVert as UserMenuIcon,
@@ -7,10 +7,10 @@ import {
 	EditOff as EditOffIcon,
 	Check as ApplyEditIcon,
 } from '@mui/icons-material';
-import { DescriptionBox } from "./CardComponents";
+import { DescriptionBox } from "./Components";
 import axios, { AxiosError } from "axios";
 import { SelectedType } from ".";
-import { ButtonAvatar, CustomAvatar, AvatarUploadIcon, ImageInput, UploadAvatar, ClickTypography } from "./Components";
+import { ButtonAvatar, CustomAvatar, AvatarUploadIcon, ImageInput, UploadAvatar, ClickTypography, CustomScrollBox } from "./Components";
 import { useUser } from "../../Providers/UserContext/User";
 import { useNavigate } from "react-router-dom";
 
@@ -54,23 +54,6 @@ const SettingsTextField =  styled(TextField)(({ theme  }) =>({
 	},
 }))
 
-const CustomScrollBox = styled(Box)(({ theme }) => ({
-	overflowY: 'auto',
-	padding: theme.spacing(.5),
-
-	'&::-webkit-scrollbar-track': {
-		backgroundColor: theme.palette.secondary.dark,
-		borderRadius: '1em',
-	},
-	'&::-webkit-scrollbar': {
-		width: '4px',
-	},
-	'&::-webkit-scrollbar-thumb': {
-		backgroundColor: theme.palette.primary.main,
-		borderRadius: '1em',
-	},
-}));
-
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   position: 'relative',
   height: '80vh',
@@ -98,8 +81,6 @@ interface SettingsBoxType {
 export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelected }) => {
 	const theme = useTheme();
 	const navigate = useNavigate();
-
-	const { triggerRefresh } = useChannel();
 	const { user } = useUser();
 
 	const passwordRef = useRef<HTMLInputElement>(null);
@@ -190,7 +171,6 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			await axios.patch(`${BACKEND_URL}/channel/${channel.id}`, payload, {
 				withCredentials: true,
 			});
-			triggerRefresh();
 			setEditMode(!editMode);
 			reset();
 		} catch (error: any) {
@@ -206,7 +186,6 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			await axios.patch(`${BACKEND_URL}/channel/${option}/${channel.id}`, payload, {
 				withCredentials: true,
 			});
-			triggerRefresh();
 		} catch(error: any) {
 			alert(error?.response?.data?.message);
 		}
@@ -227,7 +206,6 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			await axios.delete(`${BACKEND_URL}/channel/${channel.id}`, {
 				withCredentials: true,
 			});
-			triggerRefresh();
 			setSelected((prev) => ({ 
 				...prev,
 				settings: undefined,
@@ -244,7 +222,6 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			await axios.delete(`${BACKEND_URL}/channel/leave/${membership.id}`, {
 				withCredentials: true,
 			});
-			triggerRefresh();
 			setSelected((prev) => ({ 
 				...prev,
 				settings: undefined,
@@ -272,7 +249,7 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			  <Button
 				key={index}
 				variant={
-				  (channelData.type ? channelData.type : channel.type === ChannelTypeValues[index])
+				  (channelData.type ? channelData.type : channel.type) === ChannelTypeValues[index]
 					? 'contained'
 					: 'outlined'
 				}

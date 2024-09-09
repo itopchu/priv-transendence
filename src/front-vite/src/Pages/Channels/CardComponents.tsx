@@ -1,19 +1,6 @@
 import { styled, Avatar, Card, FormLabel, CardContent } from "@mui/material";
 import { Box } from "@mui/system";
 
-export const DescriptionBox = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'flex-start',
-  width: '100%',
-  maxHeight: '6em',
-  backgroundColor: theme.palette.primary.main,
-  borderRadius: '1em',
-  padding: theme.spacing(2),
-  overflow: 'auto',
-  boxShadow: theme.shadows[3],
-}));
-
 export const CustomCardContent = styled(CardContent)(() => ({
 	display: 'flex',
 	flexDirection: 'column',

@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { ChannelService } from './channel.service';
 import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
-import { User } from 'src/entities/user.entity';
-import { Channel, ChannelMember, Message } from 'src/entities/channel.entity';
+import { User } from '../entities/user.entity';
+import { Channel, ChannelMember, ChannelRoles, Message } from '../entities/channel.entity';
+import { BadRequestException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
 
 @WebSocketGateway(3001, { cors: { origin: "*" } })
 export class ChannelGateway {
@@ -18,14 +19,7 @@ export class ChannelGateway {
 
 	async handleConnection(client: Socket) {
 		try {
-			const	user = await authenticateUser(client, this.configService, this.userService);
-			const	memberships = await this.channelService.getMemberships(user);
-
-			memberships?.forEach((userChannel: ChannelMember) => {
-				client.join(`channel#${userChannel.channel.id}`);
-				console.log(`${user.nameFirst} has joined channel ${userChannel.channel.name}`);
-			}
-		);
+			await authenticateUser(client, this.configService, this.userService);
 		} catch (error) {
 			client.disconnect(true);
 			console.error(error.message);
@@ -46,26 +40,52 @@ export class ChannelGateway {
 		console.log('Client disconnected from channels:', user?.nameFirst, client.id);
 	}
 
-	@SubscribeMessage('joinRoom')
-	async onRefresh(@MessageBody() channelId: number, @ConnectedSocket() client: UserSocket) {
+	@SubscribeMessage('subscribePublicChannel')
+	async onPublicUpdate(@ConnectedSocket() client: UserSocket) {
 		const user = client.authUser;
 		if (!user) {
-			console.log('unknown user');
-			return;
+			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 		
-		const channel = await this.channelService.getChannelById(channelId, ['members', 'members.user']);
-		if (!channel) {
-			console.log('channel does not exist');
-			return;
+		client.join('channelPublicUpdate');
+	}
+
+	@SubscribeMessage('subscribeChannel')
+	async onSubscribeChannel(@MessageBody(ParseIntPipe) channelId: number, @ConnectedSocket() client: UserSocket) {
+		const user = client.authUser;
+		if (!user) {
+			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		for (const membership of channel.members) {
-			if (membership?.user?.id === user.id) {
-				client.join(`channel#${channelId}`);
-				console.log(`${user.nameFirst} has joined channel ${channelId}`);
-				break;
-			}
+		const membership = await this.channelService.getMembershipByChannel(channelId, user.id);
+		if (!membership) {
+			throw new UnauthorizedException('Unauthorized: Membership not found');
+		}
+
+		client.join(`channel#${channelId}`);
+		client.join(`channelUpdate#${channelId}`);
+		console.log(`${user.nameFirst} has subscribed to channel ${membership.channel.name}`);
+	}
+
+	@SubscribeMessage('unsubscribeChannel')
+	onUnsubscribe(@ConnectedSocket() client: UserSocket, @MessageBody(ParseIntPipe) channelId: number) {
+		const user = client.authUser;
+		if (!user) {
+			throw new UnauthorizedException('Unauthorized: User not found');
+		}
+		
+		if (channelId === -1) {
+			const rooms = Array.from(client.rooms);
+			const roomInitial = 'channel';
+
+			rooms.forEach(room => {
+				if (room.slice(0, roomInitial.length) === roomInitial) {
+					client.leave(room);
+				}
+			});
+		} else {
+			client.leave(`channelUpdate#${channelId}`);
+			client.leave(`channel#${channelId}`);
 		}
 	}
 
@@ -73,16 +93,61 @@ export class ChannelGateway {
 	async onMessage(@MessageBody() data: { message: string, channelId: number }, @ConnectedSocket() client: UserSocket) {
 		const user = client.authUser;
 		if (!user) {
-			console.log('Unknown user');
+			throw new UnauthorizedException('Unauthorized: User not found');
+		}
+		const membership = await this.channelService.getMembershipByChannel(data.channelId, user.id);
+		if (!membership) {
+			throw new UnauthorizedException('Unauthorized: Membership not found');
+		}
+		if (membership.muted) {
+			client.emit('messageError', 'You are muted');
 			return;
 		}
 
 		try {
 			const message = await this.channelService.logMessage(data.channelId, user, data.message);
-			this.server.to(`channel#${data.channelId}`).emit(`room${data.channelId}Message`, message);
+			this.server.to(`channel#${data.channelId}`).emit(`channel#${data.channelId}Message`, message);
 		} catch (error) {
-			console.log(error.message);
-			return;
+			client.emit('messageError', `Internal server error: ${error.message}`);
+		}
+	}
+
+	getUserSocketInRoom(userId: number, room: string): UserSocket | null {
+		const roomSockets = this.server.sockets.adapter.rooms.get(room);
+		if (!roomSockets) return (null);
+
+		for (const socketId of roomSockets) {
+			const socket: UserSocket = this.server.sockets.sockets.get(socketId);
+			if (socket && socket.authUser.id === userId) {
+				return (socket)
+			}
+		}
+		return (null);
+	}
+
+	emitChannelUpdate(channelId: number) {
+		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, channelId);
+	}
+
+	emitPublicChannelUpdate(channel: Channel) {
+		console.log('extra extra!')
+		this.server.to('channelPublicUpdate').emit('newPublicChannelUpdate', channel);
+	}
+
+	emitChannelDeleted(channelId: number) {
+		this.emitChannelUpdate(channelId);
+		this.server.to(`channelUpdate#${channelId}`).disconnectSockets();
+		this.server.to(`channel#{channelId}`).disconnectSockets();
+	}
+
+	emitMemberLeft(userId: number, channelId: number) {
+		const userSocket = this.getUserSocketInRoom(userId, `channelUpdate#${channelId}`)
+			|| this.getUserSocketInRoom(userId, `channel#${channelId}`)
+
+		this.emitChannelUpdate(channelId);
+		if (userSocket) {
+			userSocket.leave(`channelUpdate#${channelId}`);
+			userSocket.leave(`channel#${channelId}`);
 		}
 	}
 }

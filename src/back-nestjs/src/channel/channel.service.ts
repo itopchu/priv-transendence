@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm'
 import { Channel, ChannelMember, ChannelRoles, ChannelType, Message } from '../entities/channel.entity';
-import { UserService } from '../user/user.service';
-import { DeleteResult, Not, Repository, UpdateResult } from 'typeorm';
+import { Repository, UpdateResult } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { CreateChannelDto, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
 import path from 'path';
@@ -27,7 +26,6 @@ export class ChannelService {
 		private memberRespitory: Repository<ChannelMember>,
 		@InjectRepository(Message)
 		private messageRespitory: Repository<Message>,
-		private readonly userService: UserService,
 	) {}
 
 	async getChannelLog(channelId: number): Promise<Message[]>  {
@@ -46,6 +44,16 @@ export class ChannelService {
 			relations: requestedRelations,
 		});
 		return (channel);
+	}
+
+	async getMembershipById(member: number | ChannelMember): Promise<ChannelMember> {
+		const membership = await this.memberRespitory.createQueryBuilder('membership')
+		.where('membership.id = :id', { id: typeof member === 'number' ?  member : member.id })
+		.leftJoinAndSelect('membership.user', 'user')
+		.leftJoinAndSelect('membership.channel', 'channel')
+		.getOne()
+
+		return (membership);
 	}
 
 	async getMembershipByChannel(channelId: number, userId: number): Promise<ChannelMember> {
@@ -139,13 +147,7 @@ export class ChannelService {
 		return (await this.addChannelMember(channel, user));
 	}
 
-	async leaveChannel(user: User, membershipId: number): Promise<Channel | ChannelMember> {
-		const memberships = await this.getMemberships(user);
-		const membership = memberships.find((membership) => membership.id == membershipId);
-		if (!membership) {
-			throw new NotFoundException('Membership not found');
-		}
-
+	async leaveChannel(user: User, membership: ChannelMember): Promise<Channel | ChannelMember> {
 		if (membership.role  === ChannelRoles.admin) {
 			const channel = membership.channel;
 
@@ -332,39 +334,38 @@ export class ChannelService {
 		return (await this.channelRespitory.update(channelId, updateChannelDto));
 	}
 
-	async updateMember(user: User, memberId: number, updateMemberDto: UpdateMemberDto): Promise<UpdateResult> {
-		const selectedMember = await this.memberRespitory.findOne({
-			where: { id: memberId },
-			relations: ['channel', 'channel.members'],
-		});
-		if (!selectedMember) {
-			throw new NotFoundException('Member not found');
+	async updateMember(user: User, member: number | ChannelMember, updateMemberDto: UpdateMemberDto): Promise<UpdateResult> {
+		if (typeof member === 'number' || !member.channel) {
+			member = await this.getMembershipById(member);
+			if (!member) {
+				throw new NotFoundException('Member not found');
+			}
 		}
 
-		const userMembership = await this.getMembershipByChannel(selectedMember.channel.id, user.id);
+		const userMembership = await this.getMembershipByChannel(member.channel.id, user.id);
 		if (!userMembership) {
-			throw new NotFoundException('User membership not found');
+			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
 
-		if (userMembership.id === selectedMember.id) {
+		if (userMembership.id === member.id) {
 			throw new BadRequestException('User changing its own membership, Stop messing around!');
 		}
 
-		if (userMembership.role > selectedMember.role) {
-			throw new UnauthorizedException('Unauthorized user');
+		if (userMembership.role > member.role) {
+			throw new UnauthorizedException('Unauthorized: Insufficient privileges');
 		}
 
-		return (this.memberRespitory.update(memberId, updateMemberDto));
+		return (await this.memberRespitory.update(member.id, updateMemberDto));
 	}
 
 	async logMessage(channelId: number, author: User, message: string): Promise<Message> {
 		const channel = await this.getChannelById(channelId, ['members', 'members.user']);
 		if (!channel)
-			throw new Error('Channel not found');
+			throw new NotFoundException('Channel not found');
 
 		const memberStatus = channel.members.find(member => member.user.id === author.id);
-		if (!memberStatus)
-			throw new Error('Unauthorized author');
+		if (!memberStatus || memberStatus.muted)
+			throw new UnauthorizedException('Unauthorized author');
 
 		const newMessage = this.messageRespitory.create({
 			channel: channel,
@@ -372,6 +373,6 @@ export class ChannelService {
 			content: message,
 		})
 		console.log(`${author.nameFirst} said "${message}" and has been logged`);
-		return (this.messageRespitory.save(newMessage));
+		return (await this.messageRespitory.save(newMessage));
 	}
 }

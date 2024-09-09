@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useUser } from '../../Providers/UserContext/User';
-import { ChannelType, ChannelTypeValues, useChannel } from './channels';
+import { ChannelType, ChannelTypeValues, handleError, retryOperation } from './channels';
 import axios from 'axios';
 import {
   CenteredCard,
@@ -40,7 +40,6 @@ const initialChannelData: ChannelDataType = {
 
 const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   const { user, userSocket } = useUser();
-  const { triggerRefresh } = useChannel();
   const passwordRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -112,18 +111,19 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 	}
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
-          withCredentials: true,
-		  headers: {
-		    'Content-Type': 'multipart/form-data',
-		  },
-        }
-      );
-      triggerRefresh();
-      userSocket?.emit('joinRoom', response.data.channel.id);
+	  const newChannel = await retryOperation(async () => {
+        const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
+            withCredentials: true,
+		    headers: {
+		      'Content-Type': 'multipart/form-data',
+		    },
+        });
+		return (response.data.channel);
+	  });
+      userSocket?.emit('subscribeChannel', newChannel.id);
     } catch (error: any) {
       setLoading(false);
-      alert(error?.response?.data?.message);
+      handleError('Could not create channel: ', error);
       return;
     }
     setLoading(false);

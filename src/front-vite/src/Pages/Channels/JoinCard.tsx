@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { useChannel } from './channels';
+import { handleError, retryOperation, useChannel } from './channels';
 import { Channel } from './channels';
 import axios from 'axios';
 import { useUser } from '../../Providers/UserContext/User';
@@ -9,7 +9,6 @@ import {
   CustomFormLabel,
   Overlay,
   TextFieldWrapper,
-  DescriptionBox,
   CustomCardContent,
   LoadingBox,
 } from './CardComponents';
@@ -22,7 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import { SelectedType } from '.';
-import { CustomAvatar } from './Components';
+import { CustomAvatar, DescriptionBox } from './Components';
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
@@ -32,7 +31,7 @@ interface JoinCardType {
 }
 
 export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
-  const { triggerRefresh, memberships } = useChannel();
+  const { memberships } = useChannel();
   const { user, userSocket } = useUser();
 
   const [loading, setLoading] = useState(false);
@@ -57,15 +56,16 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
     };
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/channel/join/${channel.id}`, payload,
-        {
-          withCredentials: true,
-        }
-      );
-      triggerRefresh();
-      userSocket?.emit('joinRoom', response.data.channel.id);
+	  const JoinedChannel: Channel = await retryOperation(async () =>{
+	    const response = await axios.post(`${BACKEND_URL}/channel/join/${channel.id}`, payload, {
+            withCredentials: true,
+          }
+		);
+		return (response.data.channel);
+	  })
+      userSocket?.emit('subscribeChannel', JoinedChannel.id);
     } catch (error: any) {
-	  alert(error?.response?.data?.message);
+	  handleError('Could not get joined channels: ', error);
       setLoading(false);
       return;
     }

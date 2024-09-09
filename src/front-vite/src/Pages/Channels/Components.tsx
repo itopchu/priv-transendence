@@ -1,5 +1,5 @@
 import { Upload } from "@mui/icons-material";
-import { Avatar, Button, styled, Typography } from "@mui/material";
+import { Avatar, Box, Button, styled, Typography } from "@mui/material";
 import { availableMemory } from "process";
 import React, { Children, ReactElement } from "react";
 import { styleText } from "util";
@@ -22,6 +22,37 @@ export interface ImageInputType {
 	children?: ReactElement[];
 	onFileInput?: (file: File) => void;
 }
+
+export const CustomScrollBox = styled(Box)(({ theme }) => ({
+	overflowY: 'auto',
+	padding: theme.spacing(.5),
+
+	'&::-webkit-scrollbar-track': {
+		backgroundColor: theme.palette.secondary.dark,
+		borderRadius: '1em',
+	},
+	'&::-webkit-scrollbar': {
+		width: '4px',
+	},
+	'&::-webkit-scrollbar-thumb': {
+		backgroundColor: theme.palette.primary.main,
+		borderRadius: '1em',
+	},
+}));
+
+export const DescriptionBox = styled(CustomScrollBox)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  textAlign: 'center',
+  width: '100%',
+  maxHeight: '6em',
+  backgroundColor: theme.palette.primary.main,
+  borderRadius: '1em',
+  padding: theme.spacing(2),
+  overflow: 'auto',
+  boxShadow: theme.shadows[3],
+}));
 
 export const AvatarUploadIcon = styled(Upload)(({ theme }) => ({
 	  position: 'absolute',
