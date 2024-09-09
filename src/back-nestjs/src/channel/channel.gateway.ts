@@ -7,6 +7,11 @@ import { User } from '../entities/user.entity';
 import { Channel, ChannelMember, ChannelRoles, Message } from '../entities/channel.entity';
 import { BadRequestException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
 
+export enum UpdateType {
+	deleted = 'deleted',
+	updated = 'updated',
+}
+
 @WebSocketGateway(3001, { cors: { origin: "*" } })
 export class ChannelGateway {
 	constructor(private readonly userService: UserService,
@@ -48,6 +53,24 @@ export class ChannelGateway {
 		}
 		
 		client.join('channelPublicUpdate');
+	}
+
+	@SubscribeMessage('joinChannel')
+	async onJoinChannel(@MessageBody(ParseIntPipe) channelId: number, @ConnectedSocket() client: UserSocket) {
+		const user = client.authUser;
+		if (!user) {
+			throw new UnauthorizedException('Unauthorized: User not found');
+		}
+
+		const membership = await this.channelService.getMembershipByChannel(channelId, user.id);
+		if (!membership) {
+			throw new UnauthorizedException('Unauthorized: Membership not found');
+		}
+
+		client.join(`channel#${channelId}`);
+		client.join(`channelUpdate#${channelId}`);
+		client.emit(`newChannelUpdate`, channelId);
+		console.log(`${user.nameFirst} has subscribed to channel ${membership.channel.name}`);
 	}
 
 	@SubscribeMessage('subscribeChannel')
@@ -129,15 +152,15 @@ export class ChannelGateway {
 		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, channelId);
 	}
 
-	emitPublicChannelUpdate(channel: Channel) {
-		console.log('extra extra!')
-		this.server.to('channelPublicUpdate').emit('newPublicChannelUpdate', channel);
+	emitPublicChannelUpdate(channel: Channel, updateType: UpdateType) {
+		console.log(channel);
+		this.server.to('channelPublicUpdate').emit('newPublicChannelUpdate', {channel: channel, updateType: updateType });
 	}
 
 	emitChannelDeleted(channelId: number) {
 		this.emitChannelUpdate(channelId);
-		this.server.to(`channelUpdate#${channelId}`).disconnectSockets();
-		this.server.to(`channel#{channelId}`).disconnectSockets();
+		this.server.socketsLeave(`channelUpdate#${channelId}`);
+		this.server.socketsLeave(`channel#${channelId}`);
 	}
 
 	emitMemberLeft(userId: number, channelId: number) {

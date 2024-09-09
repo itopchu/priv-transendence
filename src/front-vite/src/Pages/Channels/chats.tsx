@@ -146,7 +146,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 	return () => {
 		userSocket?.off(`channel#${channel.id}Message`, onMessage);
 	}
-  }, [channel.id, userSocket])
+  }, [channel.id])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({

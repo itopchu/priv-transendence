@@ -46,13 +46,18 @@ export interface Channel {
 	description: string;
 }
 
+type ChannelUpdateType  = {
+	channel: Channel,
+	updateType: 'updated' | 'deleted',
+}
+
 type ChannelContextType = {
 	memberships: ChannelMember[],
 	publicChannels: Channel[],
 }
 
 export const handleError = (message: string, error: any) => {
-	const errorMessage = error.response.data ? error.response.data.message : error
+	const errorMessage = error?.response?.data ? error.response.data.message : error
 
 	alert(`${message} ${errorMessage}`);
 }
@@ -63,7 +68,14 @@ export const retryOperation = async (operation: () => Promise<any>, retries = 3)
 	for (let attempt = 1;; ++attempt) {
 		try {
 			return (await operation());
-		} catch (error) {
+		} catch (error: any) {
+			if (error.response){
+				const statusCode = error.response.status;
+				if (statusCode < 500 || statusCode > 600) {
+					throw error;
+				}
+			}
+
 			if (attempt < retries) {
 				console.warn(`Attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`);
 				await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
@@ -124,15 +136,25 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			}
 		}
 
-		const onPublicChannelUpdate = (updatedChannel: Channel) => {
-			const index = publicChannels.findIndex((channel) => channel.id === updatedChannel.id)
-			if (index === -1) {
-				setPublicChannels((prev) => [...prev, updatedChannel]);
-			} else {
-				const newChannels = [...publicChannels];
-				newChannels[index] = updatedChannel;
-				setPublicChannels(newChannels);
-			}
+		const onPublicChannelUpdate = (data: ChannelUpdateType) => {
+			setPublicChannels((prevChannels) => {
+				const index = prevChannels.findIndex(prevChannel => prevChannel.id === data.channel.id)
+
+				if (index === -1) {
+					if (data.updateType === 'updated') {
+						return ([...prevChannels, data.channel]);
+					}
+					return ([...prevChannels]);
+				}
+
+				let updatedChannels = [...prevChannels];
+				if (data.updateType === 'updated') {
+					updatedChannels[index] = data.channel;
+				} else {
+					updatedChannels.splice(index, 1);
+				}
+				return (updatedChannels);
+			});
 		}
 
 		getJoinedChannels();
@@ -140,9 +162,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 
 		userSocket?.on('newChannelUpdate', onChannelUpdate);
 		userSocket?.on('newPublicChannelUpdate', onPublicChannelUpdate);
-		console.log('mounted');
 		return () => {
-			console.log('unmount');
 			userSocket?.emit('unsubscribeChannel', -1);
 			userSocket?.off('newChannelUpdate', onChannelUpdate);
 			userSocket?.off('newPublicChannelUpdate', onPublicChannelUpdate);

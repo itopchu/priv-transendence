@@ -63,9 +63,9 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
 		);
 		return (response.data.channel);
 	  })
-      userSocket?.emit('subscribeChannel', JoinedChannel.id);
+      userSocket?.emit('joinChannel', JoinedChannel.id);
     } catch (error: any) {
-	  handleError('Could not get joined channels: ', error);
+	  handleError('Could not join channel: ', error);
       setLoading(false);
       return;
     }

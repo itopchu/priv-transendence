@@ -120,7 +120,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
         });
 		return (response.data.channel);
 	  });
-      userSocket?.emit('subscribeChannel', newChannel.id);
+      userSocket?.emit('joinChannel', newChannel.id);
     } catch (error: any) {
       setLoading(false);
       handleError('Could not create channel: ', error);

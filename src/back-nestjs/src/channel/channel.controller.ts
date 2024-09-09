@@ -6,7 +6,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CreateChannelDto, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from '../user/user.controller';
-import { ChannelGateway } from './channel.gateway';
+import { ChannelGateway, UpdateType } from './channel.gateway';
 
 @Controller('channel')
 export class ChannelController {
@@ -78,13 +78,17 @@ export class ChannelController {
 	async createChannel(@Req() req: Request, @UploadedFile() image: Express.Multer.File, @Body() createChannelDto: CreateChannelDto) {
 		const user = req.authUser;
 
-		if (createChannelDto.type === ChannelType.protected  && !createChannelDto.password) {
-			throw new BadRequestException('No password provided');
+		if (createChannelDto.type === ChannelType.protected) {
+			if (!createChannelDto.password) {
+				throw new BadRequestException('No password provided');
+			}
+			createChannelDto.password = await this.channelService.hashPassword(createChannelDto.password);
 		}
+
 		try {
 			const newChannel = await this.channelService.createChannel(user, createChannelDto, image);
 			if (newChannel.type !== ChannelType.private) {
-				this.channelGateway.emitPublicChannelUpdate(newChannel);
+				this.channelGateway.emitPublicChannelUpdate(newChannel, UpdateType.updated);
 			}
 			return ({ channel: newChannel });
 		} catch(error) {
@@ -167,14 +171,18 @@ export class ChannelController {
 		if (!Object.keys(updateChannelDto).length) {
 			return;
 		}
-		if (updateChannelDto.type && updateChannelDto.type === 'protected' && !updateChannelDto.password) {
-			throw new BadRequestException('Password required');
+
+		if (updateChannelDto.type && updateChannelDto.type === 'protected') {
+			if (!updateChannelDto.password) {
+				throw new BadRequestException('Password required');
+			}
+			updateChannelDto.password = await this.channelService.hashPassword(updateChannelDto.password);
 		}
 
 		const result = await this.channelService.updateChannel(user, channelId, updateChannelDto, image);
 		const updatedChannel = await this.channelService.getChannelById(channelId, ['members', 'members.user', 'banList']);
 		if (updateChannelDto.type && updateChannelDto.type !== ChannelType.private) {
-			this.channelGateway.emitPublicChannelUpdate(updatedChannel);
+			this.channelGateway.emitPublicChannelUpdate(updatedChannel, UpdateType.updated);
 		}
 		this.channelGateway.emitChannelUpdate(channelId);
 		return (result);
@@ -221,6 +229,9 @@ export class ChannelController {
 		} 
 
 		const deletedChannel = await this.channelService.removeChannel(channelId);
+		if (deletedChannel.type !== ChannelType.protected) {
+			this.channelGateway.emitPublicChannelUpdate({ id: channelId } as Channel, UpdateType.deleted);
+		}
 		this.channelGateway.emitChannelDeleted(channelId);
 		return (deletedChannel);
 	}
@@ -236,7 +247,12 @@ export class ChannelController {
 		}
 
 		const leftChannel = await this.channelService.leaveChannel(user, membership); 
-		this.channelGateway.emitMemberLeft(user.id, membership.channel.id);
+		if ('type' in leftChannel && leftChannel.type !== ChannelType.private) {
+			this.channelGateway.emitPublicChannelUpdate({ id: membership.channel.id } as Channel, UpdateType.deleted);
+			this.channelGateway.emitChannelDeleted(membership.channel.id);
+		} else {
+			this.channelGateway.emitMemberLeft(user.id, membership.channel.id);
+		}
 		return (leftChannel);
 	}
 }

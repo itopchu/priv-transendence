@@ -1,5 +1,5 @@
 import { Avatar, Box, Divider, Stack, styled, useTheme, Typography, Card, IconButton, Menu, MenuItem, Button, TextField, ButtonGroup, linearProgressClasses, Select, FormControl, capitalize } from "@mui/material";
-import { Channel, ChannelMember, ChannelRole, ChannelRoleValues, ChannelType, ChannelTypeValues } from "./channels";
+import { Channel, ChannelMember, ChannelRole, ChannelRoleValues, ChannelType, ChannelTypeValues, handleError } from "./channels";
 import React, { useEffect, useRef, useState } from "react";
 import {
 	MoreVert as UserMenuIcon,
@@ -11,7 +11,7 @@ import { DescriptionBox } from "./Components";
 import axios, { AxiosError } from "axios";
 import { SelectedType } from ".";
 import { ButtonAvatar, CustomAvatar, AvatarUploadIcon, ImageInput, UploadAvatar, ClickTypography, CustomScrollBox } from "./Components";
-import { useUser } from "../../Providers/UserContext/User";
+import { User, useUser } from "../../Providers/UserContext/User";
 import { useNavigate } from "react-router-dom";
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
@@ -73,6 +73,10 @@ const SettingsDivider = styled(Divider)(({ theme }) => ({
 	fontWeight: 'bold',
 }));
 
+const getUsername = (user: User): string =>  {
+	return (user.nameNick || `${user.nameFirst} ${user.nameLast}`);
+}
+
 interface SettingsBoxType {
 	membership: ChannelMember;
 	setSelected: React.Dispatch<React.SetStateAction<SelectedType>>;
@@ -88,7 +92,9 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 	const nameRef = useRef<HTMLInputElement>(null);
 
 	const channel = membership.channel;
-	const members = channel.members;
+	const members = channel.members
+							.sort((a, b) => (getUsername(a).localeCompare(getUsername(b))))
+							.sort((a, b) => a.role - b.role);
 
 	const initialAvatarSrc = `${BACKEND_URL}/${channel.image}`;
 	const initialChannelData: ChannelDataType = {
@@ -106,11 +112,12 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 	useEffect(() => {
 		if (editMode) {
 			setEditMode(false);
+			console.log('should be false');
 		}
 		if (channelData !== initialChannelData || avatarSrc !== initialAvatarSrc) {
 			reset();
 		}
-	}, [membership.id]);
+	}, [membership.id, membership.role]);
 
 	useEffect(() => {
 		if (!editMode || !nameRef.current || !descriptionRef.current) return;
@@ -142,7 +149,7 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			});
 			member.role = newRole;
 		} catch (error) {
-			alert(error);
+			handleError('Could not update user role:', error);
 		}
 	}
 
@@ -173,8 +180,8 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			});
 			setEditMode(!editMode);
 			reset();
-		} catch (error: any) {
-			alert(error?.response?.data?.message);
+		} catch (error) {
+			handleError('Could not apply changes:', error);
 		}
 	}
 
@@ -186,8 +193,8 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			await axios.patch(`${BACKEND_URL}/channel/${option}/${channel.id}`, payload, {
 				withCredentials: true,
 			});
-		} catch(error: any) {
-			alert(error?.response?.data?.message);
+		} catch(error) {
+			handleError('Could not moderate member:', error);
 		}
 	}
 
@@ -211,7 +218,7 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 				settings: undefined,
 			}));
 		} catch (error) {
-			alert(error);
+			handleError('Could not delete channel:', error);
 		}
 	}
 
@@ -226,8 +233,8 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 				...prev,
 				settings: undefined,
 			}));
-		} catch (error: any) {
-			alert(error?.response?.data?.message);
+		} catch (error) {
+			handleError('Could not leave channel:', error);
 		}
 	}
 
@@ -268,10 +275,7 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 			  {members.map((member, index) => {
 				  const memberInfo = member.user;
 				  const isDiffUser = memberInfo.id !== user.id;
-				  const membername = memberInfo.nameNick
-					? memberInfo.nameNick
-					: `${memberInfo.nameFirst} ${memberInfo.nameLast}`;
-
+				  const membername = getUsername(member.user);
 				  const [anchorEl, setAnchorEl] = useState<any>(null);
 
 				  const handleMenuClick = (event: any) => {
@@ -449,13 +453,13 @@ export const SettingsBox:  React.FC<SettingsBoxType> = ({ membership, setSelecte
 						{(editMode && isAdmin)
 							? (
 								<>
-									{channelData.type === ChannelType.protected && (
+									{(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
 										<SettingsTextField
 											inputRef={passwordRef}
 											variant="standard"
-											placeholder={passwordRef.current?.value === ''
-												? undefined
-												: 'Enter a password...'
+											placeholder={!passwordRef.current?.value.length
+												? 'Enter a password...' 
+												: undefined
 											}
 											type="password"
 										>

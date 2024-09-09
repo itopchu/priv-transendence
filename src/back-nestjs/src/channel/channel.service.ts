@@ -1,11 +1,28 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+	BadRequestException,
+	Injectable,
+	InternalServerErrorException,
+	NotFoundException,
+	UnauthorizedException
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm'
-import { Channel, ChannelMember, ChannelRoles, ChannelType, Message } from '../entities/channel.entity';
+import {
+	Channel,
+	ChannelMember,
+	ChannelRoles,
+	ChannelType,
+	Message
+} from '../entities/channel.entity';
+import {
+	CreateChannelDto,
+	UpdateChannelDto,
+	UpdateMemberDto
+} from '../dto/channel.dto';
 import { Repository, UpdateResult } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { CreateChannelDto, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
 import path from 'path';
 import { unlinkSync, writeFileSync } from 'fs';
+import * as argon2 from 'argon2'
 
 const createImage = (channelId: number, image: Express.Multer.File) => {
 	const timestamp = Date.now();
@@ -27,6 +44,24 @@ export class ChannelService {
 		@InjectRepository(Message)
 		private messageRespitory: Repository<Message>,
 	) {}
+
+	async verifyPassword(plainPassword: string, hashPassword: string): Promise<Boolean> {
+		try {
+			return (await argon2.verify(hashPassword, plainPassword));
+		} catch (error) {
+			console.warn(error.message);
+			throw new InternalServerErrorException('Error verifying password');
+		}
+	}
+
+	async hashPassword(password: string): Promise<string> {
+		try {
+			return (await argon2.hash(password));
+		} catch (error) {
+			console.warn(error.message);
+			throw new InternalServerErrorException('Error hashing password');
+		}
+	}
 
 	async getChannelLog(channelId: number): Promise<Message[]>  {
 		const log = await this.messageRespitory.createQueryBuilder('msg')
@@ -102,7 +137,7 @@ export class ChannelService {
 				user: creator,
 				channel: newChannel
 			})
-			await this.memberRespitory.save(newMember);
+			newMember = await this.memberRespitory.save(newMember);
 
 			if (image) {
 				const { fileName } = createImage(newChannel.id, image);
@@ -140,7 +175,7 @@ export class ChannelService {
 		if (isMember) {
 			throw new BadRequestException(`User is already in channel`);
 		}
-		if (channel.type === 'protected' && password !== channel.password) {
+		if (channel.type === 'protected' && !(await this.verifyPassword(password, channel.password))) {
 			throw new BadRequestException('Incorrect password');
 		}
 
@@ -149,7 +184,9 @@ export class ChannelService {
 
 	async leaveChannel(user: User, membership: ChannelMember): Promise<Channel | ChannelMember> {
 		if (membership.role  === ChannelRoles.admin) {
-			const channel = membership.channel;
+			const channel = !membership.channel || !membership.channel.members
+				? await this.getChannelById(membership.channel.id, ['members', 'members.user'])
+				: membership.channel;
 
 			if (channel.members.length === 1) {
 				return (await this.removeChannel(channel.id));
@@ -268,12 +305,12 @@ export class ChannelService {
 	async transferOwnership(user: User, newOwnerId: number, channelId: number): Promise<ChannelMember[]> {
 		const admin = await this.getMembershipByChannel(channelId, user.id);
 		const newAdmin = await this.getMembershipByChannel(channelId, newOwnerId);
-		if (!admin || newAdmin) {
+		if (!admin || !newAdmin) {
 			throw new NotFoundException('User(s) not found');
 		}
 
 		if (admin.role !== ChannelRoles.admin) {
-			throw new UnauthorizedException('Unauthorized user');
+			throw new UnauthorizedException('Unauthorized: User is not an admin');
 		}
 
 		admin.role = ChannelRoles.moderator;
@@ -311,7 +348,8 @@ export class ChannelService {
 		}
 
 		if (image) {
-			const channel  = membership.channel;
+			const channel = membership.channel;
+			const oldImagePath = path.join('/app/uploads', channel.image);
 			let newImage: string = undefined;
 			let uploadPath: string;
 
@@ -320,6 +358,7 @@ export class ChannelService {
 				newImage = fileName;
 				uploadPath = path;
 				await this.channelRespitory.update(channelId, { image: newImage });
+				unlinkSync(oldImagePath);
 			} catch (error) {
 				if (newImage) {
 					unlinkSync(uploadPath);
