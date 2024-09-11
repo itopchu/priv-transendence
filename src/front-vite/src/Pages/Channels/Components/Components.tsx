@@ -1,8 +1,6 @@
 import { Upload } from "@mui/icons-material";
 import { Avatar, Box, Button, styled, Typography } from "@mui/material";
-import { availableMemory } from "process";
-import React, { Children, ReactElement } from "react";
-import { styleText } from "util";
+import React, { ReactElement } from "react";
 
 export const CustomAvatar = styled(Avatar)(({ theme }) => ({
   margin: '0 auto',

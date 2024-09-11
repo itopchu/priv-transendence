@@ -10,7 +10,7 @@ import ChannelsPage from '../../Pages/Channels/index';
 import LogoutPage from '../../Pages/Logout';
 import { useUser } from '../../Providers/UserContext/User';
 import AuthPage from '../../Pages/2FA';
-import { ChannelContextProvider } from '../../Pages/Channels/channels';
+import { ChannelContextProvider } from '../../Providers/ChannelContext/Channel';
 
 export const Main: React.FC = () => {
   const { user } = useUser();

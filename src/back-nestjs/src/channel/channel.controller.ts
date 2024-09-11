@@ -3,7 +3,7 @@ import { Request, Response } from 'express'
 import { Channel, ChannelMember, ChannelRoles, ChannelType } from '../entities/channel.entity';
 import { ChannelService } from './channel.service';
 import { AuthGuard } from '../auth/auth.guard';
-import { CreateChannelDto, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
+import { ChannelPublicDTO, CreateChannelDto, MemberClientDTO, MessagePublicDTO, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from '../user/user.controller';
 import { ChannelGateway, UpdateType } from './channel.gateway';
@@ -24,10 +24,10 @@ export class ChannelController {
 		try {
 			channel = await this.channelService.getChannelById(id, ['log', 'log.author', 'members.user']);
 		} catch(error) {
-			throw new InternalServerErrorException(`Could not retrieve messages, error: ${error.message}`);
+			throw new InternalServerErrorException(`Could not retrieve messages: ${error.message}`);
 		}
 		if (!channel) {
-			throw new NotFoundException(`Channel with ID ${id} not found`);
+			throw new NotFoundException(`Channel not found`);
 		}
 
 		const isMember = channel.members.some(member => member.user.id === user.id);
@@ -35,7 +35,8 @@ export class ChannelController {
 			throw new ForbiddenException('Unauthirized user');
 		}
 
-		return ({ messages: channel.log });
+		const publicLog = channel.log.map(message => new MessagePublicDTO(message));
+		return ({ messages: publicLog });
 	}
 
 	@Get('joined')
@@ -44,16 +45,20 @@ export class ChannelController {
 		const user = req.authUser;
 
 		const memberships = await this.channelService.getMemberships(user);
-		return ({ memberships: memberships });
+
+		const clientMemberships = memberships.map(membership => new MemberClientDTO(membership));
+		return ({ memberships: clientMemberships });
 	}
 
 	@Get('public')
 	async getPublicChannels() {
 		try {
 			const channels = await this.channelService.getPublicChannels();
-			return ({ channels: channels });
-		} catch(error) {
-			throw new InternalServerErrorException(error.message);
+
+			const publicChannels = channels.map(channel => new ChannelPublicDTO(channel));
+			return ({ channels: publicChannels });
+		} catch (error) {
+			throw new InternalServerErrorException(`Could not retrieve public channels: ${error.message}`);
 		}
 	}
 
@@ -66,9 +71,8 @@ export class ChannelController {
 	) {
 		const user = req.authUser;
 
-		const response = await this.channelService.joinChannel(user, channelId, password);
+		await this.channelService.joinChannel(user, channelId, password);
 		this.channelGateway.emitChannelUpdate(channelId);
-		return (response);
 	}
 
 	@Post('create')
@@ -87,12 +91,13 @@ export class ChannelController {
 
 		try {
 			const newChannel = await this.channelService.createChannel(user, createChannelDto, image);
+			const publicChannel = new ChannelPublicDTO(newChannel);
+
 			if (newChannel.type !== ChannelType.private) {
-				this.channelGateway.emitPublicChannelUpdate(newChannel, UpdateType.updated);
+				this.channelGateway.emitPublicChannelUpdate(publicChannel, UpdateType.updated);
 			}
-			return ({ channel: newChannel });
+			return ({ channel: publicChannel });
 		} catch(error) {
-			console.error('Error creating channel:', error);
 			throw new InternalServerErrorException(`Channel creation failed: ${error.message}`);
 		}
 	}
@@ -105,25 +110,24 @@ export class ChannelController {
 			throw new BadRequestException('Kicking yourself.. Really?');
 		}
 
-		const kickedMember = await this.channelService.kickMember(user, victimId, channelId);
+		await this.channelService.kickMember(user, victimId, channelId);
 		this.channelGateway.emitMemberLeft(victimId, channelId);
-		return (kickedMember);
 	}
 
 	@Patch('mute/:id')
 	@UseGuards(AuthGuard)
 	async muteMember(@Req() req: Request,
 		@Param('id', ParseIntPipe) channelId: number,
-		@Body('victimId', ParseIntPipe) victimId: number
+		@Body('victimId', ParseIntPipe) victimId: number,
+		@Body('muteUntil', ParseIntPipe) muteUntil: number
 	) {
 		const user = req.authUser;
 		if (user.id === victimId) {
 			throw new BadRequestException("Muting yourself..? Just shut up...");
 		}
 
-		const result = await this.channelService.muteMember(user, victimId, channelId);
+		await this.channelService.muteMember(user, victimId, muteUntil, channelId);
 		this.channelGateway.emitChannelUpdate(channelId);
-		return (result);
 	}
 
 	@Patch('ban/:id')
@@ -134,9 +138,8 @@ export class ChannelController {
 			throw new BadRequestException("Banning yourself..? Now that's going to far");
 		}
 
-		const bannedMember = await this.channelService.banUser(user, victimId, channelId);
+		await this.channelService.banUser(user, victimId, channelId);
 		this.channelGateway.emitMemberLeft(victimId, channelId);
-		return (bannedMember);
 	}
 
 	@Patch('transfer/:id')
@@ -151,9 +154,8 @@ export class ChannelController {
 			throw new BadRequestException("You are already THE admin FOOL");
 		}
 
-		const members = await this.channelService.transferOwnership(user, victimId, channelId);
+		await this.channelService.transferOwnership(user, victimId, channelId);
 		this.channelGateway.emitChannelUpdate(channelId);
-		return (members);
 	}
 
 	@Patch(':id')
@@ -179,13 +181,12 @@ export class ChannelController {
 			updateChannelDto.password = await this.channelService.hashPassword(updateChannelDto.password);
 		}
 
-		const result = await this.channelService.updateChannel(user, channelId, updateChannelDto, image);
-		const updatedChannel = await this.channelService.getChannelById(channelId, ['members', 'members.user', 'banList']);
+		await this.channelService.updateChannel(user, channelId, updateChannelDto, image);
+		const updatedChannel = await this.channelService.getChannelById(channelId, ['members', 'members.user', 'bannedUsers']);
 		if (updateChannelDto.type && updateChannelDto.type !== ChannelType.private) {
-			this.channelGateway.emitPublicChannelUpdate(updatedChannel, UpdateType.updated);
+			this.channelGateway.emitPublicChannelUpdate(new ChannelPublicDTO(updatedChannel), UpdateType.updated);
 		}
 		this.channelGateway.emitChannelUpdate(channelId);
-		return (result);
 	}
 
 	@Patch('/member/:id')
@@ -209,9 +210,8 @@ export class ChannelController {
 			throw new BadRequestException('Unable to promote to admin');
 		}
 		
-		const result = await this.channelService.updateMember(user, member, updateMemberDto);
+		await this.channelService.updateMember(user, member, updateMemberDto);
 		this.channelGateway.emitChannelUpdate(member.channel.id);
-		return (result);
 	}
 	
 	@Delete(':id')
@@ -230,10 +230,9 @@ export class ChannelController {
 
 		const deletedChannel = await this.channelService.removeChannel(channelId);
 		if (deletedChannel.type !== ChannelType.protected) {
-			this.channelGateway.emitPublicChannelUpdate({ id: channelId } as Channel, UpdateType.deleted);
+			this.channelGateway.emitPublicChannelUpdate({ id: channelId } as ChannelPublicDTO, UpdateType.deleted);
 		}
 		this.channelGateway.emitChannelDeleted(channelId);
-		return (deletedChannel);
 	}
 	
 	@Delete('leave/:id')
@@ -248,7 +247,7 @@ export class ChannelController {
 
 		const leftChannel = await this.channelService.leaveChannel(user, membership); 
 		if ('type' in leftChannel && leftChannel.type !== ChannelType.private) {
-			this.channelGateway.emitPublicChannelUpdate({ id: membership.channel.id } as Channel, UpdateType.deleted);
+			this.channelGateway.emitPublicChannelUpdate({ id: membership.channel.id } as ChannelPublicDTO, UpdateType.deleted);
 			this.channelGateway.emitChannelDeleted(membership.channel.id);
 		} else {
 			this.channelGateway.emitMemberLeft(user.id, membership.channel.id);

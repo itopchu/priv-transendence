@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { ChannelService } from './channel.service';
 import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
-import { User } from '../entities/user.entity';
-import { Channel, ChannelMember, ChannelRoles, Message } from '../entities/channel.entity';
-import { BadRequestException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
+import { ParseIntPipe, UnauthorizedException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { ChannelPublicDTO, MessagePublicDTO } from '../dto/channel.dto';
 
 export enum UpdateType {
 	deleted = 'deleted',
@@ -21,6 +21,21 @@ export class ChannelGateway {
 
 	@WebSocketServer()
 	server: Server;
+	
+	@Cron(CronExpression.EVERY_MINUTE)
+	async checkMutes() {
+		const expiredMutes = await this.channelService.getExpiredMutes();
+
+		console.log(expiredMutes);
+		for (const mute of expiredMutes ?? []) {
+			try {
+				await this.channelService.removeMutedUser(mute.userId, mute.channelId);
+				this.emitChannelUpdate(mute.channelId);
+			} catch (error) {
+				console.error(`Cron: Could not unmute user: ${error.message}`);
+			}
+		}
+	}
 
 	async handleConnection(client: Socket) {
 		try {
@@ -118,20 +133,12 @@ export class ChannelGateway {
 		if (!user) {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
-		const membership = await this.channelService.getMembershipByChannel(data.channelId, user.id);
-		if (!membership) {
-			throw new UnauthorizedException('Unauthorized: Membership not found');
-		}
-		if (membership.muted) {
-			client.emit('messageError', 'You are muted');
-			return;
-		}
 
 		try {
 			const message = await this.channelService.logMessage(data.channelId, user, data.message);
-			this.server.to(`channel#${data.channelId}`).emit(`channel#${data.channelId}Message`, message);
+			this.server.to(`channel#${data.channelId}`).emit(`channel#${data.channelId}Message`, new MessagePublicDTO(message));
 		} catch (error) {
-			client.emit('messageError', `Internal server error: ${error.message}`);
+			client.emit('messageError', error.message);
 		}
 	}
 
@@ -152,7 +159,7 @@ export class ChannelGateway {
 		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, channelId);
 	}
 
-	emitPublicChannelUpdate(channel: Channel, updateType: UpdateType) {
+	emitPublicChannelUpdate(channel: ChannelPublicDTO, updateType: UpdateType) {
 		console.log(channel);
 		this.server.to('channelPublicUpdate').emit('newPublicChannelUpdate', {channel: channel, updateType: updateType });
 	}

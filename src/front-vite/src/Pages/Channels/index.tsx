@@ -6,10 +6,10 @@ import {
   Login as LoginIcon,
 	MoreVertSharp as MiscIcon,
 } from '@mui/icons-material';
-import { useChannel } from './channels';
+import { useChannel } from '../../Providers/ChannelContext/Channel';
 import ChatBox from './chats';
 import { JoinCard } from './JoinCard';
-import { SettingsBox } from './settings';
+import { SettingsBox } from './Settings/settings';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
@@ -26,8 +26,6 @@ export type SelectedType = {
 	channel: number | undefined,
 	settings: number | undefined,
 }
-
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
 const initialSelected = {
 	join: undefined,
@@ -75,7 +73,7 @@ const ChannelsPage: React.FC = () => {
           },
         }}
       >
-        <Avatar src={`${BACKEND_URL}/${channelImage}`} sx={{ width: '1.5em', height: '1.5em' }} />
+        <Avatar src={channelImage} sx={{ width: '1.5em', height: '1.5em' }} />
         <Typography noWrap sx={{
           maxWidth: '78%',
           overflow: 'hidden',

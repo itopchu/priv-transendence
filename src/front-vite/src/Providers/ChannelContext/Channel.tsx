@@ -1,8 +1,7 @@
 import axios from "axios";
 import React, { useContext, useEffect, useState, createContext } from "react";
 import { User, useUser } from "../../Providers/UserContext/User";
-
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+import { BACKEND_URL, handleError, retryOperation } from "../../Pages/Channels/utils";
 
 export enum ChannelType {
 	private = 'private',
@@ -32,15 +31,22 @@ export type ChannelMember = {
 	id: number;
 	user: User;
 	channel: Channel;
-	muted: boolean;
 	role: ChannelRole;
+}
+
+export type MutedUser = {
+	userId: number;
+	channelId: number;
+	user: User;
+	muteUntil: Date;
 }
 
 export interface Channel {
 	id: number;
 	image?: string;
 	name: string;
-	banList?: User[];
+	bannedUsers?: User[];
+	mutedUsers?: MutedUser[];
 	members: ChannelMember[];
 	type: ChannelType;
 	description: string;
@@ -54,36 +60,6 @@ type ChannelUpdateType  = {
 type ChannelContextType = {
 	memberships: ChannelMember[],
 	publicChannels: Channel[],
-}
-
-export const handleError = (message: string, error: any) => {
-	const errorMessage = error?.response?.data ? error.response.data.message : error
-
-	alert(`${message} ${errorMessage}`);
-}
-
-const RETRY_DELAY = 1000;
-
-export const retryOperation = async (operation: () => Promise<any>, retries = 3): Promise<any> => {
-	for (let attempt = 1;; ++attempt) {
-		try {
-			return (await operation());
-		} catch (error: any) {
-			if (error.response){
-				const statusCode = error.response.status;
-				if (statusCode < 500 || statusCode > 600) {
-					throw error;
-				}
-			}
-
-			if (attempt < retries) {
-				console.warn(`Attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`);
-				await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-			} else {
-				throw error;
-			}
-		}
-	}
 }
 
 const ChannelContext = createContext<ChannelContextType | undefined>(undefined);

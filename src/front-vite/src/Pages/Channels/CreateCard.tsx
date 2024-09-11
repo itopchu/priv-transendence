@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useUser } from '../../Providers/UserContext/User';
-import { ChannelType, ChannelTypeValues, handleError, retryOperation } from './channels';
 import axios from 'axios';
 import {
   CenteredCard,
@@ -10,7 +9,7 @@ import {
   ButtonBar,
   CustomCardContent,
   LoadingBox,
-} from './CardComponents';
+} from './Components/CardComponents';
 import {
   ButtonGroup,
   Button,
@@ -19,10 +18,9 @@ import {
   CircularProgress,
   Stack,
 } from '@mui/material';
-import { ButtonAvatar, AvatarUploadIcon, ImageInput, UploadAvatar } from './Components';
-import { validateFile } from './settings';
-
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+import { AvatarUploadIcon, ImageInput, UploadAvatar } from './Components/Components';
+import { ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Channel';
+import { BACKEND_URL, handleError, retryOperation, validateFile } from './utils';
 
 interface CreateCardType {
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;

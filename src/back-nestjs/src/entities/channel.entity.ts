@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, JoinTable, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
 
 export enum ChannelType {
@@ -38,14 +38,35 @@ export class Channel {
 	type: ChannelType;
 
 	@JoinTable()
-	@ManyToMany(() =>  User, banList => banList.bannedChannels)
-	banList: User[];
+	@ManyToMany(() =>  User, user => user.bannedFrom)
+	bannedUsers: User[];
+
+	@OneToMany(() => MutedUser, mutedMembers => mutedMembers.channel, { cascade: ['remove'], })
+	mutedUsers: MutedUser[];
 
 	@OneToMany(() => ChannelMember, member => member.channel, { cascade: ['remove'], })
 	members: ChannelMember[];
 
 	@OneToMany(() => Message, message => message.channel, { cascade: ['remove'], })
 	log: Message[];
+}
+
+@Entity()
+export class MutedUser {
+	@PrimaryColumn()
+	userId: number;
+
+	@PrimaryColumn()
+	channelId: number;
+
+	@ManyToOne(() => User, user => user.mutedFrom)
+	user: User;
+
+	@ManyToOne(() => Channel, channel => channel.mutedUsers)
+	channel: Channel;
+
+	@Column({ nullable: true, default: null })
+	muteUntil: Date;
 }
 
 @Entity()
@@ -58,9 +79,6 @@ export class ChannelMember {
 
 	@ManyToOne(() => Channel, channel => channel.members)
 	channel: Channel;
-
-	@Column({ default: false })
-	muted: boolean;
 
 	@Column({
 		type: 'enum',

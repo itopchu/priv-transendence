@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { handleError, retryOperation, useChannel } from './channels';
-import { Channel } from './channels';
+import { Channel, useChannel } from '../../Providers/ChannelContext/Channel';
 import axios from 'axios';
 import { useUser } from '../../Providers/UserContext/User';
 import {
@@ -11,7 +10,7 @@ import {
   TextFieldWrapper,
   CustomCardContent,
   LoadingBox,
-} from './CardComponents';
+} from './Components/CardComponents';
 import {
   Button,
   CircularProgress,
@@ -21,9 +20,8 @@ import {
   Typography,
 } from '@mui/material';
 import { SelectedType } from '.';
-import { CustomAvatar, DescriptionBox } from './Components';
-
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+import { CustomAvatar, DescriptionBox } from './Components/Components';
+import { BACKEND_URL, handleError, retryOperation } from './utils';
 
 interface JoinCardType {
   setSelected: React.Dispatch<React.SetStateAction<SelectedType>>;
@@ -38,8 +36,8 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const alreadyJoined = memberships.some((member) => member.channel.id === channel.id);
-  const isBanned = channel.banList
-		? channel.banList.some((bannedUser) => bannedUser.id === user.id)
+  const isBanned = channel.bannedUsers
+		? channel?.bannedUsers.some((bannedUser) => bannedUser.id === user.id)
 		: false;
   const joinDisabled = alreadyJoined || isBanned;
 
@@ -86,7 +84,7 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
 			<Stack spacing={1.6} alignItems={'center'} >
               <CustomAvatar
                 sx={{ height: 170, width: 170 }}
-                src={`${BACKEND_URL}/${channel.image}`}
+                src={channel.image}
               />
 
               <Typography fontSize={'large'}>{channel.name}</Typography>

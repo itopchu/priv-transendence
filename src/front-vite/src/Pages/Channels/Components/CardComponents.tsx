@@ -1,4 +1,4 @@
-import { styled, Avatar, Card, FormLabel, CardContent } from "@mui/material";
+import { styled, Card, FormLabel, CardContent } from "@mui/material";
 import { Box } from "@mui/system";
 
 export const CustomCardContent = styled(CardContent)(() => ({
