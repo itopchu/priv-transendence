@@ -37,7 +37,7 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
 
   const alreadyJoined = memberships.some((member) => member.channel.id === channel.id);
   const isBanned = channel.bannedUsers
-		? channel?.bannedUsers.some((bannedUser) => bannedUser.id === user.id)
+		? channel.bannedUsers.some((bannedUser) => bannedUser.id === user.id)
 		: false;
   const joinDisabled = alreadyJoined || isBanned;
 

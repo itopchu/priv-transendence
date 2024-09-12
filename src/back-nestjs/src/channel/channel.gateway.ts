@@ -29,7 +29,7 @@ export class ChannelGateway {
 		console.log(expiredMutes);
 		for (const mute of expiredMutes ?? []) {
 			try {
-				await this.channelService.removeMutedUser(mute.userId, mute.channelId);
+				await this.channelService.removeMute(mute.userId, mute.channelId);
 				this.emitChannelUpdate(mute.channelId);
 			} catch (error) {
 				console.error(`Cron: Could not unmute user: ${error.message}`);

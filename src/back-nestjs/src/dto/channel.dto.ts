@@ -1,6 +1,6 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEnum, IsNumber, isNotEmptyObject, isNotEmpty, IsDate, Validate, ValidateNested } from 'class-validator';
-import { Channel, ChannelMember, ChannelRoles, ChannelType, Message, MutedUser } from '../entities/channel.entity';
+import { Channel, ChannelMember, ChannelRoles, ChannelType, Message, Mute } from '../entities/channel.entity';
 import { UserPublicDTO } from './user.dto';
 import { User } from '../entities/user.entity';
 import { Type } from 'class-transformer';
@@ -51,7 +51,7 @@ export class UpdateMemberDto extends PartialType(PickType(ChannelMember, ['role'
 }
 
 export class MutePublicDTO {
-	constructor(mute: MutedUser) {
+	constructor(mute: Mute) {
 		this.userId = mute.userId;
 		this.channelId = mute.channelId;
 		this.user = new UserPublicDTO(mute.user, null);

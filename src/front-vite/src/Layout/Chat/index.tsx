@@ -7,7 +7,7 @@ import ContentDrawer from './ContentDrawer';
 import ContentChat from './ContentChat';
 import ContentSettings from './ContentSettings';
 
-interface ChatRoom {
+interface Chat {
   id: number;
   name: string;
   avatar: string;
@@ -28,6 +28,12 @@ export const Chat: React.FC = () => {
           },
           {
             message: <Typography>Hi</Typography>,
+            user: <Typography>User2</Typography>,
+            userPP: <Typography>User2PP</Typography>,
+            timestamp: <Typography>10:01</Typography>,
+          },
+          {
+            message: <Typography>this is kinda ugly yk</Typography>,
             user: <Typography>User2</Typography>,
             userPP: <Typography>User2PP</Typography>,
             timestamp: <Typography>10:01</Typography>,

@@ -215,7 +215,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
               />
               <Stack
                 key={index}
-                direction="row"
+                direction={'row'}
                 spacing={1}
                 minWidth={'17em'}
                 paddingTop={isTopMessage ? 3 : 0}

@@ -38,11 +38,11 @@ export class Channel {
 	type: ChannelType;
 
 	@JoinTable()
-	@ManyToMany(() =>  User, user => user.bannedFrom)
+	@ManyToMany(() =>  User)
 	bannedUsers: User[];
 
-	@OneToMany(() => MutedUser, mutedMembers => mutedMembers.channel, { cascade: ['remove'], })
-	mutedUsers: MutedUser[];
+	@OneToMany(() => Mute, mutedMembers => mutedMembers.channel, { cascade: ['remove'], })
+	mutedUsers: Mute[];
 
 	@OneToMany(() => ChannelMember, member => member.channel, { cascade: ['remove'], })
 	members: ChannelMember[];
@@ -52,14 +52,14 @@ export class Channel {
 }
 
 @Entity()
-export class MutedUser {
+export class Mute {
 	@PrimaryColumn()
 	userId: number;
 
 	@PrimaryColumn()
 	channelId: number;
 
-	@ManyToOne(() => User, user => user.mutedFrom)
+	@ManyToOne(() => User)
 	user: User;
 
 	@ManyToOne(() => Channel, channel => channel.mutedUsers)

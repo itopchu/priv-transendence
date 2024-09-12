@@ -73,23 +73,11 @@ const ContentDrawer: React.FC<ContentDrawerProps> = ({ chatProps, setChatProps }
             alignItems: 'center',
           }}
         >
-          <Stack direction={'row'} spacing={2} alignContent='center' alignItems={'center'} marginY={theme.spacing(.5)}>
-            {chatRoom.icon}
+					{chatRoom.icon}
+          <Stack direction={'row'} flexGrow={1} justifyContent={'space-evenly'}>
             <Typography sx={{ '&:hover': { color: theme.palette.secondary.dark } }}>
               {chatRoom.name}
             </Typography>
-          </Stack>
-          <Stack direction={'row'} spacing={2} alignContent='center' alignItems={'center'} marginY={theme.spacing(.5)}>
-            <Stack onClick={(event) => { event.stopPropagation(); toggleChatStatus(ChatStatus.Settings, chatRoom); }}
-              sx={{ cursor: 'pointer', '&:hover': { color: theme.palette.secondary.dark } }}
-            >
-              <SettingsIcon />
-            </Stack>
-            <Stack onClick={(event) => { event.stopPropagation(); toggleChatStatus(ChatStatus.Bubble, null); }}
-              sx={{ cursor: 'pointer', '&:hover': { color: theme.palette.error.dark } }}
-            >
-              <LogoutIcon />
-            </Stack>
           </Stack>
         </Stack>
       ))}

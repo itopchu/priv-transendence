@@ -10,7 +10,7 @@ import { ChannelModule } from './channel/channel.module';
 import { GameModule } from './game/game.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { Channel, ChannelMember, Message, MutedUser } from './entities/channel.entity';
+import { Channel, ChannelMember, Message, Mute } from './entities/channel.entity';
 
 @Module({
   controllers: [AuthController, UserController],
@@ -32,7 +32,7 @@ import { Channel, ChannelMember, Message, MutedUser } from './entities/channel.e
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
-        entities: [User, Friendship, Channel, ChannelMember, Message, MutedUser],
+        entities: [User, Friendship, Channel, ChannelMember, Message, Mute],
         synchronize: true,
       })
     }),

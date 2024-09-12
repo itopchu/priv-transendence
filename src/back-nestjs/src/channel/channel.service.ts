@@ -12,7 +12,7 @@ import {
 	ChannelRoles,
 	ChannelType,
 	Message,
-    MutedUser
+    Mute
 } from '../entities/channel.entity';
 import {
 	CreateChannelDto,
@@ -44,8 +44,8 @@ export class ChannelService {
 		private memberRespitory: Repository<ChannelMember>,
 		@InjectRepository(Message)
 		private messageRespitory: Repository<Message>,
-		@InjectRepository(MutedUser)
-		private muteRespitory: Repository<MutedUser>,
+		@InjectRepository(Mute)
+		private muteRespitory: Repository<Mute>,
 	) {}
 
 	async verifyPassword(plainPassword: string, hashPassword: string): Promise<Boolean> {
@@ -94,13 +94,13 @@ export class ChannelService {
 		return (membership);
 	}
 
-	async getMutedUserById(userId: number, channelId: number): Promise<MutedUser> {
-		const mutedUser = await this.muteRespitory.createQueryBuilder('mutedUser')
-		.where('mutedUser.userId = :userId', { userId })
-		.andWhere('mutedUser.channelId = :channelId', { channelId })
+	async getMuteById(userId: number, channelId: number): Promise<Mute> {
+		const mute = await this.muteRespitory.createQueryBuilder('mute')
+		.where('mute.userId = :userId', { userId })
+		.andWhere('mute.channelId = :channelId', { channelId })
 		.getOne()
 
-		return (mutedUser);
+		return (mute);
 	}
 
 	async getExpiredMutes() {
@@ -180,13 +180,13 @@ export class ChannelService {
 		return (newChannel);
 	}
 
-	async createMutedUser(victimId: number, channelId: number, expireDate: Date | null) {
-		const alreadyMuted = await this.getMutedUserById(victimId, channelId);
+	async createMute(victimId: number, channelId: number, expireDate: Date | null) {
+		const alreadyMuted = await this.getMuteById(victimId, channelId);
 		if (alreadyMuted) {
 			throw new BadRequestException('User is already muted');
 		}
 
-		let newMutedUser: MutedUser = this.muteRespitory.create({
+		let newMute: Mute = this.muteRespitory.create({
 			userId: victimId,
 			channelId: channelId,
 			user: { id: victimId },
@@ -195,7 +195,7 @@ export class ChannelService {
 		});
 
 		try {
-			return (await this.muteRespitory.save(newMutedUser));
+			return (await this.muteRespitory.save(newMute));
 		} catch (error) {
 			throw new InternalServerErrorException(`Could not mute user: ${error.message}`);
 		}
@@ -292,20 +292,20 @@ export class ChannelService {
 		try {
 			return (await this.memberRespitory.remove(member));
 		} catch(error) {
-			throw new InternalServerErrorException('Could not delete membership');
+			throw new InternalServerErrorException(`Could not remove membership: ${error.message}`);
 		}
 	}
 
-	async removeMutedUser(userId: number, channelId: number) {
-		const mutedUser = await this.getMutedUserById(userId, channelId);
-		if (!mutedUser) {
+	async removeMute(userId: number, channelId: number) {
+		const mute = await this.getMuteById(userId, channelId);
+		if (!mute) {
 			return (null);
 		}
 
-		return (await this.muteRespitory.remove(mutedUser));
+		return (await this.muteRespitory.remove(mute));
 	}
 
-	async muteMember(muter: User, victimId: number, muteUntil: number | null, channelId: number): Promise<MutedUser> {
+	async muteMember(muter: User, victimId: number, muteUntil: number | null, channelId: number): Promise<Mute> {
 		const muterMembership = await this.getMembershipByChannel(channelId, muter.id);
 		if (!muterMembership) {
 			throw new NotFoundException('User or Channel not found');
@@ -320,7 +320,7 @@ export class ChannelService {
 		}
 
 		try {
-			const isMuted = await this.removeMutedUser(victimId, channelId);
+			const isMuted = await this.removeMute(victimId, channelId);
 			if (isMuted) {
 				return (isMuted);
 			}
@@ -328,7 +328,7 @@ export class ChannelService {
 			throw new InternalServerErrorException(`Could not unmute user: ${error.message}`);
 		}
 		const expireDate = muteUntil ? new Date(Date.now() + muteUntil * 60 * 1000) : null;
-		return (await this.createMutedUser(victimId, channelId, expireDate));
+		return (await this.createMute(victimId, channelId, expireDate));
 	}
 	
 	async kickMember(kicker: User, victimId: number, channelId: number): Promise<ChannelMember> {
@@ -370,8 +370,10 @@ export class ChannelService {
 
 		try {
 			result = await this.removeMember(victimMembership)
-			channel.bannedUsers.push(victimMembership.user);
-			await this.channelRespitory.save(channel);
+			await this.channelRespitory.createQueryBuilder()
+			.relation(Channel, 'bannedUsers')
+			.of(channel)
+			.add(victimMembership.user)
 		} catch(error) {
 			throw new InternalServerErrorException(`Banning ${victimMembership.user.nameFirst} failed`);
 		}
@@ -470,7 +472,7 @@ export class ChannelService {
 		if (!isMember) {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
-		const isMuted = await this.getMutedUserById(author.id, channelId);
+		const isMuted = await this.getMuteById(author.id, channelId);
 		if (isMuted) {
 			throw new UnauthorizedException('Unauthorized: User is muted');
 		}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChatProps, ChatStatus, ChatRoom } from './InterfaceChat';
-import { Box, Stack, IconButton, InputBase, Button, ListItemText, Avatar } from '@mui/material';
+import { Box, Stack, IconButton, InputBase, Button, ListItemText, Avatar, Typography } from '@mui/material';
 // import { useTheme } from '@emotion/react';
 import { Chat as ChatIcon, Settings as SettingsIcon, Send as SendIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -51,28 +51,16 @@ const ContentChat: React.FC<ContentChatProps> = ({ chatProps, setChatProps }) =>
             height: '48px',
           }}
         >
-          <Stack direction={'row'} alignItems={'center'} spacing={1}>
-            {chatProps.selected?.icon || <ChatIcon />}
-            <ListItemText primary={chatProps.selected?.name || 'Chat Name'} />
-          </Stack>
-          <Stack direction={'row'}>
-            <IconButton onClick={() => { toggleChatStatus(ChatStatus.Settings, chatProps.selected) }} sx={{
-              color: (theme) => theme.palette.secondary.main,
-              '&:hover': {
-                color: 'orange'
-              },
-            }}>
-              <SettingsIcon />
-            </IconButton>
-            <IconButton onClick={() => { toggleChatStatus(ChatStatus.Bubble, null) }} sx={{
-              color: (theme) => theme.palette.secondary.main,
-              '&:hover': {
-                color: (theme) => theme.palette.error.main,
-              },
-            }}>
-              <CancelIcon />
-            </IconButton>
-          </Stack>
+					{chatProps.selected?.icon || <ChatIcon />}
+					<Typography>{chatProps.selected?.name || 'Chat Name'}</Typography>
+					<IconButton onClick={() => { toggleChatStatus(ChatStatus.Bubble, null) }} sx={{
+						color: (theme) => theme.palette.secondary.main,
+						'&:hover': {
+							color: (theme) => theme.palette.error.main,
+						},
+					}}>
+						<CancelIcon />
+					</IconButton>
         </Stack>
         <Stack direction={'column'} sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '50vh' }}>
           <Stack
@@ -82,7 +70,8 @@ const ContentChat: React.FC<ContentChatProps> = ({ chatProps, setChatProps }) =>
             bgcolor={(theme) => theme.palette.background.default}
             border={2}
             borderColor={(theme) => theme.palette.divider}
-            sx={{ maxHeight: 'calc(70vh - 130px)',
+            sx={{
+							maxHeight: 'calc(70vh - 130px)',
               overflowY: 'auto',
               '&': {
                 scrollbarWidth: 'thin',
@@ -108,26 +97,22 @@ const ContentChat: React.FC<ContentChatProps> = ({ chatProps, setChatProps }) =>
                   borderRadius="0.3em"
                   sx={{ width: '70%' }}
                 >
-                  <ListItemText primary={message.user} />
-                  <Stack direction="column" sx={{ wordWrap: 'break-word'}}>
-                    <ListItemText
-                      primary={message.message}
-                      primaryTypographyProps={{
-                        sx: { wordWrap: 'break-word' }
-                      }}
-                    />
-                    <Box
+                  <Stack spacing={-.1} direction="column" sx={{ wordWrap: 'break-word'}}>
+                    <Typography
+                        sx={{ wordWrap: 'break-word' }}
+                    >
+                      {message.message}
+										</Typography>
+                    <Typography
+											color={'gray'}
                       sx={{
                         display: 'flex',
                         justifyContent: 'flex-end',
-                        alignItems: 'flex-end',
                         fontSize: '0.5rem',
-                        color: 'gray',
-                        mt: 0.5
                       }}
                     >
                       {message.timestamp}
-                    </Box>
+                    </Typography>
                   </Stack>
                 </Stack>
               </Stack>
@@ -156,6 +141,7 @@ const ContentChat: React.FC<ContentChatProps> = ({ chatProps, setChatProps }) =>
               color: (theme) => theme.palette.secondary.main,
               border: '1px solid #ced4da',
               padding: '0.4em',
+							paddingLeft: '1em',
               borderRadius: '5em',
               borderColor: (theme) => theme.palette.divider,
               '&:hover': {
