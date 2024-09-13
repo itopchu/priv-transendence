@@ -5,6 +5,7 @@ import { Friendship, FriendshipAttitude, FriendshipAttitudeBehaviour, User } fro
 import { AccessTokenDTO } from '../dto/auth.dto';
 import { Request, Response } from 'express';
 import { UserClient } from '../dto/user.dto';
+import { GameHistory } from '../entities/game.history.entity';
 
 @Injectable()
 export class UserService {
@@ -13,6 +14,8 @@ export class UserService {
     private userRepository: Repository<User>,
     @InjectRepository(Friendship)
     private friendsRepository: Repository<Friendship>,
+    @InjectRepository(GameHistory)
+    private gameHistoryRepository: Repository<GameHistory>,
   ) { }
 
   async createUser(access: AccessTokenDTO, userMe: Record<string, any>): Promise<UserClient> {
@@ -107,6 +110,26 @@ export class UserService {
       return users;
     } catch (error) {
       console.error('Error searching users:', error);
+      return null;
+    }
+  }
+
+  async getUserGamesById(userId: number): Promise<GameHistory[] | null> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['games'] });
+      if (!user) {
+        return null;
+      }
+
+      const games = await this.gameHistoryRepository
+        .createQueryBuilder('gameHistory')
+        .leftJoinAndSelect('gameHistory.players', 'player')
+        .where('player.id = :userId', { userId })
+        .getMany();
+
+      return games;
+    } catch (error) {
+      console.error('Failed to get user games by id:', error);
       return null;
     }
   }

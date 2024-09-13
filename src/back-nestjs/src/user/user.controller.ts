@@ -157,4 +157,12 @@ export class UserController {
     const friendsDTO = friends.map(friend => new UserPublicDTO(friend, null));
     return res.status(200).json({friendsDTO})
   }
+  
+  @Get('games/:id')
+  async getUserGamesById(@Res() res: Response, @Param('id', ParseIntPipe) id: number) {
+    const games = await this.userService.getUserGamesById(id);
+    if (!games)
+      return res.status(404);
+    return res.status(200).json(games);
+  }
 }

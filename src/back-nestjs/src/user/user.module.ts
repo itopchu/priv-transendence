@@ -7,10 +7,11 @@ import { User, Friendship } from '../entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
 import { WSAuthGuard } from '../auth/auth.ws.guard';
 import { GameService } from './user.game.service';
+import { GameHistory } from '../entities/game.history.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Friendship]),
+    TypeOrmModule.forFeature([User, Friendship, GameHistory]),
     forwardRef(() => AuthModule),
   ],
   controllers: [UserController],

@@ -13,7 +13,7 @@ enum PlayerStates {
 }
 
 const Play = () => {
-  const { user, userSocket } = useUser();
+  const { userSocket } = useUser();
   const [playerState, setPlayerState] = useState<PlayerStates>(PlayerStates.notInGame);
   const [isPlaying, setIsPlaying] = useState(false);
   const [mePaused, setMePaused] = useState(false);
@@ -54,7 +54,6 @@ const Play = () => {
         } else {
           setPlayerState(PlayerStates.Lose);
         }
-        // setPlayerState(PlayerStates.notInGame);
       });
 
       userSocket.on("playerState", (playerState: number) => {

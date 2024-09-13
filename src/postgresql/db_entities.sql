@@ -21,17 +21,16 @@ CREATE TABLE
 		FOREIGN KEY (higher_id) REFERENCES Users (user_id),
 	);
 
-CREATE TABLE
-	IF NOT EXISTS Games (
-		game_id SERIAL PRIMARY KEY,
-		FOREIGN KEY (sender_id) REFERENCES Users (user_id),
-		FOREIGN KEY (receiver_id) REFERENCES Users (user_id),
-		custom BOOLEAN NOT NULL DEFAULT false,
-		score_sender INTEGER NOT NULL DEFAULT 0,
-		score_receiver INTEGER NOT NULL DEFAULT 0,
-		time_start TIMESTAMP,
-		time_end TIMESTAMP,
-	);
+CREATE TABLE IF NOT EXISTS GameHistory (
+  id SERIAL PRIMARY KEY,
+  player1Score INTEGER NOT NULL,
+  player2Score INTEGER NOT NULL,
+  winner BOOLEAN NOT NULL,
+  player1_id INTEGER,
+  player2_id INTEGER,
+  FOREIGN KEY (player1_id) REFERENCES Users (user_id),
+  FOREIGN KEY (player2_id) REFERENCES Users (user_id)
+);
 
 -- Think about dynamic tables f.e. table for every channel like: Channel_id_Members
 CREATE TABLE

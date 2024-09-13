@@ -2,12 +2,12 @@ import { WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, 
 import { Server, Socket } from 'socket.io';
 import { verify, JwtPayload } from 'jsonwebtoken';
 import { UserService } from '../user/user.service';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { User } from '../entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserPublicDTO } from '../dto/user.dto';
 import { GameService } from './user.game.service';
-import { subscribe } from 'diagnostics_channel';
+import { GameHistory } from '../entities/game.history.entity';
 
 export interface UserSocket extends Socket {
   authUser?: User;
@@ -300,16 +300,20 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roomId = this.leaveGameId(client.authUser.id);
       if (!roomId) return;
     }
+    this.emitGameOver(roomId, client.position === false);
+  }
+
+  emitGameOver(roomId: string, winner: boolean): void {
     const room = this.rooms.get(roomId)
     if (!room) return;
     room.forEach(player => {
       this.resetClient(player.client);
-      if (player.client.authUser.id === client.authUser.id) {
-        player.client.emit('gameOver', false);
-      } else {
+      if (player.position === winner) {
         player.client.emit('gameOver', true);
+      } else {
+        player.client.emit('gameOver', false);
       }
-      console.log('gameOver', player.client.authUser.nameFirst);
+      console.log('emitOver', player.client.authUser.nameFirst);
     });
     this.cleanUp(roomId);
   }
@@ -355,17 +359,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   gameOver(roomId: string, winner: boolean): void {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-    const loser = room.find(player => player.position !== winner);
-    if (!loser) {
-      const player = room.find(player => player.position === true);
-      if (!winner) return;
-      player.client.emit('gameOver', true);
-      this.resetClient(player.client);
-      this.cleanUp(roomId);
-    }
-    else
-      this.handleLeaveGame(loser.client);
+    console.log('gameOver', roomId, winner);
+    this.emitGameOver(roomId, winner);
   }
 }

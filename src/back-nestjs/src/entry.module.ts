@@ -9,6 +9,7 @@ import { UserModule } from './user/user.module';
 // import { ChannelsModule } from './channels/channels.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { GameHistory } from './entities/game.history.entity';
 
 @Module({
   controllers: [AuthController, UserController],
@@ -30,7 +31,7 @@ import { join } from 'path';
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
-        entities: [User, Friendship],
+        entities: [User, Friendship, GameHistory],
         synchronize: true,
       })
     }),
