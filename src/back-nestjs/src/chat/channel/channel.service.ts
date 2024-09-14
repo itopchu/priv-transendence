@@ -6,6 +6,7 @@ import {
 	UnauthorizedException
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm'
+import { Repository, UpdateResult } from 'typeorm';
 import {
 	Channel,
 	ChannelMember,
@@ -13,17 +14,17 @@ import {
 	ChannelType,
 	Message,
     Mute
-} from '../entities/channel.entity';
+} from '../../entities/channel.entity';
 import {
 	CreateChannelDto,
 	UpdateChannelDto,
-	UpdateMemberDto
-} from '../dto/channel.dto';
-import { Repository, UpdateResult } from 'typeorm';
-import { User } from '../entities/user.entity';
-import path from 'path';
+} from '../../dto/channel.dto';
+import { MessageService } from '../message/message.service';
+import { MemberService } from './member.service';
+import { User } from '../../entities/user.entity';
 import { unlinkSync, writeFileSync } from 'fs';
 import * as argon2 from 'argon2'
+import path from 'path';
 
 const createImage = (channelId: number, image: Express.Multer.File) => {
 	const timestamp = Date.now();
@@ -32,7 +33,7 @@ const createImage = (channelId: number, image: Express.Multer.File) => {
 	const uploadPath = path.join('/app/uploads', fileName);
 
 	writeFileSync(uploadPath, image.buffer);
-	return ({ fileName: fileName, path: uploadPath });
+	return ({ fileName: fileName, imagePath: uploadPath });
 }
 
 @Injectable()
@@ -40,12 +41,10 @@ export class ChannelService {
 	constructor(
 		@InjectRepository(Channel)
 		private channelRespitory: Repository<Channel>,
-		@InjectRepository(ChannelMember)
-		private memberRespitory: Repository<ChannelMember>,
-		@InjectRepository(Message)
-		private messageRespitory: Repository<Message>,
 		@InjectRepository(Mute)
 		private muteRespitory: Repository<Mute>,
+		private readonly messageService: MessageService,
+		private readonly memberService: MemberService,
 	) {}
 
 	async verifyPassword(plainPassword: string, hashPassword: string): Promise<Boolean> {
@@ -66,32 +65,12 @@ export class ChannelService {
 		}
 	}
 
-	async getChannelLog(channelId: number): Promise<Message[]>  {
-		const log = await this.messageRespitory.createQueryBuilder('msg')
-		.innerJoin('msg.channel', 'channel')
-		.leftJoinAndSelect('msg.author', 'author')
-		.where('channel.id = :id', { id: channelId })
-		.getMany();
-
-		return (log);
-	}
-
 	async getChannelById(channelId: number, requestedRelations: string[] | null): Promise<Channel> {
 		const channel = await this.channelRespitory.findOne({
 			where: { id: channelId },
 			relations: requestedRelations,
 		});
 		return (channel);
-	}
-
-	async getMembershipById(member: number | ChannelMember): Promise<ChannelMember> {
-		const membership = await this.memberRespitory.createQueryBuilder('membership')
-		.where('membership.id = :id', { id: typeof member === 'number' ?  member : member.id })
-		.leftJoinAndSelect('membership.user', 'user')
-		.leftJoinAndSelect('membership.channel', 'channel')
-		.getOne()
-
-		return (membership);
 	}
 
 	async getMuteById(userId: number, channelId: number): Promise<Mute> {
@@ -113,30 +92,6 @@ export class ChannelService {
 		return (expiredMutes);
 	}
 
-	async getMembershipByChannel(channelId: number, userId: number): Promise<ChannelMember> {
-		const membership = await this.memberRespitory.createQueryBuilder('membership')
-		.innerJoin('membership.user', 'user')
-		.where('user.id = :userId', { userId })
-		.leftJoinAndSelect('membership.channel', 'channel')
-		.andWhere('channel.id = :channelId', { channelId })
-		.getOne()
-
-		return (membership);
-	}
-
-	async getMemberships(user: User): Promise<ChannelMember[]> {
-		const userMemberships = await this.memberRespitory.createQueryBuilder('membership')
-		.innerJoin('membership.user', 'user')
-		.where('user.id = :id', { id: user.id })
-		.leftJoinAndSelect('membership.channel', 'channel')
-		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')
-		.leftJoinAndSelect('channel.members', 'members')
-		.leftJoinAndSelect('members.user', 'channelUsers')
-		.getMany();
-		
-		return (userMemberships);
-	}
-
 	async getPublicChannels(): Promise<Channel[]> {
 		return (await this.channelRespitory.find({
 			where: [
@@ -153,13 +108,7 @@ export class ChannelService {
 		newChannel.name = newChannel.name.replace(/\s+/g, ' ').trim();
 		try {
 			newChannel = await this.channelRespitory.save(newChannel);
-
-			newMember = this.memberRespitory.create({
-				role: ChannelRoles.admin,
-				user: creator,
-				channel: newChannel
-			})
-			newMember = await this.memberRespitory.save(newMember);
+			newMember = await this.memberService.createMember(newChannel, creator, ChannelRoles.admin);
 
 			if (image) {
 				const { fileName } = createImage(newChannel.id, image);
@@ -172,7 +121,7 @@ export class ChannelService {
 				await this.channelRespitory.delete(newChannel.id);
 			}
 			if (newMember.id) {
-				await this.memberRespitory.delete(newMember.id);
+				await this.memberService.deleteMember(newMember.id);
 			}
 			throw new InternalServerErrorException(`Failed to create channel and associate member: ${error.message}`);
 		}
@@ -201,18 +150,6 @@ export class ChannelService {
 		}
 	}
 
-	async createChannelMember(channel: Channel, user: User): Promise<ChannelMember> {
-		const newMember = this.memberRespitory.create({
-			user: user,
-			channel: channel,
-		})
-		try {
-			return (await this.memberRespitory.save(newMember));
-		} catch(error) {
-			throw new InternalServerErrorException('Failed to create new channel member');
-		}
-	}
-
 	async joinChannel(user: User, channelId: number, password?: string | null): Promise<ChannelMember> {
 		const channel = await this.getChannelById(channelId, ['members.user', 'bannedUsers']);
 		if (!channel) {
@@ -235,10 +172,10 @@ export class ChannelService {
 			throw new BadRequestException('Incorrect password');
 		}
 
-		return (await this.createChannelMember(channel, user));
+		return (await this.memberService.createMember(channel, user));
 	}
 
-	async leaveChannel(user: User, membership: ChannelMember): Promise<Channel | ChannelMember> {
+	async leaveChannel(user: User, membership: ChannelMember) {
 		if (membership.role  === ChannelRoles.admin) {
 			const channel = !membership.channel || !membership.channel.members
 				? await this.getChannelById(membership.channel.id, ['members', 'members.user'])
@@ -254,7 +191,7 @@ export class ChannelService {
 			}
 			await this.transferOwnership(user, candidate.user.id, channel.id);
 		}
-		return (await this.removeMember(membership));
+		return (await this.memberService.removeMember(membership));
 	}
 
 	async removeChannel(channelId: number) {
@@ -265,10 +202,10 @@ export class ChannelService {
 
 		try {
 			if (channel.log) {
-				await this.messageRespitory.remove(channel.log);
+				await this.messageService.removeMessages(channel.log);
 			}
 			if (channel.members) {
-				await this.memberRespitory.remove(channel.members);
+				await this.memberService.removeMember(channel.members);
 			}
 			channel = await this.channelRespitory.remove(channel);
 			if (channel.image) {
@@ -281,21 +218,6 @@ export class ChannelService {
 		return (channel);
 	}
 
-	async removeMember(member: number | ChannelMember): Promise<ChannelMember> {
-		if (typeof(member) === 'number') {
-			member = await this.memberRespitory.findOne({ where: { id: member } });
-			if (!member) {
-				throw new BadRequestException('Member not found');
-			}
-		}
-
-		try {
-			return (await this.memberRespitory.remove(member));
-		} catch(error) {
-			throw new InternalServerErrorException(`Could not remove membership: ${error.message}`);
-		}
-	}
-
 	async removeMute(userId: number, channelId: number) {
 		const mute = await this.getMuteById(userId, channelId);
 		if (!mute) {
@@ -306,11 +228,11 @@ export class ChannelService {
 	}
 
 	async muteMember(muter: User, victimId: number, muteUntil: number | null, channelId: number): Promise<Mute> {
-		const muterMembership = await this.getMembershipByChannel(channelId, muter.id);
+		const muterMembership = await this.memberService.getMembershipByChannel(channelId, muter.id);
 		if (!muterMembership) {
 			throw new NotFoundException('User or Channel not found');
 		}
-		const victimMembership = await this.getMembershipByChannel(channelId, victimId);
+		const victimMembership = await this.memberService.getMembershipByChannel(channelId, victimId);
 		if (!victimMembership) {
 			throw new NotFoundException('Victim not found');
 		}
@@ -331,21 +253,21 @@ export class ChannelService {
 		return (await this.createMute(victimId, channelId, expireDate));
 	}
 	
-	async kickMember(kicker: User, victimId: number, channelId: number): Promise<ChannelMember> {
-		const kickerMembership = await this.getMembershipByChannel(channelId, kicker.id);
+	async kickMember(kicker: User, victimId: number, channelId: number) {
+		const kickerMembership = await this.memberService.getMembershipByChannel(channelId, kicker.id);
 		if (!kickerMembership)
 			throw new NotFoundException('User or Channel not found');
-		const victimMembership = await this.getMembershipByChannel(channelId, victimId);
+		const victimMembership = await this.memberService.getMembershipByChannel(channelId, victimId);
 		if (!victimMembership)
 			throw new NotFoundException('Victim not found');
 
 		if (kickerMembership.role > victimMembership.role)
 			throw new UnauthorizedException('Unauthorized user')
-		return (await this.removeMember(victimMembership));
+		return (await this.memberService.removeMember(victimMembership));
 	}
 
-	async banUser(user: User, victimId: number, channelId: number): Promise<ChannelMember> {
-		let result: ChannelMember;
+	async banUser(user: User, victimId: number, channelId: number) {
+		let result: ChannelMember | ChannelMember[];
 
 		const channel = await this.getChannelById(channelId, ['members', 'members.user', 'bannedUsers']);
 		if (!channel)
@@ -369,7 +291,7 @@ export class ChannelService {
 		}
 
 		try {
-			result = await this.removeMember(victimMembership)
+			result = await this.memberService.removeMember(victimMembership)
 			await this.channelRespitory.createQueryBuilder()
 			.relation(Channel, 'bannedUsers')
 			.of(channel)
@@ -381,8 +303,8 @@ export class ChannelService {
 	}
 
 	async transferOwnership(user: User, newOwnerId: number, channelId: number): Promise<ChannelMember[]> {
-		const admin = await this.getMembershipByChannel(channelId, user.id);
-		const newAdmin = await this.getMembershipByChannel(channelId, newOwnerId);
+		const admin = await this.memberService.getMembershipByChannel(channelId, user.id);
+		const newAdmin = await this.memberService.getMembershipByChannel(channelId, newOwnerId);
 		if (!admin || !newAdmin) {
 			throw new NotFoundException('User(s) not found');
 		}
@@ -395,14 +317,14 @@ export class ChannelService {
 		newAdmin.role = ChannelRoles.admin;
 		try {
 			const members = [admin, newAdmin];
-			return (await this.memberRespitory.save(members));
+			return (await this.memberService.saveMembers(members));
 		} catch (error) {
 			throw new InternalServerErrorException(`Could not transfer ownership: ${error.message}`);
 		}
 	}
 
 	async updateChannel(user: User, channelId: number, updateChannelDto: UpdateChannelDto, image: Express.Multer.File): Promise<UpdateResult> {
-		const membership = await this.getMembershipByChannel(channelId, user.id);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized user');
 		}
@@ -415,16 +337,18 @@ export class ChannelService {
 
 		if (image) {
 			const channel = membership.channel;
-			const oldImagePath = path.join('/app/uploads', channel.image);
 			let newImage: string = undefined;
 			let uploadPath: string;
 
 			try {
-				const { fileName, path } = createImage(channel.id, image);
+				const { fileName, imagePath } = createImage(channel.id, image);
 				newImage = fileName;
-				uploadPath = path;
+				uploadPath = imagePath;
 				await this.channelRespitory.update(channelId, { image: newImage });
-				unlinkSync(oldImagePath);
+				if (channel.image) {
+					const oldImagePath = path.join('/app/uploads', channel.image);
+					unlinkSync(oldImagePath);
+				}
 			} catch (error) {
 				if (newImage) {
 					unlinkSync(uploadPath);
@@ -437,30 +361,6 @@ export class ChannelService {
 			updateChannelDto.name = updateChannelDto?.name.replace(/\s+/g, ' ').trim();
 		}
 		return (await this.channelRespitory.update(channelId, updateChannelDto));
-	}
-
-	async updateMember(user: User, member: number | ChannelMember, updateMemberDto: UpdateMemberDto): Promise<UpdateResult> {
-		if (typeof member === 'number' || !member.channel) {
-			member = await this.getMembershipById(member);
-			if (!member) {
-				throw new NotFoundException('Member not found');
-			}
-		}
-
-		const userMembership = await this.getMembershipByChannel(member.channel.id, user.id);
-		if (!userMembership) {
-			throw new UnauthorizedException('Unauthorized: Membership not found');
-		}
-
-		if (userMembership.id === member.id) {
-			throw new BadRequestException('User changing its own membership, Stop messing around!');
-		}
-
-		if (userMembership.role > member.role) {
-			throw new UnauthorizedException('Unauthorized: Insufficient privileges');
-		}
-
-		return (await this.memberRespitory.update(member.id, updateMemberDto));
 	}
 
 	async logMessage(channelId: number, author: User, message: string): Promise<Message> {
@@ -477,12 +377,6 @@ export class ChannelService {
 			throw new UnauthorizedException('Unauthorized: User is muted');
 		}
 
-		const newMessage = this.messageRespitory.create({
-			channel: channel,
-			author: author,
-			content: message,
-		})
-		console.log(`${author.nameFirst} said "${message}" and has been logged`);
-		return (await this.messageRespitory.save(newMessage));
+		return (await this.messageService.createMessage(channel, author, message));
 	}
 }

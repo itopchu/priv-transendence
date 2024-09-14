@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Box, Divider, Typography, IconButton, Container, useTheme, Stack, Avatar } from '@mui/material';
+import { Divider, Typography, IconButton, Container, useTheme, Stack, Avatar } from '@mui/material';
 import CreateCard from './CreateCard';
 import {
   Add as AddIcon,
   Login as LoginIcon,
 	MoreVertSharp as MiscIcon,
 } from '@mui/icons-material';
-import { useChannel } from '../../Providers/ChannelContext/Channel';
-import ChatBox from './chats';
+import { Channel, useChannel } from '../../Providers/ChannelContext/Channel';
+import ChatBox from './chatBox';
 import { JoinCard } from './JoinCard';
 import { SettingsBox } from './Settings/settings';
+import { lonelyBox } from './Components/Components';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
@@ -21,28 +22,33 @@ interface ChannelTypeEvent {
   iconClickEvent: () => void;
 }
 
-export type SelectedType = {
-	join: number | undefined,
-	channel: number | undefined,
-	settings: number | undefined,
+const enum ChannelStates {
+	chat = 'chat',
+	settings = 'settings',
 }
 
-const initialSelected = {
-	join: undefined,
-	channel: undefined,
-	settings: undefined,
+export type ChannelProps = {
+	selected: Channel | undefined,
+	selectedJoin: Channel | undefined,
+	state: ChannelStates | undefined,
+}
+
+const initialProps = {
+	selected: undefined,
+	state: undefined,
+	selectedJoin: undefined,
 }
 
 const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const [selected, setSelected] = useState<SelectedType>(initialSelected);
+  const [channelProps, setChannelProps] = useState<ChannelProps>(initialProps);
   const { memberships, publicChannels } = useChannel();
 
-  const changeSelected = (selection: Partial<SelectedType>) => {
-	  setSelected((prev) => ({
+  const changeProps = (newProps: Partial<ChannelProps>) => {
+	  setChannelProps((prev) => ({
 		  ...prev,
-		  ...selection,
+		  ...newProps,
 	  }))
   }
 
@@ -111,8 +117,8 @@ const ChannelsPage: React.FC = () => {
 			newColor={"green"}
 			isSelected={false}
 			channelImage={channel?.image}
-			clickEvent={() => changeSelected({ join: index })}
-			iconClickEvent={() => changeSelected({ join: index })}
+			clickEvent={() => changeProps({ selectedJoin: channel })}
+			iconClickEvent={() => changeProps({ selectedJoin: channel })}
 		  />
         ))}
       </Stack>
@@ -122,22 +128,26 @@ const ChannelsPage: React.FC = () => {
   let generateJoinedChannels = () => {
 		if (!memberships.length) return;
 
-      return (
-        <Stack gap={1}>
-          {memberships.map((membership, index) => (
-			<ChannelLine
-			  key={index}
-			  name={membership.channel.name}
-			  component={<MiscIcon />}
-			  newColor={"white"}
-			  isSelected={selected.channel === index || selected.settings === index}
-			  channelImage={membership.channel?.image}
-			  clickEvent={() => changeSelected({ channel: index, settings: undefined })}
-			  iconClickEvent={() =>  changeSelected({ channel: undefined, settings: index })}
-			/>
-		  ))}
-		</Stack>
-	);
+		return (
+			<Stack gap={1}>
+				{memberships.map((membership, _) => {
+					const channel = membership.channel;
+
+					return (
+						<ChannelLine
+							key={channel.id}
+							name={channel.name}
+							component={<MiscIcon />}
+							newColor={"white"}
+							isSelected={channel.id === channelProps?.selected?.id}
+							channelImage={channel?.image}
+							clickEvent={() => changeProps({ selected: channel, state: ChannelStates.chat })}
+							iconClickEvent={() =>  changeProps({ selected: channel, state: ChannelStates.settings })}
+						/>
+					);
+				})}
+			</Stack>
+		);
   };
 
   let createChannelButton = () => {
@@ -148,7 +158,7 @@ const ChannelsPage: React.FC = () => {
         height={'48px'}
         direction={'row'}
         alignItems={'center'}
-		paddingLeft={theme.spacing(3.2)}
+				paddingLeft={theme.spacing(3.2)}
         gap={1}
         bgcolor={theme.palette.primary.main}
         sx={{
@@ -169,30 +179,29 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
-  let lonelyBox = () => {
-	  return  (
-		<Box
-			sx={{
-				position: 'relative',
-				height: '80vh',
-				backgroundColor: theme.palette.primary.light,
-				display: 'flex',
-				flexDirection: 'column',
-				padding: theme.spacing(2),
-				justifyContent: 'center',
-				alignItems: 'center'
-			}}
-		>
-			<span style={{fontSize: '50px', fontWeight: 'bold', opacity: '0.5'}}>SUCH EMPTINESS</span>
-		</Box>
-	  )
-  }
+	const renderChannelState = () => {
+		if (!channelProps.selected) { console.log('necicsoory?'); return (lonelyBox()); }
+
+		switch (channelProps.state) {
+			case ChannelStates.chat:
+				return (<ChatBox channel={channelProps.selected} />);
+			case ChannelStates.settings:
+				return (
+					<SettingsBox
+						membership={memberships.find(membership => membership.channel.id === channelProps?.selected?.id)}
+						changeProps={changeProps}
+					/>
+				);
+			default:
+				return (lonelyBox());
+		}
+	}
 
   let pageContainer = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
 		{showCreateCard && (<CreateCard setIsVisible={setShowCreateCard} />)}
-		{selected.join !== undefined && (<JoinCard setSelected={setSelected} channel={publicChannels[selected.join]}/>)}
+		<JoinCard changeProps={changeProps} channel={channelProps.selectedJoin} />
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}
@@ -220,15 +229,9 @@ const ChannelsPage: React.FC = () => {
           </Stack>
           <Stack
             width={'100%'}
-			overflow={'auto'}
+						overflow={'auto'}
           >
-		    {selected.settings !== undefined ? (
-				<SettingsBox membership={memberships[selected.settings]} setSelected={setSelected} />
-			) : selected.channel !== undefined ? (
-				<ChatBox channel={memberships[selected.channel].channel} />
-			) : (
-				lonelyBox()
-			)}
+						{renderChannelState()}
           </Stack>
         </Stack>
       </Container>

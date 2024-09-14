@@ -52,6 +52,22 @@ export class Channel {
 }
 
 @Entity()
+export class Chat {
+	@PrimaryGeneratedColumn()
+	id: number;
+
+	@Column()
+	status: number;
+
+	@JoinTable()
+	@ManyToMany(() => User, user => user.chats)
+	users: User[];
+
+	@OneToMany(() => Message, message => message.chat)
+	log: Message[];
+}
+
+@Entity()
 export class Mute {
 	@PrimaryColumn()
 	userId: number;
@@ -59,6 +75,7 @@ export class Mute {
 	@PrimaryColumn()
 	channelId: number;
 
+	@JoinColumn()
 	@ManyToOne(() => User)
 	user: User;
 
@@ -96,10 +113,13 @@ export class Message {
 	@CreateDateColumn()
 	timestamp: Date;
 	
-	@ManyToOne(() => Channel, channel => channel.log)
-	channel: Channel;
+	@ManyToOne(() => Channel, channel => channel.log, { nullable: true })
+	channel: Channel | null;
 
-	@ManyToOne(() => User, author => author.messages)
+	@ManyToOne(() => Chat, chat => chat.log, { nullable: true })
+	chat: Chat | null;
+
+	@ManyToOne(() => User)
 	author: User;
 
 	@Column()

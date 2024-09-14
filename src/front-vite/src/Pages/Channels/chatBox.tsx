@@ -18,7 +18,7 @@ import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
 import { Channel } from '../../Providers/ChannelContext/Channel';
 import axios from 'axios';
-import { ButtonAvatar, ClickTypography, CustomScrollBox } from './Components/Components';
+import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
 import { LoadingBox } from './Components/CardComponents';
 import { BACKEND_URL, getUsername, handleError, retryOperation } from './utils';
@@ -109,6 +109,8 @@ type Message = {
 };
 
 const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
+	if (!channel) return (lonelyBox());
+
   const navigate = useNavigate();
   const theme = useTheme();
   const { user, userSocket } = useUser();

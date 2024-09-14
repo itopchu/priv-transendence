@@ -56,6 +56,19 @@ export class UserService {
     }
   }
 
+  async getUserByIdWithRel(id: number, relations: string[]): Promise<User | null> {
+    try {
+      const found = await this.userRepository.findOne({
+		  where: { id },
+		  relations: relations,
+	  });
+      return found;
+    } catch (error) {
+      console.error("Failed to get user by id:", error);
+    }
+    return (null);
+  }
+
   async getUserById(id: number): Promise<User | null> {
     try {
       const found = await this.userRepository.findOne({ where: { id } });

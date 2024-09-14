@@ -30,8 +30,9 @@ import {
   UploadAvatar,
   CustomScrollBox,
   DescriptionBox,
+  lonelyBox,
 } from '../Components/Components';
-import { SelectedType } from '..';
+import { ChannelProps } from '..';
 import { BACKEND_URL, getUsername, handleError, validateFile } from '../utils';
 
 type ChannelDataType = {
@@ -69,11 +70,13 @@ const SettingsDivider = styled(Divider)(() => ({
 }));
 
 interface SettingsBoxType {
-  membership: ChannelMember;
-  setSelected: React.Dispatch<React.SetStateAction<SelectedType>>;
+  membership: ChannelMember | undefined;
+  changeProps: (newProps: Partial<ChannelProps>) => void;
 }
 
-export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, setSelected, }) => {
+export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps }) => {
+	if (!membership) return (lonelyBox());
+
   const passwordRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -99,7 +102,6 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, setSelected
   useEffect(() => {
     if (editMode) {
       setEditMode(false);
-      console.log('should be false');
     }
     if (channelData !== initialChannelData || avatarSrc !== initialAvatarSrc) {
       reset();
@@ -172,10 +174,7 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, setSelected
       await axios.delete(`${BACKEND_URL}/channel/${channel.id}`, {
         withCredentials: true,
       });
-      setSelected((prev) => ({
-        ...prev,
-        settings: undefined,
-      }));
+      changeProps({ selected: undefined, state: undefined });
     } catch (error) {
       handleError('Could not delete channel:', error);
     }
@@ -188,10 +187,7 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, setSelected
       await axios.delete(`${BACKEND_URL}/channel/leave/${membership.id}`, {
         withCredentials: true,
       });
-      setSelected((prev) => ({
-        ...prev,
-        settings: undefined,
-      }));
+      changeProps({ selected: undefined, state: undefined });
     } catch (error) {
       handleError('Could not leave channel:', error);
     }

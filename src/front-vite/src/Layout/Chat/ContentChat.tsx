@@ -4,15 +4,13 @@ import { Box, Stack, IconButton, InputBase, Button, ListItemText, Avatar, Typogr
 // import { useTheme } from '@emotion/react';
 import { Chat as ChatIcon, Settings as SettingsIcon, Send as SendIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useChat } from '../../Providers/ChatContext/Chat';
 
-interface ContentChatProps {
-  chatProps: ChatProps;
-  setChatProps: React.Dispatch<React.SetStateAction<ChatProps>>;
-}
+const ContentChat = () => {
+	const { chatProps, changeChatProps } = useChat();
 
-const ContentChat: React.FC<ContentChatProps> = ({ chatProps, setChatProps }) => {
   const toggleChatStatus = (status: ChatStatus, selection: ChatRoom | null) => {
-    setChatProps({ ...chatProps, chatStatus: status, selected: selection });
+    changeChatProps({ chatStatus: status, selected: selection });
   };
   // const theme = useTheme();
   const navigate = useNavigate();

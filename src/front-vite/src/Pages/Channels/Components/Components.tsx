@@ -130,3 +130,21 @@ export const UploadAvatar: React.FC<AvatarButtonType> = ({ children, src, clickE
 		{children}
 	</ButtonAvatar>
 );
+
+export const lonelyBox = () => (
+	<Box
+		sx={{
+			position: 'relative',
+			height: '80vh',
+			backgroundColor: (theme) => theme.palette.primary.light,
+			display: 'flex',
+			flexDirection: 'column',
+			padding: (theme) => theme.spacing(2),
+			justifyContent: 'center',
+			alignItems: 'center'
+		}}
+	>
+		<span style={{fontSize: '50px', fontWeight: 'bold', opacity: '0.5'}}>SUCH EMPTINESS</span>
+	</Box>
+)
+

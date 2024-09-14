@@ -16,6 +16,8 @@ import {
 import { darken, alpha } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
 import axios from 'axios';
+import { useChat } from '../../Providers/ChatContext/Chat';
+import { ChatStatus } from '../../Layout/Chat/InterfaceChat';
 
 interface VisitedInfoProps {
   visitedUser: UserPublic | undefined;
@@ -46,6 +48,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
   const { user } = useUser();
+	const { changeChatProps } = useChat();
 
   useEffect(() => {
     const getFriendshipAttitude = async () => {
@@ -187,7 +190,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   }
 
   function handleChatInvite() {
-    console.log('chat invite');
+    changeChatProps({ chatStatus: ChatStatus.Chatbox });
   }
 
   let imagePart = () => {

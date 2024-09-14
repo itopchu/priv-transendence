@@ -1,11 +1,12 @@
 import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, ConnectedSocket } from '@nestjs/websockets'; import { Server, Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
-import { ChannelService } from './channel.service';
+import { ChannelService } from './channel/channel.service';
 import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
 import { ParseIntPipe, UnauthorizedException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ChannelPublicDTO, MessagePublicDTO } from '../dto/channel.dto';
+import { MemberService } from './channel/member.service';
 
 export enum UpdateType {
 	deleted = 'deleted',
@@ -13,14 +14,17 @@ export enum UpdateType {
 }
 
 @WebSocketGateway(3001, { cors: { origin: "*" } })
-export class ChannelGateway {
+export class ChatGateway {
 	constructor(private readonly userService: UserService,
 				private readonly configService: ConfigService,
 				private readonly channelService: ChannelService,
+				private readonly memberService: MemberService,
 			   ) { }
 
 	@WebSocketServer()
 	server: Server;
+
+  private connectedUsers: Map<number, UserSocket> = new Map();
 	
 	@Cron(CronExpression.EVERY_MINUTE)
 	async checkMutes() {
@@ -39,7 +43,8 @@ export class ChannelGateway {
 
 	async handleConnection(client: Socket) {
 		try {
-			await authenticateUser(client, this.configService, this.userService);
+			const user = await authenticateUser(client, this.configService, this.userService);
+			this.connectedUsers.set(user.id, client);
 		} catch (error) {
 			client.disconnect(true);
 			console.error(error.message);
@@ -52,6 +57,7 @@ export class ChannelGateway {
 		const user = client.authUser;
 
 		if (user) {
+			this.connectedUsers.delete(user.id);
 			const rooms = Array.from(client.rooms);
 			rooms.forEach(room => {
 				client.leave(room);
@@ -77,7 +83,7 @@ export class ChannelGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const membership = await this.channelService.getMembershipByChannel(channelId, user.id);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
@@ -95,7 +101,7 @@ export class ChannelGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const membership = await this.channelService.getMembershipByChannel(channelId, user.id);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
@@ -155,12 +161,40 @@ export class ChannelGateway {
 		return (null);
 	}
 
+  @SubscribeMessage('sendDirectMessage')
+  async directMMessage(client: UserSocket, payload: { recipientId: number, content: string }) {
+    const user = client.authUser;
+    if (!user) {
+      throw new UnauthorizedException('Unauthorized: User not found');
+    }
+
+	  try {
+		  const recipient = await this.userService.getUserByIdWithRel(payload.recipientId, ['blockedUsers'])
+			if (!recipient) {
+				throw new Error('Recipient not found');
+			}
+
+			const isBlocked = recipient.blockedUsers.some((blockedUser) => blockedUser.id === user.id);
+			if (isBlocked) {
+				throw new UnauthorizedException('Unauthorized: User is blocked');
+			}
+
+			const recipientSocket = this.connectedUsers.get(recipient.id);
+			if (recipientSocket) {
+				recipientSocket.emit('directMessage')
+			}
+			client.emit('messageSent');
+	  } catch(error) {
+			console.log(error);
+			client.emit('directMessageError', error.message);
+	  }
+  }
+
 	emitChannelUpdate(channelId: number) {
 		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, channelId);
 	}
 
 	emitPublicChannelUpdate(channel: ChannelPublicDTO, updateType: UpdateType) {
-		console.log(channel);
 		this.server.to('channelPublicUpdate').emit('newPublicChannelUpdate', {channel: channel, updateType: updateType });
 	}
 
@@ -171,8 +205,7 @@ export class ChannelGateway {
 	}
 
 	emitMemberLeft(userId: number, channelId: number) {
-		const userSocket = this.getUserSocketInRoom(userId, `channelUpdate#${channelId}`)
-			|| this.getUserSocketInRoom(userId, `channel#${channelId}`)
+		const userSocket = this.connectedUsers.get(userId);
 
 		this.emitChannelUpdate(channelId);
 		if (userSocket) {

@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, PrimaryColumn, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate, ManyToMany } from 'typeorm';
 import { IsAscii, Length, validateOrReject, IsOptional, IsEmail, IsInt, IsEnum } from 'class-validator';
-import { Channel, ChannelMember, Message, Mute } from './channel.entity';
+import { ChannelMember, Chat } from './channel.entity';
 @Entity()
 @Unique(['nameNick'])
 export class User {
@@ -57,8 +57,8 @@ export class User {
   @OneToMany(() => ChannelMember, membership => membership.user)
   memberships: ChannelMember[];
 
-  @OneToMany(() => Message, messages => messages.author)
-  messages: Message[];
+  @ManyToMany(() => Chat, chat => chat.users)
+  chats: Chat[];
 
   async validate() {
     await validateOrReject(this);

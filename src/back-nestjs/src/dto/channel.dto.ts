@@ -1,6 +1,6 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEnum, IsNumber, isNotEmptyObject, isNotEmpty, IsDate, Validate, ValidateNested } from 'class-validator';
-import { Channel, ChannelMember, ChannelRoles, ChannelType, Message, Mute } from '../entities/channel.entity';
+import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute } from '../entities/channel.entity';
 import { UserPublicDTO } from './user.dto';
 import { User } from '../entities/user.entity';
 import { Type } from 'class-transformer';
@@ -179,6 +179,32 @@ export class ChannelPublicDTO {
 	members: MemberPublicDTO[];
 
 	@IsNotEmpty()
+	@ValidateNested({ each: true })
+	@Type(() => MessagePublicDTO)
+	log: MessagePublicDTO[];
+}
+
+export class ChatClientDTO {
+	constructor(chat: Chat, userId: number) {
+		this.id = chat.id;
+
+		const otherUser = chat.users[0].id === userId ? chat.users[1] : chat.users[0];
+		this.user = new UserPublicDTO(otherUser, null);
+		this.log = [];
+
+		for (const message of chat.log ?? []) {
+			this.log.push(new MessagePublicDTO(message));
+		}
+	}
+
+	@IsNumber()
+	id: number;
+
+	@ValidateNested()
+	@Type(() => UserPublicDTO)
+	@ValidateNested({ each: true })
+	user: UserPublicDTO;
+
 	@ValidateNested({ each: true })
 	@Type(() => MessagePublicDTO)
 	log: MessagePublicDTO[];

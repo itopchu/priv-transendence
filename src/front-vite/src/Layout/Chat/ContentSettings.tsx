@@ -23,19 +23,19 @@ import {
 } from '@mui/icons-material';
 // import { useTheme } from '@emotion/react';
 import { useNavigate } from 'react-router-dom';
+import { useChat } from '../../Providers/ChatContext/Chat';
 
-interface ContentSettingsProps {
-  chatProps: ChatProps;
-  setChatProps: React.Dispatch<React.SetStateAction<ChatProps>>;
-}
+const ContentSettings = () => {
+	const { chatProps, changeChatProps } = useChat();
 
-const ContentSettings: React.FC<ContentSettingsProps> = ({ chatProps, setChatProps }) => {
   const toggleChatStatus = (status: ChatStatus, selection: ChatRoom | null) => {
-    setChatProps({ ...chatProps, chatStatus: status, selected: selection });
+    changeChatProps({ chatStatus: status, selected: selection });
   };
+
   const [selectedType, setSelectedType] = useState(chatProps.selected?.settings.type);
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
+
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue: string = event.target.value;
     if (newValue === "public" || newValue === "private" || newValue === "password" || newValue === undefined) {

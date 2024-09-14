@@ -8,6 +8,7 @@ import { themeOptions } from './Styles/themeOptions';
 import { useUser } from './Providers/UserContext/User';
 import './mainAppComponent.css';
 import { Chat } from './Layout/Chat';
+import { ChatContextProvider } from './Providers/ChatContext/Chat';
 
 const mainAppComponent: React.FC = () => {
   const theme = createTheme(themeOptions);
@@ -17,13 +18,15 @@ const mainAppComponent: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       {user.id !== 0 && <HeaderBar />}
-      <Container maxWidth="xl">
-        <Box paddingTop={user.id === 0 ? '0em' : '3em'} bgcolor={theme.palette.primary.main}>
-          <Main />
-        </Box>
-      </Container>
+			<ChatContextProvider>
+				<Container maxWidth="xl">
+					<Box paddingTop={user.id === 0 ? '0em' : '3em'} bgcolor={theme.palette.primary.main}>
+						<Main />
+					</Box>
+				</Container>
+				<Chat />
+			</ChatContextProvider>
       <Divider orientation="horizontal" sx={{ backgroundColor: theme.palette.background.default, width: '0.01em', minWidth: '100%' }} />
-      <Chat />
       <Footer />
     </ThemeProvider>
   );

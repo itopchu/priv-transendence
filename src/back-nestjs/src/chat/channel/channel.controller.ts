@@ -1,18 +1,47 @@
-import { Controller, Get, Post, Patch, Res, Req, UseGuards, Body, UsePipes, ValidationPipe, InternalServerErrorException, Param, ParseIntPipe, NotFoundException, ForbiddenException, BadRequestException, UnauthorizedException, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
-import { Request, Response } from 'express'
-import { Channel, ChannelMember, ChannelRoles, ChannelType } from '../entities/channel.entity';
-import { ChannelService } from './channel.service';
-import { AuthGuard } from '../auth/auth.guard';
-import { ChannelPublicDTO, CreateChannelDto, MemberClientDTO, MessagePublicDTO, UpdateChannelDto, UpdateMemberDto } from '../dto/channel.dto';
+import {
+	Controller,
+	Get,
+	Post,
+	Patch,
+	Req,
+	UseGuards,
+	Body,
+	UsePipes,
+	ValidationPipe,
+	InternalServerErrorException,
+	Param,
+	ParseIntPipe,
+	NotFoundException,
+	ForbiddenException,
+	BadRequestException,
+	UnauthorizedException,
+	Delete,
+	UseInterceptors,
+	UploadedFile
+} from '@nestjs/common';
+import { Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express';
-import { multerOptions } from '../user/user.controller';
-import { ChannelGateway, UpdateType } from './channel.gateway';
+import {
+	ChannelPublicDTO,
+	CreateChannelDto,
+	MemberClientDTO,
+	MessagePublicDTO,
+	UpdateChannelDto,
+	UpdateMemberDto
+} from '../../dto/channel.dto';
+import { Channel, ChannelRoles, ChannelType } from '../../entities/channel.entity';
+import { ChannelService } from './channel.service';
+import { AuthGuard } from '../../auth/auth.guard';
+import { multerOptions } from '../../user/user.controller';
+import { ChatGateway, UpdateType } from '../chat.gateway';
+import { MemberService } from './member.service';
 
 @Controller('channel')
 export class ChannelController {
 	constructor(
 		private readonly channelService: ChannelService,
-		private readonly channelGateway: ChannelGateway
+		private readonly memberService: MemberService,
+		private readonly channelGateway: ChatGateway
 	) {}
 
 	@Get('messages/:id')
@@ -44,7 +73,7 @@ export class ChannelController {
 	async getUserChannels(@Req() req: Request) {
 		const user = req.authUser;
 
-		const memberships = await this.channelService.getMemberships(user);
+		const memberships = await this.memberService.getMemberships(user);
 
 		const clientMemberships = memberships.map(membership => new MemberClientDTO(membership));
 		return ({ memberships: clientMemberships });
@@ -202,7 +231,7 @@ export class ChannelController {
 		if (!Object.keys(updateMemberDto).length) {
 			return;
 		}
-		const member = await this.channelService.getMembershipById(memberId);
+		const member = await this.memberService.getMembershipById(memberId);
 		if (!member) {
 			throw new NotFoundException('Member not found');
 		}
@@ -210,7 +239,7 @@ export class ChannelController {
 			throw new BadRequestException('Unable to promote to admin');
 		}
 		
-		await this.channelService.updateMember(user, member, updateMemberDto);
+		await this.memberService.updateMember(user, member, updateMemberDto);
 		this.channelGateway.emitChannelUpdate(member.channel.id);
 	}
 	
@@ -240,7 +269,7 @@ export class ChannelController {
 	async leaveChannel(@Req() req: Request, @Param('id', ParseIntPipe) membershipId: number) {
 		const user = req.authUser;
 
-		const membership = await this.channelService.getMembershipById(membershipId);
+		const membership = await this.memberService.getMembershipById(membershipId);
 		if (!membership) {
 			throw new NotFoundException('Member not found');
 		}

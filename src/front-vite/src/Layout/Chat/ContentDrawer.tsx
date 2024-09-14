@@ -1,29 +1,26 @@
 import React from 'react';
-import { ChatProps, ChatStatus, ChatRoom } from './InterfaceChat';
+import { ChatStatus, ChatRoom } from './InterfaceChat';
 import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography } from '@mui/material';
 import { darken, alpha, useTheme } from '@mui/material/styles';
 import { Add as AddIcon, Settings as SettingsIcon, Logout as LogoutIcon } from '@mui/icons-material';
+import { useChat } from '../../Providers/ChatContext/Chat';
 
-interface ContentDrawerProps {
-  chatProps: ChatProps;
-  setChatProps: React.Dispatch<React.SetStateAction<ChatProps>>;
-}
-
-const ContentDrawer: React.FC<ContentDrawerProps> = ({ chatProps, setChatProps }) => {
+const ContentDrawer = () => {
   const theme = useTheme();
+	const { chatProps, changeChatProps } = useChat();
 
   const toggleChatStatus = (status: ChatStatus, selection: ChatRoom | null) => {
-    setChatProps({ ...chatProps, chatStatus: status, selected: selection });
+		changeChatProps({ chatStatus: status, selected: selection });
   };
 
   const handleSearchClick = () => {
     if (chatProps.searchPrompt == '') {
-      setChatProps({ ...chatProps, searchPrompt: 'Search...' });
+			changeChatProps({ searchPrompt: 'Search...' });
     }
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setChatProps({ ...chatProps, searchPrompt: event.target.value });
+    changeChatProps({ searchPrompt: event.target.value });
     console.log('Search Prompt onChange activated: ', chatProps.searchPrompt);
   };
 

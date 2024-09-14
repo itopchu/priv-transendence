@@ -19,16 +19,18 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { SelectedType } from '.';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
 import { BACKEND_URL, handleError, retryOperation } from './utils';
+import { ChannelProps } from '.';
 
 interface JoinCardType {
-  setSelected: React.Dispatch<React.SetStateAction<SelectedType>>;
-  channel: Channel;
+  changeProps: (newProps: Partial<ChannelProps>) => void;
+  channel: Channel | undefined;
 }
 
-export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
+export const JoinCard: React.FC<JoinCardType> = ({ changeProps, channel }) => {
+	if (!channel) return undefined;
+
   const { memberships } = useChannel();
   const { user, userSocket } = useUser();
 
@@ -42,7 +44,7 @@ export const JoinCard: React.FC<JoinCardType> = ({ setSelected, channel }) => {
   const joinDisabled = alreadyJoined || isBanned;
 
   const onCancel = () => {
-    setSelected((prev) => ({...prev, join: undefined}));
+    changeProps({ selectedJoin: undefined });
   };
 
   const onJoin = async () => {
