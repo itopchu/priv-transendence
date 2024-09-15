@@ -57,18 +57,21 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     this.intervalIds.set(roomId, intervalId);
   }
 
-  getGameState(roomId: string): GameState {
+  setGameSate(roomId: string, bot: boolean): void {
     if (!roomId) return;
     if (!this.gameStates.has(roomId)) {
       this.gameStates.set(roomId, {
         player1: { y: 150 , direction: 0 },
         player2: { y: 150, direction: 0 },
-        bot: false,
+        bot: bot,
         ball: { x: 390, y: 190, dx: 2, dy: 2 },
         score: { player1: 0, player2: 0 },
       });
       this.setGameInterval(roomId);
     }
+  }
+
+  getGameState(roomId: string): GameState {
     return this.gameStates.get(roomId);
   }
 
@@ -84,6 +87,8 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
 
   updateBallPosition(roomId: string): void {
     const gameState = this.getGameState(roomId);
+    if (!gameState) return;
+
     let { x, y, dx, dy } = gameState.ball;
     const { player1, player2 } = gameState;
     
@@ -125,13 +130,13 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (x <= 0) {
-      if (++gameState.score.player2 === 1) {
+      if (++gameState.score.player2 === 5) {
         this.finishGame(roomId, false);
       }
       this.resetBall(roomId, false);
     } else if (x >= this.containerWidth - 20) {
       if (++gameState.score.player1 === 5) {
-        // this.finishGame(roomId, true);
+        this.finishGame(roomId, true);
       }
       this.resetBall(roomId, true);
     } else {
@@ -141,6 +146,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
 
   resetBall(roomId: string, lastScored: boolean): void {
     const gameState = this.getGameState(roomId);
+    if (!gameState) return;
     const angle = Math.random() * Math.PI / 4 - Math.PI / 8;
     const speed = 2;
     const dx = lastScored ? -speed * Math.cos(angle) : speed * Math.cos(angle);
@@ -167,8 +173,8 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     this.gameStates.delete(roomId);
   }
 
-  async finishGame(roomId: string, winner: boolean): Promise<void> {
-    const gameState = this.getGameState(roomId);
+  finishGame(roomId: string, winner: boolean): void {
+/*     const gameState = this.getGameState(roomId);
     const gameHistory = new GameHistory();
     gameHistory.player1Score = gameState.score.player1;
     gameHistory.player2Score = gameState.score.player2;
@@ -188,7 +194,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   
     const lastSavedGame = lastSavedGames[0];
   
-    console.log('Saved game from database:', lastSavedGame);
+    console.log('Saved game from database:', lastSavedGame); */
     this.gateway.gameOver(roomId, winner);
   }
 }

@@ -192,13 +192,15 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       { userId: player1.userId, position: true, client: player1.client },
       { userId: player2.userId, position: false, client: player2.client },
     ]);
-  
+
     [player1, player2].forEach((player, index) => {
       player.client.join(roomId);
       player.client.roomId = roomId;
       player.client.position = index === 0;
       player.client.emit('startGame', index + 1);
     });
+
+    this.gameService.setGameSate(roomId, false);
   }
 
   @SubscribeMessage('leaveQueue')
@@ -278,7 +280,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.rooms.set(roomId, [
       { userId: client.authUser.id, position: true, client }
     ]);
-    this.gameService.getGameState(roomId).bot = true;
+    this.gameService.setGameSate(roomId, true);
     client.join(roomId);
     client.roomId = roomId;
     client.position = true;
