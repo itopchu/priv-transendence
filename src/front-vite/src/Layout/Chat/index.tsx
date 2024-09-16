@@ -19,7 +19,7 @@ export const Chat: React.FC = () => {
     return (true);
   }
 
-  function GetChatRooms(): ChatRoom[] {
+  function GetChatRooms(): Chat[] {
 
   }
 

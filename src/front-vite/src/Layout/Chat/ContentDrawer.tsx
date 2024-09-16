@@ -1,15 +1,16 @@
 import React from 'react';
-import { ChatStatus, ChatRoom } from './InterfaceChat';
-import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography } from '@mui/material';
+import { ChatStatus, Chat } from './InterfaceChat';
+import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography, Avatar } from '@mui/material';
 import { darken, alpha, useTheme } from '@mui/material/styles';
 import { Add as AddIcon, Settings as SettingsIcon, Logout as LogoutIcon } from '@mui/icons-material';
 import { useChat } from '../../Providers/ChatContext/Chat';
+import { getUsername } from '../../Pages/Channels/utils';
 
 const ContentDrawer = () => {
   const theme = useTheme();
 	const { chatProps, changeChatProps } = useChat();
 
-  const toggleChatStatus = (status: ChatStatus, selection: ChatRoom | null) => {
+  const toggleChatStatus = (status: ChatStatus, selection: Chat | undefined) => {
 		changeChatProps({ chatStatus: status, selected: selection });
   };
 
@@ -61,8 +62,8 @@ const ContentDrawer = () => {
       <Box sx={{ height: '0', color: 'transparent', bgcolor: 'transparent' }}>
         <Divider orientation="horizontal" />
       </Box>
-      {chatProps.chatRooms.map((chatRoom, index) => (
-        <Stack key={index} direction={'row'} onClick={() => toggleChatStatus(ChatStatus.Chatbox, chatRoom)}
+      {chatProps.chats.map((chat, index) => (
+        <Stack key={index} direction={'row'} onClick={() => toggleChatStatus(ChatStatus.Chatbox, chat)}
           sx={{
             cursor: 'pointer',
             justifyContent: 'space-between',
@@ -70,10 +71,10 @@ const ContentDrawer = () => {
             alignItems: 'center',
           }}
         >
-					{chatRoom.icon}
+					<Avatar src={chat.user?.image} />
           <Stack direction={'row'} flexGrow={1} justifyContent={'space-evenly'}>
             <Typography sx={{ '&:hover': { color: theme.palette.secondary.dark } }}>
-              {chatRoom.name}
+              {getUsername(chat.user)}
             </Typography>
           </Stack>
         </Stack>
@@ -82,8 +83,8 @@ const ContentDrawer = () => {
   );
 
   const handleClose = () => {
-    if (chatProps.selected == null)
-      toggleChatStatus(ChatStatus.Bubble, null);
+    if (chatProps.selected == undefined)
+			changeChatProps({ chatStatus: ChatStatus.Bubble });
   }
 
   return (

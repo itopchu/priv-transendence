@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { UserPublic, useUser } from '../../Providers/UserContext/User';
-import { Avatar, Stack, Typography, useTheme, Grid, IconButton } from '@mui/material';
+import { Avatar, Stack, Typography, useTheme, Grid, IconButton, Popover } from '@mui/material';
 import {
   AccountCircle as AccountCircleIcon,
   CheckCircle as ApproveIcon,
@@ -18,6 +18,7 @@ import { useMediaQuery } from '@mui/material';
 import axios from 'axios';
 import { useChat } from '../../Providers/ChatContext/Chat';
 import { ChatStatus } from '../../Layout/Chat/InterfaceChat';
+import { handleError } from '../Channels/utils';
 
 interface VisitedInfoProps {
   visitedUser: UserPublic | undefined;
@@ -48,7 +49,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
   const { user } = useUser();
-	const { changeChatProps } = useChat();
+	const { chatProps, changeChatProps } = useChat();
 
   useEffect(() => {
     const getFriendshipAttitude = async () => {
@@ -189,8 +190,33 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
     console.log('game invite');
   }
 
-  function handleChatInvite() {
-    changeChatProps({ chatStatus: ChatStatus.Chatbox });
+  async function handleChatInvite() {
+		if (!visitedUser?.id || !chatProps.chats) return;
+
+		console.log(chatProps.chats);
+		const chat = chatProps.chats.find((chat) => chat.user.id === visitedUser.id);
+		if (chat) {
+			changeChatProps({
+				selected: chat,
+				chatStatus: ChatStatus.Chatbox,
+			});
+			return;
+		}
+
+		try {
+			const response = await axios.post(`${BACKEND_URL}/chat/${visitedUser?.id}`, null, { withCredentials: true});
+			console.log(response);
+			const newChat = response.data.chat;
+			if (newChat) {
+				changeChatProps({
+					chats: [newChat],
+					selected: newChat,
+					chatStatus: ChatStatus.Chatbox,
+				});
+			}
+		} catch (error) {
+			handleError('Could not create chat:', error);
+		}
   }
 
   let imagePart = () => {

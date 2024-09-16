@@ -3,10 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { ChannelService } from './channel/channel.service';
 import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
-import { ParseIntPipe, UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ChannelPublicDTO, MessagePublicDTO } from '../dto/channel.dto';
+import { ChannelPublicDTO, ChatClientDTO, MessagePublicDTO } from '../dto/channel.dto';
 import { MemberService } from './channel/member.service';
+import { Chat } from 'src/entities/channel.entity';
+import { ChatService } from './chat.service';
 
 export enum UpdateType {
 	deleted = 'deleted',
@@ -19,6 +21,7 @@ export class ChatGateway {
 				private readonly configService: ConfigService,
 				private readonly channelService: ChannelService,
 				private readonly memberService: MemberService,
+				private readonly chatService: ChatService,
 			   ) { }
 
 	@WebSocketServer()
@@ -148,47 +151,55 @@ export class ChatGateway {
 		}
 	}
 
-	getUserSocketInRoom(userId: number, room: string): UserSocket | null {
-		const roomSockets = this.server.sockets.adapter.rooms.get(room);
-		if (!roomSockets) return (null);
-
-		for (const socketId of roomSockets) {
-			const socket: UserSocket = this.server.sockets.sockets.get(socketId);
-			if (socket && socket.authUser.id === userId) {
-				return (socket)
-			}
-		}
-		return (null);
-	}
-
   @SubscribeMessage('sendDirectMessage')
-  async directMMessage(client: UserSocket, payload: { recipientId: number, content: string }) {
+  async directMessage(client: UserSocket, payload: { chatId: number, content: string }) {
     const user = client.authUser;
     if (!user) {
       throw new UnauthorizedException('Unauthorized: User not found');
     }
 
-	  try {
-		  const recipient = await this.userService.getUserByIdWithRel(payload.recipientId, ['blockedUsers'])
-			if (!recipient) {
-				throw new Error('Recipient not found');
-			}
+	try {
+		const chat = await this.chatService.getChatById(payload.chatId, ['users', 'users.blockedUsers']);
+		if (!chat) {
+			throw new NotFoundException('Chat not found');
+		}
 
-			const isBlocked = recipient.blockedUsers.some((blockedUser) => blockedUser.id === user.id);
-			if (isBlocked) {
-				throw new UnauthorizedException('Unauthorized: User is blocked');
-			}
+		const recipient = chat.users.find((chatUser) => chatUser.id !== user.id);
+		if (!recipient) {
+			//throw new NotFoundException('Recipient not found');
+		}
 
-			const recipientSocket = this.connectedUsers.get(recipient.id);
-			if (recipientSocket) {
-				recipientSocket.emit('directMessage')
-			}
-			client.emit('messageSent');
-	  } catch(error) {
-			console.log(error);
-			client.emit('directMessageError', error.message);
-	  }
+		const isBlocked = recipient?.blockedUsers?.some((blockedUser) => blockedUser.id === user.id);
+		if (isBlocked) {
+			throw new UnauthorizedException('Unauthorized: User is blocked');
+		}
+
+		const message = await this.chatService.logMessage(chat.id, user, payload.content);
+		const publicMessage = new MessagePublicDTO(message);
+		const messageData = {
+			chatId: chat.id,
+			message: publicMessage,
+		}
+		const recipientSocket = false; //this.connectedUsers.get(recipient.id);
+		if (recipientSocket) {
+			//recipientSocket.emit('directMessage');
+		}
+		client.emit('directMessage', messageData);
+		//client.emit('messageSent', message.timestamp);
+	} catch(error) {
+		console.log(error);
+		client.emit('directMessageError', error.message);
+	}
   }
+
+	emitNewChat(chat: Chat) {
+		const recipient = chat.users[1];
+		const recipientSocket = this.connectedUsers.get(recipient.id);
+
+		if (recipientSocket) {
+			recipientSocket .emit('newChat', new ChatClientDTO(chat, recipient.id));
+		}
+	}
 
 	emitChannelUpdate(channelId: number) {
 		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, channelId);

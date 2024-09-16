@@ -1,15 +1,39 @@
-import React from 'react';
-import { ChatProps, ChatStatus, ChatRoom } from './InterfaceChat';
+import { ChatProps, ChatStatus, Chat } from './InterfaceChat';
 import { Box, Stack, IconButton, InputBase, Button, ListItemText, Avatar, Typography } from '@mui/material';
 // import { useTheme } from '@emotion/react';
-import { Chat as ChatIcon, Settings as SettingsIcon, Send as SendIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import {
+	Send as SendIcon,
+	Cancel as CancelIcon,
+	KeyboardBackspace as BackIcon,
+} from '@mui/icons-material';
+import { ButtonAvatar, ClickTypography } from '../../Pages/Channels/Components/Components';
 import { useNavigate } from 'react-router-dom';
+import { useRef } from 'react';
+import { useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
+import { getUsername, trimMessage } from '../../Pages/Channels/utils';
+import { formatDate } from '../../Pages/Channels/chatBox';
 
 const ContentChat = () => {
 	const { chatProps, changeChatProps } = useChat();
+	const { userSocket } = useUser();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const toggleChatStatus = (status: ChatStatus, selection: ChatRoom | null) => {
+	const onSend = () => {
+		if (!inputRef.current) return;
+
+    const cleanMessage = trimMessage(inputRef.current.value);
+    if (cleanMessage.length) {
+      const payload = {
+        chatId: chatProps.selected?.id,
+        content: cleanMessage,
+      };
+      userSocket?.emit('sendDirectMessage', payload);
+    }
+		inputRef.current.value = '';
+	}
+
+  const toggleChatStatus = (status: ChatStatus, selection: Chat | undefined) => {
     changeChatProps({ chatStatus: status, selected: selection });
   };
   // const theme = useTheme();
@@ -34,6 +58,7 @@ const ContentChat = () => {
       <Stack direction={'column'} sx={{ flexGrow: 1, maxHeight: '100%' }}>
         <Stack
           direction={'row'}
+					spacing={1.4}
           sx={{
             position: 'sticky',
             top: 0,
@@ -41,27 +66,56 @@ const ContentChat = () => {
             borderTopLeftRadius: '1em',
             borderTopRightRadius: '1em',
             color: (theme) => theme.palette.secondary.main,
-            justifyContent: 'space-between',
+            justifyContent: 'flex-start',
             alignItems: 'center',
-            paddingX: '0.9em',
+            paddingX: '0.5em',
             paddingY: '0.1em',
             bgcolor: (theme) => theme.palette.background.default,
             height: '48px',
           }}
         >
-					{chatProps.selected?.icon || <ChatIcon />}
-					<Typography>{chatProps.selected?.name || 'Chat Name'}</Typography>
-					<IconButton onClick={() => { toggleChatStatus(ChatStatus.Bubble, null) }} sx={{
-						color: (theme) => theme.palette.secondary.main,
-						'&:hover': {
-							color: (theme) => theme.palette.error.main,
-						},
-					}}>
+					<IconButton
+						onClick={() => {
+							toggleChatStatus(ChatStatus.Drawer, undefined)
+						}}
+						sx={{
+							width: '40px',
+							height: '40px',
+							color: (theme) => theme.palette.secondary.main,
+						}}
+					>
+						<BackIcon sx={{ fontSize: '120%' }} />
+					</IconButton>
+					<ButtonAvatar
+						clickEvent={() => (navigate(`/profile/${chatProps.selected?.user.id}`))}
+						src={chatProps.selected?.user?.image}
+					/>
+					<ClickTypography
+						onClick={() => (navigate(`/profile/${chatProps.selected?.user.id}`))}
+						sx={{
+							overflow: 'hidden',
+							textOverflow: 'ellipsis'
+							}}
+					>
+						{getUsername(chatProps.selected?.user)}
+					</ClickTypography>
+					<Box flexGrow={1} />
+					<IconButton
+						onClick={() => { toggleChatStatus(ChatStatus.Bubble, undefined) }}
+						sx={{
+							marginLeft: 'auto',
+							color: (theme) => theme.palette.secondary.main,
+							'&:hover': {
+								color: (theme) => theme.palette.error.main,
+							},
+						}}
+					>
 						<CancelIcon />
 					</IconButton>
         </Stack>
         <Stack direction={'column'} sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '50vh' }}>
           <Stack
+						flexGrow={1}
             direction="column"
             padding="0.5em"
             spacing={1}
@@ -80,41 +134,45 @@ const ContentChat = () => {
               },
             }}
           >
-            {chatProps.selected?.messages.map((message, idx) => (
-              <Stack direction="row" spacing={1} key={idx}>
-                <Stack onClick={()=> (navigate(`/profile/${message.user}`))}>
-                  <Avatar  sx={{cursor: 'pointer'}} >
-                    {message.userPP}
-                  </Avatar>
-                </Stack>
-                <Stack
-                  direction="column"
-                  spacing={0.5}
-                  padding="0.5em"
-                  bgcolor={(theme) => theme.palette.primary.main}
-                  borderRadius="0.3em"
-                  sx={{ width: '70%' }}
-                >
-                  <Stack spacing={-.1} direction="column" sx={{ wordWrap: 'break-word'}}>
-                    <Typography
-                        sx={{ wordWrap: 'break-word' }}
-                    >
-                      {message.message}
-										</Typography>
-                    <Typography
-											color={'gray'}
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        fontSize: '0.5rem',
-                      }}
-                    >
-                      {message.timestamp}
-                    </Typography>
-                  </Stack>
-                </Stack>
-              </Stack>
-            ))}
+            {chatProps?.messages?.length !== 0 && chatProps.messages.map((message, idx) => {
+							const timestamp = formatDate(message.timestamp);
+
+							return (
+								<Stack direction="row" spacing={1} key={idx}>
+								<ButtonAvatar
+									avatarSx={{ border: '0px' }}
+									clickEvent={() => (navigate(`/profile/${message.author.id}`))}
+									src={message.author?.image}
+								/>
+									<Stack
+										direction="column"
+										spacing={0.5}
+										padding="0.5em"
+										bgcolor={(theme) => theme.palette.primary.main}
+										borderRadius="0.3em"
+										sx={{ width: '70%' }}
+									>
+										<Stack spacing={-.1} direction="column" sx={{ wordWrap: 'break-word'}}>
+											<Typography
+													sx={{ wordWrap: 'break-word' }}
+											>
+												{message.content}
+											</Typography>
+											<Typography
+												color={'gray'}
+												sx={{
+													display: 'flex',
+													justifyContent: 'flex-end',
+													fontSize: '0.5rem',
+												}}
+											>
+												{timestamp.time}
+											</Typography>
+										</Stack>
+									</Stack>
+								</Stack>
+							);
+            })}
           </Stack>
         </Stack>
         <Stack
@@ -134,6 +192,7 @@ const ContentChat = () => {
           }}
         >
           <InputBase
+						inputRef={inputRef}
             sx={{
               flexGrow: 1,
               color: (theme) => theme.palette.secondary.main,
@@ -150,11 +209,18 @@ const ContentChat = () => {
                 boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.light}`,
               },
             }}
-            placeholder='Type a message...'
+						onKeyDown={(event) => {
+							if (event.key === 'Enter' && !event.shiftKey) {
+								event.preventDefault();
+								onSend();
+							}
+						}}
+            placeholder={inputRef.current?.value?.length ? undefined : 'Type a message...'}
           />
           <Button
             variant="contained"
             color="secondary"
+						onClick={onSend}
             sx={{
               marginLeft: '0.5em',
               borderRadius: '0.8em',

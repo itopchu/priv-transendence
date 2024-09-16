@@ -188,7 +188,7 @@ export class ChatClientDTO {
 	constructor(chat: Chat, userId: number) {
 		this.id = chat.id;
 
-		const otherUser = chat.users[0].id === userId ? chat.users[1] : chat.users[0];
+		const otherUser = chat.users[0] //chat.users[0].id === userId ? chat.users[1] : chat.users[0];
 		this.user = new UserPublicDTO(otherUser, null);
 		this.log = [];
 

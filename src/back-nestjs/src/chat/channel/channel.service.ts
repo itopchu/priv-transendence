@@ -364,6 +364,10 @@ export class ChannelService {
 	}
 
 	async logMessage(channelId: number, author: User, message: string): Promise<Message> {
+		if (!message?.length) {
+			throw new BadRequestException('Empty message');
+		}
+
 		const channel = await this.getChannelById(channelId, ['members', 'members.user']);
 		if (!channel)
 			throw new NotFoundException('Channel not found');

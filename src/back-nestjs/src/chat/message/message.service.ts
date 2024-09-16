@@ -29,12 +29,13 @@ export class MessageService {
 		if (chat instanceof Channel) {
 			newMessage.channel = chat;
 			newMessage.chat = null;
+			console.log(`${author.nameFirst} said "${message}" and has been logged in channel`);
 		} else {
 			newMessage.chat = chat;
 			newMessage.channel = null;
+			console.log(`${author.nameFirst} said "${message}" and has been logged in direct message`);
 		}
 
-		console.log(`${author.nameFirst} said "${message}" and has been logged`);
 		try  {
 			return (await this.messageRespitory.save(newMessage));
 		} catch (error) {

@@ -1,14 +1,16 @@
-import { Controller, Get, NotFoundException, Param, ParseIntPipe, Post, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { BadRequestException, Controller, Get, NotFoundException, Param, ParseIntPipe, Post, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { Request } from "express";
 import { AuthGuard } from '../auth/auth.guard';
 import { ChatService } from "./chat.service";
 import { ChatClientDTO, MessagePublicDTO } from "../dto/channel.dto";
 import { UserService } from "../user/user.service";
+import { ChatGateway } from "./chat.gateway";
 
 @Controller('chat')
 export class ChatController {
 	constructor(
 		private readonly chatService: ChatService,
+		private readonly chatGateway: ChatGateway,
 		private readonly userService: UserService,
 	) {}
 
@@ -38,7 +40,7 @@ export class ChatController {
 
 		const chats = await this.chatService.getUserChats(user);
 		const clientChats = chats.map(chat => new ChatClientDTO(chat, user.id));
-		return (clientChats);
+		return ({ chats: clientChats });
 	}
 
 	@Post(':id')
@@ -46,9 +48,21 @@ export class ChatController {
 	async createChat(@Req() req: Request, @Param('id', ParseIntPipe) recipientId: number) {
 		const user = req.authUser;
 
+		if (user.id === recipientId) {
+			throw new BadRequestException('User dming themselves, try making some friends maybe?');
+		}
+
 		const recipient = await this.userService.getUserByIdWithRel(recipientId, ['blockedUsers']);
 		if (!recipient) {
 			throw new NotFoundException('Recipient not found');
+		}
+
+		const userChats = await this.chatService.getUserChats(user);
+		for (const chat of userChats ?? []) {
+			const alreadyExists = chat.users.find((chatUser) => chatUser.id === recipientId);
+			if (alreadyExists) {
+				return (alreadyExists);
+			}
 		}
 
 		const isBlocked = recipient.blockedUsers.some((blockedUser) => blockedUser.id === user.id);
@@ -56,6 +70,8 @@ export class ChatController {
 			throw new UnauthorizedException('Unauthorized: User is block');
 		}
 
-		await this.chatService.createChat(user, recipient);
+		const newChat = await this.chatService.createChat(user, recipient);
+		this.chatGateway.emitNewChat(newChat);
+		return ({ chat: new ChatClientDTO(newChat, user.id) });
 	}
 }

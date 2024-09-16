@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Chat, Message } from "../entities/channel.entity";
 import { User } from "../entities/user.entity";
@@ -43,12 +43,12 @@ export class ChatService {
 
 	async createChat(user: User, recipient: User) {
 		const newChat = this.chatRepository.create({
-			status: 0,
+			status: 0, //change later?
 			users: [user, recipient],
 		});
 
 		try {
-			await this.chatRepository.save(newChat);
+			return (await this.chatRepository.save(newChat));
 		} catch (error) {
 			console.error(error.message);
 			throw new InternalServerErrorException(`Could not create a new chat: ${error.message}`);
@@ -56,6 +56,10 @@ export class ChatService {
 	}
 
 	async logMessage(chatId: number, author: User, message: string): Promise<Message> {
+		if (!message?.length) {
+			throw new BadRequestException('Empty message');
+		}
+
 		const chat = await this.getChatById(chatId, ['users', 'users.blockedUsers']);
 		if (!chat) {
 			throw new NotFoundException('Chat not found');
@@ -66,7 +70,7 @@ export class ChatService {
 			throw new UnauthorizedException('Unauthorized: Author is not in chat');
 		}
 		const recipient = chat.users.find((user) =>  user.id !== author.id);
-		const isBlocked = recipient.blockedUsers.some((user) => user.id === author.id);
+		const isBlocked = recipient?.blockedUsers?.some((user) => user.id === author.id);
 		if (isBlocked) {
 			throw new UnauthorizedException('Unauthorized: Author is blocked');
 		}

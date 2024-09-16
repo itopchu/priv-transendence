@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, PrimaryColumn, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate, ManyToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, PrimaryColumn, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate, ManyToMany, JoinTable } from 'typeorm';
 import { IsAscii, Length, validateOrReject, IsOptional, IsEmail, IsInt, IsEnum } from 'class-validator';
 import { ChannelMember, Chat } from './channel.entity';
 @Entity()
@@ -51,6 +51,7 @@ export class User {
   @OneToMany(() => Friendship, friendship => friendship.user2)
   friendships2: Friendship[];
 
+  @JoinTable()
   @ManyToMany(() => User)
   blockedUsers: User[];
 

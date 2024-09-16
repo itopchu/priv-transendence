@@ -10,31 +10,30 @@ import {
   CircularProgress,
 } from '@mui/material';
 import {
-  Message,
   SendRounded as SendIcon,
   CancelScheduleSendRounded as MutedIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
-import { User, useUser } from '../../Providers/UserContext/User';
+import { useUser } from '../../Providers/UserContext/User';
 import { Channel } from '../../Providers/ChannelContext/Channel';
-import axios from 'axios';
 import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
 import { LoadingBox } from './Components/CardComponents';
-import { BACKEND_URL, getUsername, handleError, retryOperation } from './utils';
+import { BACKEND_URL, getUsername, handleError, retryOperation, trimMessage } from './utils';
+import { Message } from '../../Layout/Chat/InterfaceChat';
+import axios from 'axios';
 
 type formatDateType = { date: string; time: string };
 
-const formatDate = (timestamp: Date): formatDateType => {
+export const formatDate = (timestamp: Date): formatDateType => {
   const now: Date = new Date();
   const date: Date = new Date(timestamp);
-  let formattedDate: string;
 
   const formattedTime = date.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
-  formattedDate = date.toLocaleDateString('en-UK', {
+  let formattedDate = date.toLocaleDateString('en-UK', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -101,13 +100,6 @@ interface ChatBoxType {
   channel: Channel;
 }
 
-type Message = {
-  id: number;
-  content: string;
-  author: User;
-  timestamp: Date;
-};
-
 const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 	if (!channel) return (lonelyBox());
 
@@ -160,7 +152,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
     return () => {
       userSocket?.off(`channel#${channel.id}Message`, onMessage);
     };
-  }, [channel.id]);
+  }, [channel.id, userSocket]);
 
   useEffect(() => {
     const element = messagesEndRef.current;
@@ -171,22 +163,17 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   }, [messageLog]);
 
   const onSend = () => {
-    const cleanMessage = inputRef.current?.value
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .join('\n');
+    if (!inputRef.current) return;
 
-    if (cleanMessage) {
+    const cleanMessage = trimMessage(inputRef.current.value);
+    if (cleanMessage.length) {
       const payload = {
         message: cleanMessage,
         channelId: channel.id,
       };
       userSocket?.emit('message', payload);
     }
-    if (inputRef.current) {
-      inputRef.current.value = '';
-    }
+		inputRef.current.value = '';
   };
 
   const generateMessages = () => {

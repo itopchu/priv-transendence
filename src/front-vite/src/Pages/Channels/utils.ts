@@ -21,8 +21,22 @@ export function validateFile(file: File): boolean {
   return true;
 };
 
-export function getUsername(user: User): string {
-  return user.nameNick || `${user.nameFirst} ${user.nameLast}`;
+export function trimMessage(message: string | undefined): string {
+	if (!message) return ("");
+
+	const trimmedMessage = message
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0)
+		.join('\n');
+
+	return (trimmedMessage);
+}
+
+export function getUsername(user: User | undefined): string {
+	if (!user) return ('Unknown');
+
+  return (user.nameNick || `${user.nameFirst} ${user.nameLast}`);
 };
 
 export const handleError = (message: string, error: any) => {

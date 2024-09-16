@@ -1,5 +1,6 @@
 import React from 'react';
 import Typography from '@mui/material';
+import { User } from '../../Providers/UserContext/User';
 
 export enum ChatStatus {
     Bubble = 'bubble',
@@ -7,6 +8,15 @@ export enum ChatStatus {
     Chatbox = 'chatbox',
     Settings = 'settings',
 }
+
+
+export type Message = {
+  id: number;
+  content: string;
+  author: User;
+  timestamp: Date;
+  sent?: boolean;
+};
 
 export interface ChatMessage {
   message: React.ReactElement<typeof Typography>;
@@ -37,16 +47,16 @@ export interface ChatSettings {
   owner: string;
 }
 
-export interface ChatRoom {
-  name: string;
-  icon: React.ReactElement;
-  messages: ChatMessage[];
-  settings: ChatSettings;
+export interface Chat {
+  id: number;
+  user: User;
+  unreadMsgCount: number;
 }
 
 export interface ChatProps {
-  chatRooms: ChatRoom[];
+  chats: Chat[];
   chatStatus: ChatStatus;
-  selected: ChatRoom | null;
-  searchPrompt: string | null;
+  selected: Chat | undefined;
+  messages: Message[];
+  searchPrompt: string | undefined;
 }
