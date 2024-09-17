@@ -1,9 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
-import { GameHistory } from '../entities/game.history.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../entities/user.entity';
 
 interface Player {
   y: number;
@@ -30,10 +26,6 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(forwardRef(() => UserGateway))
     private readonly gateway: UserGateway,
-    @InjectRepository(GameHistory)
-    private readonly gameHistoryRepository: Repository<GameHistory>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
   private gameStates: Map<string, GameState> = new Map(); // roomId -> gameState
   private intervalIds: Map<string, NodeJS.Timeout> = new Map(); // roomId -> intervalId
@@ -131,28 +123,26 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
 
     if (x <= 0) {
       if (++gameState.score.player2 === 5) {
-        this.finishGame(roomId, false);
+        this.gateway.gameOver(roomId, false);
       }
-      this.resetBall(roomId, false);
+      this.resetBall(gameState, false);
     } else if (x >= this.containerWidth - 20) {
       if (++gameState.score.player1 === 5) {
-        this.finishGame(roomId, true);
+        this.gateway.gameOver(roomId, true);
       }
-      this.resetBall(roomId, true);
+      this.resetBall(gameState, true);
     } else {
       gameState.ball = { x, y, dx, dy };
     }
   }
 
-  resetBall(roomId: string, lastScored: boolean): void {
-    const gameState = this.getGameState(roomId);
-    if (!gameState) return;
+  resetBall(game: GameState, lastScored: boolean): void {
     const angle = Math.random() * Math.PI / 4 - Math.PI / 8;
     const speed = 2;
     const dx = lastScored ? -speed * Math.cos(angle) : speed * Math.cos(angle);
     const dy = speed * Math.sin(angle);
 
-    gameState.ball = {
+    game.ball = {
       x: this.containerWidth / 2,
       y: this.containerHeight / 2,
       dx,
@@ -171,30 +161,5 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     console.log('Game deleted:', roomId);
     this.pauseGame(roomId);
     this.gameStates.delete(roomId);
-  }
-
-  finishGame(roomId: string, winner: boolean): void {
-/*     const gameState = this.getGameState(roomId);
-    const gameHistory = new GameHistory();
-    gameHistory.player1Score = gameState.score.player1;
-    gameHistory.player2Score = gameState.score.player2;
-    gameHistory.winner = winner;
-    gameHistory.players = [
-      await this.userRepository.findOne({ where: { id: 1 } }),
-      await this.userRepository.findOne({ where: { id: 2 } })
-    ];
-    await this.gameHistoryRepository.save(gameHistory);
-  
-    // En son kaydedilen oyunu al
-    const lastSavedGames = await this.gameHistoryRepository.find({
-      order: { id: 'DESC' },
-      take: 1,
-      relations: ['players'],
-    });
-  
-    const lastSavedGame = lastSavedGames[0];
-  
-    console.log('Saved game from database:', lastSavedGame); */
-    this.gateway.gameOver(roomId, winner);
   }
 }
