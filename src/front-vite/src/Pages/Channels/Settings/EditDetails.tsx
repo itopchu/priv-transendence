@@ -1,80 +1,38 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { UserCards } from './userCard';
 import {
   Box,
-  Divider,
   Stack,
-  styled,
-  Typography,
-  IconButton,
   Button,
   TextField,
   ButtonGroup,
+  IconButton,
 } from '@mui/material';
 import {
-  ChannelMember,
   ChannelRole,
   ChannelType,
   ChannelTypeValues,
 } from '../../../Providers/ChannelContext/Channel';
 import {
-  ModeEdit as EditIcon,
   EditOff as EditOffIcon,
   Check as ApplyEditIcon,
 } from '@mui/icons-material';
 import {
-  CustomAvatar,
   AvatarUploadIcon,
   ImageInput,
   UploadAvatar,
-  CustomScrollBox,
   DescriptionBox,
   lonelyBox,
 } from '../Components/Components';
-import { ChannelProps } from '..';
-import { BACKEND_URL, getUsername, handleError, validateFile } from '../utils';
+import { ChannelStates } from '..';
+import { BACKEND_URL, getUsername, handleError, onFileUpload } from '../utils';
+import { SettingsContainer, SettingsDivider, SettingsTextField } from '../Components/SettingsComponents';
+import { ChannelDataType, SettingsBoxType } from './Types';
+import { MemberCards } from './MemberCards';
+import { SettingsUserCardBox } from '../Components/SettingsComponents';
+import { BannedUserCards } from './BannedUserCards';
 
-type ChannelDataType = {
-  image: File | undefined;
-  type: ChannelType | undefined;
-};
-
-const SettingsTextField = styled(TextField)(() => ({
-  '& .MuiInputBase-input': {
-    padding: '0px 4px',
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
-    lineheight: 1.334,
-    letterspacing: '0em',
-  },
-}));
-
-const SettingsContainer = styled(CustomScrollBox)(({ theme }) => ({
-  position: 'relative',
-  height: '80vh',
-  backgroundColor: theme.palette.primary.light,
-  display: 'flex',
-  flexDirection: 'column',
-  padding: theme.spacing(2),
-}));
-
-const SettingsDivider = styled(Divider)(() => ({
-  width: '70%',
-  '&::before, &::after': {
-    borderWidth: '3px',
-    borderRadius: '1em',
-  },
-  fontSize: '1.3em',
-  fontWeight: 'bold',
-}));
-
-interface SettingsBoxType {
-  membership: ChannelMember | undefined;
-  changeProps: (newProps: Partial<ChannelProps>) => void;
-}
-
-export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps }) => {
+export const EditDetails: React.FC<SettingsBoxType> = ({ membership, channelProps, changeProps }) => {
 	if (!membership) return (lonelyBox());
 
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -82,6 +40,8 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps
   const nameRef = useRef<HTMLInputElement>(null);
 
   const channel = membership.channel;
+	const bannedUsers = (channel?.bannedUsers ?? [])
+    .sort((a, b) => getUsername(a).localeCompare(getUsername(b)))
   const members = channel.members
     .sort((a, b) => getUsername(a).localeCompare(getUsername(b)))
     .sort((a, b) => a.role - b.role);
@@ -93,27 +53,26 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps
   };
 
   const isAdmin = membership.role === ChannelRole.admin;
-  const isMod = membership.role < ChannelRole.member;
 
-  const [editMode, setEditMode] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState(initialAvatarSrc);
   const [channelData, setChannelData] = useState(initialChannelData);
 
+  const disableEditMode = () => {
+    changeProps({ state: ChannelStates.details });
+  };
+
   useEffect(() => {
-    if (editMode) {
-      setEditMode(false);
-    }
     if (channelData !== initialChannelData || avatarSrc !== initialAvatarSrc) {
       reset();
     }
   }, [membership.id, membership.role]);
 
   useEffect(() => {
-    if (!editMode || !nameRef.current || !descriptionRef.current) return;
+    if (!nameRef.current || !descriptionRef.current) return;
 
     nameRef.current.value = channel.name;
     descriptionRef.current.value = channel.description;
-  }, [editMode]);
+  }, []);
 
   const reset = () => {
     setAvatarSrc(initialAvatarSrc);
@@ -152,18 +111,10 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps
       await axios.patch(`${BACKEND_URL}/channel/${channel.id}`, payload, {
         withCredentials: true,
       });
-      setEditMode(!editMode);
-      reset();
+			disableEditMode();
+			reset();
     } catch (error) {
       handleError('Could not apply changes:', error);
-    }
-  };
-
-  const onEditMode = () => {
-    setEditMode(!editMode);
-
-    if (editMode) {
-      reset();
     }
   };
 
@@ -178,30 +129,6 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps
     } catch (error) {
       handleError('Could not delete channel:', error);
     }
-  };
-
-  const onLeave = async () => {
-    if (!confirm(`Are you sure you want to leave ${channel.name}?`)) return;
-
-    try {
-      await axios.delete(`${BACKEND_URL}/channel/leave/${membership.id}`, {
-        withCredentials: true,
-      });
-      changeProps({ selected: undefined, state: undefined });
-    } catch (error) {
-      handleError('Could not leave channel:', error);
-    }
-  };
-
-  const onFileUpload = (file: File) => {
-    if (!validateFile(file)) return;
-
-    changeChannelData({ image: file });
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAvatarSrc(reader?.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const generateButtonGroup = () => (
@@ -238,7 +165,7 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps
           }}
         >
           <AvatarUploadIcon className="hidden-icon" />
-          <ImageInput onFileInput={onFileUpload} />
+          <ImageInput onFileInput={(file: File) => onFileUpload(file, changeChannelData, setAvatarSrc)} />
         </UploadAvatar>
         <Stack spacing={1}>
           <SettingsTextField
@@ -286,42 +213,6 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps
     </>
   );
 
-  const ChannelDetails = () => (
-    <>
-      <Stack
-        direction={'row'}
-        justifyContent={'center'}
-        spacing={3}
-        alignItems={'center'}
-      >
-        <CustomAvatar
-          src={channel.image}
-          sx={{
-            height: '7em',
-            width: '7em',
-          }}
-        />
-
-        <Stack>
-          <Typography variant="h5" fontWeight="bold">
-            {channel.name}
-          </Typography>
-
-          <Typography variant="body1" color={'textSecondary'}>
-            {`${channel.type} • ${members.length}\
-				${members.length > 1 ? 'members' : 'member'}`}
-          </Typography>
-        </Stack>
-      </Stack>
-
-      <DescriptionBox sx={{ width: '65%' }}>
-        <Typography sx={{ wordBreak: 'break-word', whiteSpace: 'pre' }}>
-          {channel.description}
-        </Typography>
-      </DescriptionBox>
-    </>
-  );
-
   return (
     <SettingsContainer>
       <Stack direction={'row'} padding={0}>
@@ -331,64 +222,63 @@ export const SettingsBox: React.FC<SettingsBoxType> = ({ membership, changeProps
           alignItems="center"
           minWidth={'calc(100% - 48px)'}
         >
-          {editMode ? EditChannelDetail() : ChannelDetails()}
+          {EditChannelDetail()}
 
           <SettingsDivider>Members</SettingsDivider>
 
-          <Box
-            sx={{
-              maxHeight: '30em',
-              minWidth: '65%',
-              overflowY: 'auto',
-              '&::-webkit-scrollbar': { width: '0px' },
-            }}
-          >
+          <SettingsUserCardBox>
             <Stack spacing={1}>
-              <UserCards
+              <MemberCards
                 channel={channel}
                 members={members}
-                editMode={editMode}
+                editMode={true}
                 isAdmin={isAdmin}
-                isMod={isMod}
+                isMod={true}
               />
             </Stack>
-          </Box>
+          </SettingsUserCardBox>
 
-          {(!editMode || isAdmin) && (
+          {bannedUsers.length !== 0 && (
+						<>
+							<SettingsDivider>Banned Members</SettingsDivider>
+							<SettingsUserCardBox>
+								<Stack spacing={1}>
+									<BannedUserCards
+										users={bannedUsers}
+										channelId={channel.id}
+									/>
+								</Stack>
+							</SettingsUserCardBox>
+						</>
+					)}
+
+          {isAdmin && (
             <>
               <SettingsDivider>
-                {editMode ? 'Hate this Channel?' : 'Leaving?'}
+                Hate this Channel?
               </SettingsDivider>
 
               <Box sx={{ marginTop: 3, textAlign: 'center' }}>
                 <Button
                   variant="contained"
                   color="error"
-                  onClick={editMode ? onDelete : onLeave}
+                  onClick={onDelete}
                 >
-                  {editMode ? 'Delete Channel' : 'Leave Channel'}
+                  Delete Channel
                 </Button>
               </Box>
             </>
           )}
         </Stack>
 
-        {isMod && (
-          <Box sx={{ alignSelf: 'flex-start' }}>
-            <IconButton onClick={onEditMode}>
-              {editMode ? (
-                <EditOffIcon sx={{ fontSize: '36px' }} />
-              ) : (
-                <EditIcon sx={{ fontSize: '36px' }} />
-              )}
-            </IconButton>
-            {editMode && (
-              <IconButton onClick={onApply}>
-                <ApplyEditIcon sx={{ fontSize: '36px' }} />
-              </IconButton>
-            )}
-          </Box>
-        )}
+				<Box sx={{ alignSelf: 'flex-start' }}>
+					<IconButton onClick={disableEditMode}>
+							<EditOffIcon sx={{ fontSize: '36px' }} />
+					</IconButton>
+					<IconButton onClick={onApply}>
+						<ApplyEditIcon sx={{ fontSize: '36px' }} />
+					</IconButton>
+				</Box>
       </Stack>
     </SettingsContainer>
   );

@@ -44,12 +44,14 @@ export const DescriptionBox = styled(CustomScrollBox)(({ theme }) => ({
   alignItems: 'center',
   textAlign: 'center',
   width: '100%',
-  maxHeight: '6em',
+  maxHeight: '7.5em',
   backgroundColor: theme.palette.primary.main,
   borderRadius: '1em',
-  padding: theme.spacing(2),
-  overflow: 'auto',
+  padding: theme.spacing(1),
+  overflowY: 'auto',
+	overflowX: 'hidden',
   boxShadow: theme.shadows[3],
+	boxSizing: 'border-box',
 }));
 
 export const AvatarUploadIcon = styled(Upload)(({ theme }) => ({

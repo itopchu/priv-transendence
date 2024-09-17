@@ -8,7 +8,6 @@ import {
 import React, { useState } from 'react';
 import {
   Box,
-  Card,
   Divider,
   FormControl,
   IconButton,
@@ -20,10 +19,11 @@ import {
   useTheme,
 } from '@mui/material';
 import { ButtonAvatar, ClickTypography } from '../Components/Components';
-import { MoreVert as UserMenuIcon } from '@mui/icons-material';
-import { useUser } from '../../../Providers/UserContext/User';
+import { MoreVert as MemberMenuIcon } from '@mui/icons-material';
+import { User, useUser } from '../../../Providers/UserContext/User';
 import { useNavigate } from 'react-router-dom';
 import { BACKEND_URL, getUsername, handleError } from '../utils';
+import { BarCard } from '../Components/CardComponents';
 
 type MuteOptionsType = { key: string; value: number | null };
 
@@ -37,7 +37,7 @@ const MuteOptions: MuteOptionsType[] = [
 
 const ModerateOptions: string[] = ['kick', 'ban'];
 
-type UserCardsType = {
+type MemberCardsType = {
   channel: Channel;
   members: ChannelMember[];
   editMode: boolean;
@@ -45,7 +45,54 @@ type UserCardsType = {
   isMod: boolean;
 };
 
-export const UserCards: React.FC<UserCardsType> = ({
+const onChangeRole = async (member: ChannelMember, newRole: ChannelRole) => {
+	const payload = {
+		role: newRole,
+	};
+
+	try {
+		await axios.patch(`${BACKEND_URL}/channel/member/${member.id}`, payload, {
+			withCredentials: true,
+		});
+		member.role = newRole;
+	} catch (error) {
+		handleError('Could not update user role:', error);
+	}
+};
+
+export const onBlock = async (victimId: number, menuCloseFunc: () => void) => {
+	try {
+		await axios.patch(`${BACKEND_URL}/user/block/${victimId}`, { withCredentials: true });
+		menuCloseFunc();
+	} catch (error) {
+		handleError('Could not block/unblock user', error);
+	}
+}
+
+export const onModerate = async (
+	victim: User,
+	option: string,
+	channelId: number,
+	menuCloseFunc: () => void
+) => {
+	const payload = {
+		victimId: victim.id,
+	};
+	try {
+		await axios.patch(
+			`${BACKEND_URL}/channel/${option}/${channelId}`,
+			payload,
+			{
+				withCredentials: true,
+			}
+		);
+		menuCloseFunc();
+	} catch (error) {
+		handleError('Could not kick/ban member:', error);
+	}
+};
+
+export const MemberCards: React.FC<MemberCardsType> = ({
   channel,
   members,
   editMode,
@@ -55,21 +102,6 @@ export const UserCards: React.FC<UserCardsType> = ({
   const theme = useTheme();
   const { user } = useUser();
   const navigate = useNavigate();
-
-  const onChangeRole = async (member: ChannelMember, newRole: ChannelRole) => {
-    const payload = {
-      role: newRole,
-    };
-
-    try {
-      await axios.patch(`${BACKEND_URL}/channel/member/${member.id}`, payload, {
-        withCredentials: true,
-      });
-      member.role = newRole;
-    } catch (error) {
-      handleError('Could not update user role:', error);
-    }
-  };
 
   const onMute = async (member: ChannelMember, duration: number | null, menuCloseFunc: () => void) => {
     const payload = {
@@ -83,33 +115,6 @@ export const UserCards: React.FC<UserCardsType> = ({
 			menuCloseFunc();
     } catch (error) {
       handleError('Could not mute member:', error);
-    }
-  };
-
-  const onBlock = async (victimId: number, menuCloseFunc: () => void) => {
-		try {
-			await axios.patch(`${BACKEND_URL}/user/block/${victimId}`, { withCredentials: true });
-			menuCloseFunc();
-		} catch (error) {
-			handleError('Could not block/unblock user', error);
-		}
-  }
-
-  const onModerate = async (member: ChannelMember, option: string, menuCloseFunc: () => void) => {
-    const payload = {
-      victimId: member.user.id,
-    };
-    try {
-      await axios.patch(
-        `${BACKEND_URL}/channel/${option}/${channel.id}`,
-        payload,
-        {
-          withCredentials: true,
-        }
-      );
-			menuCloseFunc();
-    } catch (error) {
-      handleError('Could not kick/ban member:', error);
     }
   };
 
@@ -130,14 +135,14 @@ export const UserCards: React.FC<UserCardsType> = ({
 			const capitalizedOption = option.charAt(0).toUpperCase() + option.slice(1);
 
 			return (
-					<MenuItem
+				<MenuItem
 					key={index}
-					onClick={() => onModerate(member, option, menuCloseFunc)}
+					onClick={() => onModerate(member.user, option, channel.id, menuCloseFunc)}
 					sx={{ color: 'red' }}
-					>
+				>
 					{`${capitalizedOption} ${getUsername(member.user)}`}
-					</MenuItem>
-					);
+				</MenuItem>
+			);
 		})
 	)
 
@@ -147,9 +152,9 @@ export const UserCards: React.FC<UserCardsType> = ({
         const memberUser = member.user;
         const membername = getUsername(memberUser);
 
-		const isBlocked = user?.blockedUsers?.some(
-		  (blockedUser) => blockedUser.id === member.user.id
-		);
+				const isBlocked = user?.blockedUsers?.some(
+					(blockedUser) => blockedUser.id === member.user.id
+				);
         const isDiffUser = memberUser.id !== user.id;
         const isMemberMuted = channel?.mutedUsers?.some(
           (mutedUser) => mutedUser.userId === member.user.id
@@ -175,17 +180,7 @@ export const UserCards: React.FC<UserCardsType> = ({
         };
 
         return (
-          <Card
-            key={index}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: 2,
-              maxWidth: 600,
-              minWidth: '65%',
-              backgroundColor: theme.palette.primary.main,
-            }}
-          >
+          <BarCard key={index}>
             <ButtonAvatar
               src={memberUser?.image}
               clickEvent={() => {
@@ -279,7 +274,7 @@ export const UserCards: React.FC<UserCardsType> = ({
             {isDiffUser && (
               <Box sx={{ marginLeft: 'auto' }}>
                 <IconButton onClick={onMenuClick}>
-                  <UserMenuIcon />
+                  <MemberMenuIcon />
                 </IconButton>
                 <Menu
                   anchorEl={anchorEl}
@@ -287,14 +282,14 @@ export const UserCards: React.FC<UserCardsType> = ({
                   onClose={onMenuClose}
                 >
                   {isAdmin && [
-                    <MenuItem onClick={() => onModerate(member, 'transfer', onMenuClose)}>
+                    <MenuItem onClick={() => onModerate(memberUser, 'transfer', channel.id, onMenuClose)}>
                       Transfer admin
                     </MenuItem>,
                     <Divider />,
                   ]}
                   <MenuItem onClick={onMenuClose} >{'Add friend'}</MenuItem>
                   <MenuItem onClick={() => onBlock(member.user.id, onMenuClose)} >
-										{`${isBlocked ? 'Block' : 'Unlock'} ${membername}`}
+										{`${isBlocked ? 'Block' : 'Unblock'} ${membername}`}
 									</MenuItem>
                   <Divider />
                   {isMemberMuted ? (
@@ -324,7 +319,7 @@ export const UserCards: React.FC<UserCardsType> = ({
                 </Menu>
               </Box>
             )}
-          </Card>
+          </BarCard>
         );
       })}
     </>

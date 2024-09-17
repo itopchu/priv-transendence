@@ -39,7 +39,22 @@ export function getUsername(user: User | undefined): string {
   return (user.nameNick || `${user.nameFirst} ${user.nameLast}`);
 };
 
-export const handleError = (message: string, error: any) => {
+export function onFileUpload(
+	file: File,
+	changeChannelData: (newData: Partial<any>) => void,
+	setAvatarSrc: (value: React.SetStateAction<string | undefined>) => void)
+{
+	if (!validateFile(file)) return;
+
+	changeChannelData({ image: file });
+	const reader = new FileReader();
+	reader.onloadend = () => {
+		setAvatarSrc(reader?.result as string);
+	};
+	reader.readAsDataURL(file);
+};
+
+export function handleError(message: string, error: any) {
 	if (!error) {
 		alert(message);
 	} else {
@@ -49,7 +64,7 @@ export const handleError = (message: string, error: any) => {
 	}
 }
 
-export const retryOperation = async (operation: () => Promise<any>, retries = 3): Promise<any> => {
+export async function retryOperation (operation: () => Promise<any>, retries = 3): Promise<any> {
 	for (let attempt = 1;; ++attempt) {
 		try {
 			return (await operation());

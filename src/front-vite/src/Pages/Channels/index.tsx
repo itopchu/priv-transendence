@@ -9,8 +9,9 @@ import {
 import { Channel, useChannel } from '../../Providers/ChannelContext/Channel';
 import ChatBox from './chatBox';
 import { JoinCard } from './JoinCard';
-import { SettingsBox } from './Settings/settings';
 import { lonelyBox } from './Components/Components';
+import { ChannelDetails } from './Settings/ChannelDetails';
+import { EditDetails } from './Settings/EditDetails';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
@@ -22,12 +23,13 @@ interface ChannelTypeEvent {
   iconClickEvent: () => void;
 }
 
-const enum ChannelStates {
+export const enum ChannelStates {
 	chat = 'chat',
-	settings = 'settings',
+	details = 'details',
+	editMode = 'editMode',
 }
 
-export type ChannelProps = {
+export type ChannelPropsType = {
 	selected: Channel | undefined,
 	selectedJoin: Channel | undefined,
 	state: ChannelStates | undefined,
@@ -42,10 +44,10 @@ const initialProps = {
 const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const [channelProps, setChannelProps] = useState<ChannelProps>(initialProps);
+  const [channelProps, setChannelProps] = useState<ChannelPropsType>(initialProps);
   const { memberships, publicChannels } = useChannel();
 
-  const changeProps = (newProps: Partial<ChannelProps>) => {
+  const changeProps = (newProps: Partial<ChannelPropsType>) => {
 	  setChannelProps((prev) => ({
 		  ...prev,
 		  ...newProps,
@@ -68,9 +70,9 @@ const ChannelsPage: React.FC = () => {
           width: '100%',
           cursor: 'pointer',
           transition: 'padding-left ease-in-out 0.3s, padding-right ease-in-out 0.3s, border-radius ease-in-out 0.3s, background-color ease-in-out 0.3s',
-		  paddingLeft: isSelected ? '1em' : '0.5em',
-		  paddingRight: isSelected ? '0.02em' : '0em',
-		  borderRadius: isSelected ? '1.9em' : '0em',
+					paddingLeft: isSelected ? '1em' : '0.5em',
+					paddingRight: isSelected ? '0.02em' : '0em',
+					borderRadius: isSelected ? '1.9em' : '0em',
           '&:hover': {
             bgcolor: theme.palette.primary.dark,
             borderRadius: '2em',
@@ -142,7 +144,7 @@ const ChannelsPage: React.FC = () => {
 							isSelected={channel.id === channelProps?.selected?.id}
 							channelImage={channel?.image}
 							clickEvent={() => changeProps({ selected: channel, state: ChannelStates.chat })}
-							iconClickEvent={() =>  changeProps({ selected: channel, state: ChannelStates.settings })}
+							iconClickEvent={() =>  changeProps({ selected: channel, state: ChannelStates.details })}
 						/>
 					);
 				})}
@@ -180,15 +182,24 @@ const ChannelsPage: React.FC = () => {
   };
 
 	const renderChannelState = () => {
-		if (!channelProps.selected) { console.log('necicsoory?'); return (lonelyBox()); }
+		if (!channelProps.selected) return (lonelyBox());
 
 		switch (channelProps.state) {
 			case ChannelStates.chat:
 				return (<ChatBox channel={channelProps.selected} />);
-			case ChannelStates.settings:
+			case ChannelStates.details:
 				return (
-					<SettingsBox
+					<ChannelDetails
 						membership={memberships.find(membership => membership.channel.id === channelProps?.selected?.id)}
+						channelProps={channelProps}
+						changeProps={changeProps}
+					/>
+				);
+			case ChannelStates.editMode:
+				return (
+					<EditDetails
+						membership={memberships.find(membership => membership.channel.id === channelProps?.selected?.id)}
+						channelProps={channelProps}
 						changeProps={changeProps}
 					/>
 				);

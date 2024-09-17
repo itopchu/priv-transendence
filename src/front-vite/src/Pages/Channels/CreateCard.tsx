@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { AvatarUploadIcon, ImageInput, UploadAvatar } from './Components/Components';
 import { ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Channel';
-import { BACKEND_URL, handleError, retryOperation, validateFile } from './utils';
+import { BACKEND_URL, handleError, onFileUpload, retryOperation } from './utils';
 
 interface CreateCardType {
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -43,7 +43,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 
   const [channelData, setChannelData] = useState<ChannelDataType>(initialChannelData);
   const [loading, setLoading] = useState(false);
-  const [avatarSrc, setAvatarSrc] = useState('');
+  const [avatarSrc, setAvatarSrc] = useState<string | undefined>(undefined);
 
   useEffect(() => {
 	if (nameRef.current) {
@@ -56,17 +56,6 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
       ...prevData,
       ...newData,
     }));
-  };
-
-  const onFileUpload = (file: File) => {
-	if (!validateFile(file)) return;
-
-    changeChannelData({ image: file });
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAvatarSrc(reader?.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const generateButtonGroup = () => {
@@ -133,74 +122,73 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
       <Overlay onClick={onCancel} />
       <CenteredCard sx={{ display: 'flex', flexDirection: 'column' }}>
         {loading &&
-			<LoadingBox>
-				<CircularProgress size={80} />
-			</LoadingBox>
-		}
-		<CustomCardContent 
-			sx={{
-				visibility: loading ? 'hidden' : 'visible',
-			}}
-		>
-          <Stack spacing={2}>
-			<UploadAvatar
-				src={avatarSrc}
-				avatarSx={{ width: 170, height: 170 }}
-				sx={{ alignSelf: 'center' }}
-			>
-			  <AvatarUploadIcon className="hidden-icon" />
-			  <ImageInput onFileInput={onFileUpload} />
-			</UploadAvatar>
+					<LoadingBox>
+						<CircularProgress size={80} />
+					</LoadingBox>
+				}
+				<CustomCardContent 
+					sx={{
+						visibility: loading ? 'hidden' : 'visible',
+					}}
+				>
+				<Stack spacing={2}>
+					<UploadAvatar
+						src={avatarSrc}
+						avatarSx={{ width: 170, height: 170 }}
+						sx={{ alignSelf: 'center' }}
+					>
+						<AvatarUploadIcon className="hidden-icon" />
+						<ImageInput onFileInput={(file: File) => onFileUpload(file, changeChannelData, setAvatarSrc)} />
+					</UploadAvatar>
+						{!loading && generateButtonGroup()}
 
-            {!loading && generateButtonGroup()}
+							<TextFieldWrapper>
+								<FormControl fullWidth variant="outlined">
+									<CustomFormLabel>Channel Name</CustomFormLabel>
+									<TextField
+										variant="outlined"
+										inputRef={nameRef}
+										InputProps={{
+											style: {
+												padding: '4px 4px',
+												fontSize: '1rem',
+											},
+										}}
+										sx={{
+											height: '25px',
+											'& .MuiInputBase-input': {
+												padding: '2px 4px',
+											},
+										}}
+									/>
+								</FormControl>
+							</TextFieldWrapper>
 
-            <TextFieldWrapper>
-              <FormControl fullWidth variant="outlined">
-                <CustomFormLabel>Channel Name</CustomFormLabel>
-                <TextField
-                  variant="outlined"
-				  inputRef={nameRef}
-                  InputProps={{
-                    style: {
-                      padding: '4px 4px',
-                      fontSize: '1rem',
-                    },
-                  }}
-                  sx={{
-                    height: '25px',
-                    '& .MuiInputBase-input': {
-                      padding: '2px 4px',
-                    },
-                  }}
-                />
-              </FormControl>
-            </TextFieldWrapper>
-
-            {channelData.type === 'protected' && (
-              <TextFieldWrapper>
-                <FormControl fullWidth variant="outlined">
-                  <CustomFormLabel>Channel Password</CustomFormLabel>
-                  <TextField
-					inputRef={passwordRef}
-                    variant="outlined"
-                    type="password"
-                    InputProps={{
-                      style: {
-                        padding: '4px 4px',
-                        fontSize: '1rem',
-                      },
-                    }}
-                    sx={{
-                      height: '25px',
-                      '& .MuiInputBase-input': {
-                        padding: '2px 4px',
-                      },
-                    }}
-                  />
-                </FormControl>
-              </TextFieldWrapper>
-            )}
-          </Stack>
+							{channelData.type === 'protected' && (
+								<TextFieldWrapper>
+									<FormControl fullWidth variant="outlined">
+										<CustomFormLabel>Channel Password</CustomFormLabel>
+										<TextField
+											inputRef={passwordRef}
+											variant="outlined"
+											type="password"
+											InputProps={{
+												style: {
+													padding: '4px 4px',
+													fontSize: '1rem',
+												},
+											}}
+											sx={{
+												height: '25px',
+												'& .MuiInputBase-input': {
+													padding: '2px 4px',
+												},
+											}}
+										/>
+									</FormControl>
+								</TextFieldWrapper>
+							)}
+							</Stack>
 
             <ButtonBar>
               <Button onClick={onCancel} sx={{ minWidth: 100, height: 40 }}>
@@ -214,7 +202,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
                 Create
               </Button>
             </ButtonBar>
-		</CustomCardContent>
+				</CustomCardContent>
       </CenteredCard>
     </>
   );

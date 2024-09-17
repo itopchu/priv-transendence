@@ -8,6 +8,13 @@ export const CustomCardContent = styled(CardContent)(() => ({
 	padding: '0px',
 }));
 
+export const BarCard = styled(Card)(({ theme }) => ({
+	display: 'flex',
+	alignItems: 'center',
+	padding: theme.spacing(1),
+	backgroundColor: theme.palette.primary.main,
+}));
+
 export const CenteredCard = styled(Card)(({ theme }) => ({
   position: 'fixed',
   top: '50%',

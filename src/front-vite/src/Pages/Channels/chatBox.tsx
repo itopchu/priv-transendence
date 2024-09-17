@@ -29,7 +29,7 @@ type formatDateType = {
 	time: string;
 };
 
-export const formatDate = (timestamp: Date): formatDateType => {
+export function formatDate(timestamp: Date): formatDateType {
   const now: Date = new Date();
   const date: Date = new Date(timestamp);
 	let particle: string = '';
@@ -43,6 +43,7 @@ export const formatDate = (timestamp: Date): formatDateType => {
     month: 'long',
     day: 'numeric',
   });
+
   if (
     now.getFullYear() === date.getFullYear() &&
     now.getMonth() === date.getMonth()
@@ -61,7 +62,7 @@ export const formatDate = (timestamp: Date): formatDateType => {
   return { date: formattedDate, particle, time: formattedTime };
 };
 
-export const getTimeDiff = (timestamp1: Date, timestamp2: Date) => {
+export function getTimeDiff(timestamp1: Date, timestamp2: Date) {
   const date1 = new Date(timestamp1);
   const date2 = new Date(timestamp2);
 
@@ -70,6 +71,15 @@ export const getTimeDiff = (timestamp1: Date, timestamp2: Date) => {
 	}
 	return (date2.getTime() - date1.getTime());
 };
+
+function isDiffDate(date1: Date, date2: Date): boolean {
+  const normalizedDate1 = new Date(date1);
+  const normalizedDate2 = new Date(date2);
+  normalizedDate1.setHours(0, 0, 0, 0);
+  normalizedDate2.setHours(0, 0, 0, 0);
+
+  return (normalizedDate1.getTime() !== normalizedDate2.getTime());
+}
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   position: 'relative',
@@ -118,6 +128,8 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   );
 
   useEffect(() => {
+		if (!loading) setLoading(true);
+
     const onMessage = (message: Message) => {
       if (user?.blockedUsers?.some((blockedUser) => blockedUser.id === message.author.id)) {
           return;
@@ -140,6 +152,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 					));
 
         setMessageLog(messageLog);
+				setLoading(false);
       } catch (error: any) {
         handleError('Unable to get message log:', error);
       }
@@ -147,10 +160,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 
     getMessageLog();
     userSocket?.on(`channel#${channel.id}Message`, onMessage);
-    userSocket?.on(`messageError`, (errMessage: string) =>
-      handleError(errMessage, null)
-    );
-    setLoading(false);
+    userSocket?.on(`messageError`, (errMessage: string) => handleError(errMessage, null));
     return () => {
       userSocket?.off(`channel#${channel.id}Message`, onMessage);
     };
@@ -182,9 +192,8 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   };
 
   const generateMessages = () => {
-    if (!messageLog.length) return '';
+    if (!messageLog.length) return undefined;
     const timeSeparation = 2 * 60 * 1000; // 2 min in milisecondes
-		const timeDivider = 24 * 60 * 60 * 1000; // 1 day in milisecondes
 
     return (
       <>
@@ -196,8 +205,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 						|| getTimeDiff(messageLog[index + 1].timestamp, msg.timestamp) > timeSeparation;
           const isPrevDiffTime = isFirstMessage
 						|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeSeparation;
-					const isDiffDay = isFirstMessage
-						|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeDivider;
+					const isDiffDay = isFirstMessage || isDiffDate(msg.timestamp, messageLog[index - 1].timestamp);
 
           const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
           const isLastUserMessage = isLastMessage || messageLog[index + 1].author.id !== msg.author.id;

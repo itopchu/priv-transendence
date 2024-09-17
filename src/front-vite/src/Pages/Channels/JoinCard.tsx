@@ -21,10 +21,10 @@ import {
 } from '@mui/material';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
 import { BACKEND_URL, handleError, retryOperation } from './utils';
-import { ChannelProps } from '.';
+import { ChannelPropsType } from '.';
 
 interface JoinCardType {
-  changeProps: (newProps: Partial<ChannelProps>) => void;
+  changeProps: (newProps: Partial<ChannelPropsType>) => void;
   channel: Channel | undefined;
 }
 
@@ -83,7 +83,7 @@ export const JoinCard: React.FC<JoinCardType> = ({ changeProps, channel }) => {
           </LoadingBox>
         ) : (
           <CustomCardContent>
-			<Stack spacing={1.6} alignItems={'center'} >
+						<Stack spacing={1.6} alignItems={'center'} >
               <CustomAvatar
                 sx={{ height: 170, width: 170 }}
                 src={channel.image}
@@ -91,8 +91,17 @@ export const JoinCard: React.FC<JoinCardType> = ({ changeProps, channel }) => {
 
               <Typography fontSize={'large'}>{channel.name}</Typography>
 
-              <DescriptionBox>
-                <Typography sx={{ wordBreak: 'break-word', whiteSpace: 'pre' }}>
+              <DescriptionBox sx={{ overflow: 'hidden' }}>
+                <Typography
+									sx={{
+										display: '-webkit-box',
+										overflow: 'hidden',
+										textOverflow: 'ellipsis',
+										WebkitLineClamp: 4,
+										WebkitBoxOrient: 'vertical',
+										wordBreak: 'break-word',
+										whiteSpace: 'pre-wrap'
+									}}>
                   {channel.description}
                 </Typography>
               </DescriptionBox>
@@ -120,9 +129,9 @@ export const JoinCard: React.FC<JoinCardType> = ({ changeProps, channel }) => {
                   </FormControl>
                 </TextFieldWrapper>
               )}
-			</Stack>
+						</Stack>
 
-			<div style={{ flexGrow: 1 }} />
+						<div style={{ flexGrow: 1 }} />
 
             {alreadyJoined && (
                <Typography variant="body2">

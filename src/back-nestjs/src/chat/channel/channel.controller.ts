@@ -212,7 +212,7 @@ export class ChannelController {
 
 		await this.channelService.updateChannel(user, channelId, updateChannelDto, image);
 		const updatedChannel = await this.channelService.getChannelById(channelId, ['members', 'members.user', 'bannedUsers']);
-		if (updateChannelDto.type && updateChannelDto.type !== ChannelType.private) {
+		if (updatedChannel.type !== ChannelType.private || updateChannelDto?.type !== ChannelType.private) {
 			this.channelGateway.emitPublicChannelUpdate(new ChannelPublicDTO(updatedChannel), UpdateType.updated);
 		}
 		this.channelGateway.emitChannelUpdate(channelId);
