@@ -16,18 +16,23 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { useUser } from '../../Providers/UserContext/User';
 import { Channel } from '../../Providers/ChannelContext/Channel';
-import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox } from './Components/Components';
+import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox, ChatBubble } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
 import { LoadingBox } from './Components/CardComponents';
 import { BACKEND_URL, getUsername, handleError, retryOperation, trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import axios from 'axios';
 
-type formatDateType = { date: string; time: string };
+type formatDateType = {
+	date: string;
+	particle: string;
+	time: string;
+};
 
 export const formatDate = (timestamp: Date): formatDateType => {
   const now: Date = new Date();
   const date: Date = new Date(timestamp);
+	let particle: string = '';
 
   const formattedTime = date.toLocaleTimeString([], {
     hour: '2-digit',
@@ -46,19 +51,24 @@ export const formatDate = (timestamp: Date): formatDateType => {
     const dayDate = date.getDate();
 
     if (dayNow === dayDate) {
-      formattedDate = 'today at';
+      formattedDate = 'Today';
+			particle = 'at';
     } else if (dayNow - 1 === dayDate) {
-      formattedDate = 'yesterday at';
+      formattedDate = 'Yesterday';
+			particle = 'at';
     }
   }
-  return { date: formattedDate, time: formattedTime };
+  return { date: formattedDate, particle, time: formattedTime };
 };
 
-const getTimeDiff = (timestamp1: Date, timestamp2: Date) => {
+export const getTimeDiff = (timestamp1: Date, timestamp2: Date) => {
   const date1 = new Date(timestamp1);
   const date2 = new Date(timestamp2);
 
-  return date1.getTime() - date2.getTime();
+	if (timestamp1 > timestamp2) {
+		return (date1.getTime() - date2.getTime());
+	}
+	return (date2.getTime() - date1.getTime());
 };
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
@@ -70,16 +80,6 @@ const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   padding: theme.spacing(2),
 }));
 
-const ChatBubble = styled(Box)(({ theme }) => ({
-  display: 'inline-block',
-  backgroundColor: theme.palette.primary.main,
-  borderRadius: '1.5em',
-  alignSelf: 'flex-start',
-  padding: '6px 1em',
-  wordBreak: 'break-word',
-  overflow: 'auto',
-}));
-
 const ChatMessages = styled(Stack)(({ theme }) => ({
   flex: -1,
   padding: theme.spacing(2),
@@ -87,12 +87,12 @@ const ChatMessages = styled(Stack)(({ theme }) => ({
 
 const TextBar = styled(Box)(({ theme }) => ({
   display: 'flex',
+	position: 'sticky',
   alignItems: 'center',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
   borderRadius: '2em',
   backgroundColor: theme.palette.primary.dark,
-  bottom: theme.spacing(2),
   boxShadow: theme.shadows[5],
 }));
 
@@ -119,27 +119,29 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 
   useEffect(() => {
     const onMessage = (message: Message) => {
-      //if (user.blockList.includes(message.author.id)) {
-      //    return;
-      //}
+      if (user?.blockedUsers?.some((blockedUser) => blockedUser.id === message.author.id)) {
+          return;
+      }
       setMessageLog((prevMessages) => [...prevMessages, message]);
     };
 
     const getMessageLog = async () => {
       try {
-        const fetchedMessageLog = await retryOperation(async () => {
+        const messageLog = await retryOperation(async () => {
           const response = await axios.get(
             `${BACKEND_URL}/channel/messages/${channel.id}`,
             { withCredentials: true }
           );
           return response.data.messages || [];
         });
-        fetchedMessageLog.sort((a: Message, b: Message) => a.id - b.id);
-        //.filter((message: Message) => !user.blockList.includes(message.author.id));
+        messageLog.sort((a: Message, b: Message) => a.id - b.id)
+					.filter((message: Message) => (
+						user?.blockedUsers?.some((blockedUser) => blockedUser.id === message.author.id)
+					));
 
-        setMessageLog(fetchedMessageLog);
+        setMessageLog(messageLog);
       } catch (error: any) {
-        handleError('Unable to fetch message log:', error);
+        handleError('Unable to get message log:', error);
       }
     };
 
@@ -158,7 +160,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
     const element = messagesEndRef.current;
 
     if (element) {
-      element.scrollTop = element.scrollHeight;
+      element.scrollTo({
+				top: element.scrollHeight,
+				behavior: 'smooth',
+			});
     }
   }, [messageLog]);
 
@@ -179,23 +184,38 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   const generateMessages = () => {
     if (!messageLog.length) return '';
     const timeSeparation = 2 * 60 * 1000; // 2 min in milisecondes
+		const timeDivider = 24 * 60 * 60 * 1000; // 1 day in milisecondes
 
     return (
       <>
         {messageLog.map((msg, index) => {
           const isFirstMessage = index === 0;
           const isLastMessage = index + 1 === messageLog.length;
-          const isDiffTime = isLastMessage || getTimeDiff(messageLog[index + 1].timestamp, msg.timestamp) > timeSeparation;
-          const isPrevDiffTime = isFirstMessage || getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeSeparation;
+
+          const isDiffTime = isLastMessage
+						|| getTimeDiff(messageLog[index + 1].timestamp, msg.timestamp) > timeSeparation;
+          const isPrevDiffTime = isFirstMessage
+						|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeSeparation;
+					const isDiffDay = isFirstMessage
+						|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeDivider;
+
           const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
           const isLastUserMessage = isLastMessage || messageLog[index + 1].author.id !== msg.author.id;
-          const isTopMessage = isDifferentUser || isPrevDiffTime;
+
+          const isNewMsgBlock = isDifferentUser || isPrevDiffTime;
 
           const username = getUsername(msg.author);
           const timestamp = formatDate(msg.timestamp);
 
           return (
             <React.Fragment key={index}>
+							{isDiffDay && (
+								<Box flexGrow={1} paddingTop={3} >
+									<Divider sx={{ color: 'text.secondary' }} >
+										{timestamp.date}
+									</Divider>
+								</Box>
+							)}
               <Divider
                 sx={{
                   alignSelf: 'flex-start',
@@ -207,7 +227,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
                 direction={'row'}
                 spacing={1}
                 minWidth={'17em'}
-                paddingTop={isTopMessage ? 3 : 0}
+                paddingTop={isNewMsgBlock ? 3 : 0}
                 alignItems="flex-start"
                 sx={{
                   '&:hover': {
@@ -218,7 +238,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
                   },
                 }}
               >
-                {isTopMessage ? (
+                {isNewMsgBlock ? (
                   <ButtonAvatar
                     clickEvent={() => {
                       navigate(`/profile/${msg.author.id}`);
@@ -228,24 +248,33 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
                     src={msg.author?.image}
                   />
                 ) : (
-                  <Typography
-                    className="hidden-timestamp"
-                    variant="caption"
-                    color={'textSecondary'}
-                    alignSelf={'flex-end'}
-                    sx={{
-                      fontSize: '0.55em',
-                      paddingInline: '5px',
-                      minWidth: '50px',
-                      visibility: 'hidden',
-                    }}
-                  >
-                    {timestamp.time}
-                  </Typography>
+									<Box
+										sx={{
+											display: 'flex',
+											alignItems: 'flex-end',
+											justifyContent: 'center',
+											height: '100%',
+											flexGrow: 1,
+											minWidth: 50,
+											maxWidth: 50,
+										}}
+									>
+										<Typography
+											className="hidden-timestamp"
+											variant="caption"
+											color={'textSecondary'}
+											sx={{
+												fontSize: '0.55em',
+												visibility: 'hidden',
+											}}
+										>
+											{timestamp.time}
+										</Typography>
+									</Box>
                 )}
 
                 <Stack spacing={0.4} flexGrow={1}>
-                  {isTopMessage && (
+                  {isNewMsgBlock && (
                     <Stack flexDirection="row">
                       <ClickTypography
                         paddingLeft={2}
@@ -260,9 +289,13 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
                       <Typography
                         variant="caption"
                         color={'textSecondary'}
-                        sx={{ fontSize: '0.7em', paddingLeft: '1em' }}
+												whiteSpace={'nowrap'}
+                        sx={{
+													fontSize: '0.7em',
+													paddingLeft: '1em'
+												}}
                       >
-                        {`${timestamp.date} ${timestamp.time}`}
+                        {`${timestamp.date} ${timestamp.particle} ${timestamp.time}`}
                       </Typography>
                     </Stack>
                   )}
@@ -270,10 +303,9 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
                   <Stack flexDirection={'row'}>
                     <ChatBubble
                       sx={{
-						backgroundColor: user.id === msg.author.id ? undefined : '#7280ce',
-                        borderTopLeftRadius: isTopMessage ? undefined : '0.2em',
-                        borderBottomLeftRadius:
-                          isLastUserMessage || isDiffTime ? undefined : '0.2em',
+												backgroundColor: user.id === msg.author.id ? undefined : '#7280ce',
+                        borderTopLeftRadius: isNewMsgBlock ? undefined : '0.2em',
+                        borderBottomLeftRadius: isLastUserMessage || isDiffTime ? undefined : '0.2em',
                       }}
                     >
                       <Typography

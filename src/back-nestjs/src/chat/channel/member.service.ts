@@ -35,7 +35,7 @@ export class MemberService {
 
 	async getMemberships(user: User): Promise<ChannelMember[]> {
 		const userMemberships = await this.memberRespitory.createQueryBuilder('membership')
-		.innerJoin('membership.user', 'user')
+		.leftJoinAndSelect('membership.user', 'user')
 		.where('user.id = :id', { id: user.id })
 		.leftJoinAndSelect('membership.channel', 'channel')
 		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')

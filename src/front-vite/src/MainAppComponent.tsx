@@ -24,7 +24,7 @@ const mainAppComponent: React.FC = () => {
 						<Main />
 					</Box>
 				</Container>
-				<Chat />
+				{user && user.id && <Chat />}
 			</ChatContextProvider>
       <Divider orientation="horizontal" sx={{ backgroundColor: theme.palette.background.default, width: '0.01em', minWidth: '100%' }} />
       <Footer />

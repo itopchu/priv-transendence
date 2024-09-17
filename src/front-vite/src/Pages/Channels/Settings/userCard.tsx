@@ -86,6 +86,15 @@ export const UserCards: React.FC<UserCardsType> = ({
     }
   };
 
+  const onBlock = async (victimId: number, menuCloseFunc: () => void) => {
+		try {
+			await axios.patch(`${BACKEND_URL}/user/block/${victimId}`, { withCredentials: true });
+			menuCloseFunc();
+		} catch (error) {
+			handleError('Could not block/unblock user', error);
+		}
+  }
+
   const onModerate = async (member: ChannelMember, option: string, menuCloseFunc: () => void) => {
     const payload = {
       victimId: member.user.id,
@@ -138,8 +147,11 @@ export const UserCards: React.FC<UserCardsType> = ({
         const memberUser = member.user;
         const membername = getUsername(memberUser);
 
+		const isBlocked = user?.blockedUsers?.some(
+		  (blockedUser) => blockedUser.id === member.user.id
+		);
         const isDiffUser = memberUser.id !== user.id;
-        const isMemberMuted = channel.mutedUsers?.some(
+        const isMemberMuted = channel?.mutedUsers?.some(
           (mutedUser) => mutedUser.userId === member.user.id
         );
 
@@ -280,8 +292,10 @@ export const UserCards: React.FC<UserCardsType> = ({
                     </MenuItem>,
                     <Divider />,
                   ]}
-                  <MenuItem onClick={onMenuClose} >{`Add ${membername}`}</MenuItem>
-                  <MenuItem onClick={onMenuClose} >{`Block ${membername}`}</MenuItem>
+                  <MenuItem onClick={onMenuClose} >{'Add friend'}</MenuItem>
+                  <MenuItem onClick={() => onBlock(member.user.id, onMenuClose)} >
+										{`${isBlocked ? 'Block' : 'Unlock'} ${membername}`}
+									</MenuItem>
                   <Divider />
                   {isMemberMuted ? (
                     <MenuItem onClick={() => onMute(member, null, onMuteMenuClose)} >

@@ -15,6 +15,7 @@ export interface User {
 }
 
 export interface UserClient extends User {
+  blockedUsers?: User[];
   auth2F?: boolean;
 }
 

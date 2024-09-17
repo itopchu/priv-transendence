@@ -8,16 +8,30 @@ import {
 } from '@mui/icons-material';
 import { ButtonAvatar, ClickTypography } from '../../Pages/Channels/Components/Components';
 import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
 import { getUsername, trimMessage } from '../../Pages/Channels/utils';
-import { formatDate } from '../../Pages/Channels/chatBox';
+import { ContentChatMessages } from './ContentChatMessages';
 
 const ContentChat = () => {
 	const { chatProps, changeChatProps } = useChat();
 	const { userSocket } = useUser();
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = messagesEndRef.current;
+
+    if (element) {
+      element.scrollTo({
+				top: element.scrollHeight,
+				behavior: 'smooth',
+			});
+    }
+  }, [chatProps.messages]);
+
 
 	const onSend = () => {
 		if (!inputRef.current) return;
@@ -46,7 +60,7 @@ const ContentChat = () => {
         bottom: 16,
         right: 16,
         width: 300,
-        bgcolor: (theme) => theme.palette.background.default,
+        bgcolor: (theme) => theme.palette.primary.dark,
         borderRadius: '1em',
         maxHeight: '70vh',
         minHeight: '30vh',
@@ -70,7 +84,7 @@ const ContentChat = () => {
             alignItems: 'center',
             paddingX: '0.5em',
             paddingY: '0.1em',
-            bgcolor: (theme) => theme.palette.background.default,
+            bgcolor: (theme) => theme.palette.primary.dark,
             height: '48px',
           }}
         >
@@ -95,7 +109,7 @@ const ContentChat = () => {
 						sx={{
 							overflow: 'hidden',
 							textOverflow: 'ellipsis'
-							}}
+						}}
 					>
 						{getUsername(chatProps.selected?.user)}
 					</ClickTypography>
@@ -115,13 +129,14 @@ const ContentChat = () => {
         </Stack>
         <Stack direction={'column'} sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '50vh' }}>
           <Stack
+						ref={messagesEndRef}
 						flexGrow={1}
             direction="column"
             padding="0.5em"
-            spacing={1}
+						paddingBottom={"1em"}
             bgcolor={(theme) => theme.palette.background.default}
             border={2}
-            borderColor={(theme) => theme.palette.divider}
+            borderColor={(theme) => theme.palette.primary.light}
             sx={{
 							maxHeight: 'calc(70vh - 130px)',
               overflowY: 'auto',
@@ -134,45 +149,7 @@ const ContentChat = () => {
               },
             }}
           >
-            {chatProps?.messages?.length !== 0 && chatProps.messages.map((message, idx) => {
-							const timestamp = formatDate(message.timestamp);
-
-							return (
-								<Stack direction="row" spacing={1} key={idx}>
-								<ButtonAvatar
-									avatarSx={{ border: '0px' }}
-									clickEvent={() => (navigate(`/profile/${message.author.id}`))}
-									src={message.author?.image}
-								/>
-									<Stack
-										direction="column"
-										spacing={0.5}
-										padding="0.5em"
-										bgcolor={(theme) => theme.palette.primary.main}
-										borderRadius="0.3em"
-										sx={{ width: '70%' }}
-									>
-										<Stack spacing={-.1} direction="column" sx={{ wordWrap: 'break-word'}}>
-											<Typography
-													sx={{ wordWrap: 'break-word' }}
-											>
-												{message.content}
-											</Typography>
-											<Typography
-												color={'gray'}
-												sx={{
-													display: 'flex',
-													justifyContent: 'flex-end',
-													fontSize: '0.5rem',
-												}}
-											>
-												{timestamp.time}
-											</Typography>
-										</Stack>
-									</Stack>
-								</Stack>
-							);
-            })}
+						<ContentChatMessages messageLog={chatProps.messages} />
           </Stack>
         </Stack>
         <Stack
@@ -183,7 +160,7 @@ const ContentChat = () => {
             position: 'sticky',
             bottom: 0,
             zIndex: 1,
-            bgcolor: (theme) => theme.palette.background.default,
+            bgcolor: (theme) => theme.palette.primary.dark,
             borderBottomLeftRadius: '1em',
             borderBottomRightRadius: '1em',
             height: '50px',

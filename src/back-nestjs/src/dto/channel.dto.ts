@@ -1,7 +1,7 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEnum, IsNumber, isNotEmptyObject, isNotEmpty, IsDate, Validate, ValidateNested } from 'class-validator';
 import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute } from '../entities/channel.entity';
-import { UserPublicDTO } from './user.dto';
+import { UserClient, UserPublicDTO } from './user.dto';
 import { User } from '../entities/user.entity';
 import { Type } from 'class-transformer';
 
@@ -126,22 +126,10 @@ export class ChannelPublicDTO {
 		this.description = channel.description;
 		this.type = channel.type;
 
-		this.members = [];
-		for (const member of channel.members ?? []) {
-			this.members.push(new MemberPublicDTO(member));
-		}
-		this.bannedUsers = [];
-		for (const bannedUsers of channel.bannedUsers ?? []) {
-			this.bannedUsers.push(new UserPublicDTO(bannedUsers, null));
-		}
-		this.mutedUsers = [];
-		for (const mute of channel.mutedUsers ?? []) {
-			this.mutedUsers.push(new MutePublicDTO(mute));
-		}
-		this.log = [];
-		for (const message of channel.log ?? []) {
-			this.log.push(new MessagePublicDTO(message));
-		}
+		this.members = (channel?.members ?? []).map(member => new MemberPublicDTO(member));
+		this.bannedUsers = (channel?.bannedUsers ?? []).map(user => new UserPublicDTO(user, null));
+		this.mutedUsers = (channel?.mutedUsers ?? []).map(user => new MutePublicDTO(user));
+		this.log = (channel?.log ?? []).map(message => new MessagePublicDTO(message));
 	}
 
 	@IsNumber()
@@ -190,11 +178,7 @@ export class ChatClientDTO {
 
 		const otherUser = chat.users[0] //chat.users[0].id === userId ? chat.users[1] : chat.users[0];
 		this.user = new UserPublicDTO(otherUser, null);
-		this.log = [];
-
-		for (const message of chat.log ?? []) {
-			this.log.push(new MessagePublicDTO(message));
-		}
+		this.log = (chat?.log ?? []).map(message => new MessagePublicDTO(message));
 	}
 
 	@IsNumber()
@@ -213,7 +197,7 @@ export class ChatClientDTO {
 export class MemberClientDTO {
 	constructor(member: ChannelMember) {
 		this.id = member.id;
-		this.user = member.user;
+		this.user = new UserClient(member.user);
 		this.channel = new ChannelPublicDTO(member.channel);
 		this.role = member.role;
 	}
@@ -222,7 +206,7 @@ export class MemberClientDTO {
 	id: number;
 
 	@IsNotEmpty()
-	user: User;
+	user: UserClient;
 
 	@IsNotEmpty()
 	@ValidateNested()

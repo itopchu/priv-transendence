@@ -75,7 +75,7 @@ export class ChannelController {
 
 		const memberships = await this.memberService.getMemberships(user);
 
-		const clientMemberships = memberships.map(membership => new MemberClientDTO(membership));
+		const clientMemberships = (memberships ?? []).map(membership => new MemberClientDTO(membership));
 		return ({ memberships: clientMemberships });
 	}
 

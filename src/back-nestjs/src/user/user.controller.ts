@@ -1,4 +1,4 @@
-import { UseGuards, Controller, Get, Param, Req, Res, ParseIntPipe, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { UseGuards, Controller, Get, Param, Req, Res, ParseIntPipe, Post, UseInterceptors, UploadedFile, BadRequestException, NotFoundException, InternalServerErrorException, Patch } from '@nestjs/common';
 import { Request, Response, Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
@@ -97,6 +97,32 @@ export class UserController {
       fs.unlinkSync(uploadPath);
       return res.status(500).json({ message: 'Failed to update user', error: error.message });
     }
+  }
+
+  @Patch('block/:id')
+  @UseGuards(AuthGuard)
+  async blockUser(@Req() req: Request, @Param('id', ParseIntPipe) victimId: number, @Res() res: Response) {
+	if (req.authUser.id === victimId) {
+		throw new BadRequestException('User blocking himself, stop hating yourself...');
+	}
+    const user = await this.userService.getUserByIdWithRel(req.authUser.id, ['blockedUsers']);
+
+	const blockedUserIndex = user.blockedUsers.findIndex((blockedUser) =>  blockedUser.id === victimId);
+	if (blockedUserIndex !== -1) {
+		user.blockedUsers.splice(blockedUserIndex, 1);
+	} else {
+		const victim = await this.userService.getUserById(victimId);
+		if (!victim) {
+			throw new NotFoundException('User not found');
+		}
+		user.blockedUsers.push(victim);
+	}
+	const newUser = await this.userService.updateUser(res, user);
+	if (!newUser) {
+		throw new InternalServerErrorException('Could not block user');
+	}
+	const userClient = new UserClient(newUser);
+	return ({ userClient });
   }
   
   @Get('friendship/:id')

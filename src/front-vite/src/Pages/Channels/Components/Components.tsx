@@ -88,6 +88,16 @@ export const ClickTypography = styled(Typography)(({}) => ({
 	}
 }));
 
+export const ChatBubble = styled(Box)(({ theme }) => ({
+  display: 'inline-block',
+  backgroundColor: theme.palette.primary.main,
+  borderRadius: '1.5em',
+  alignSelf: 'flex-start',
+  padding: '6px 1em',
+  wordBreak: 'break-word',
+  overflow: 'auto',
+}));
+
 export const ButtonAvatar: React.FC<AvatarButtonType> = ({ children, src, clickEvent, avatarSx, sx }) => {
 	return (
 		<Button
@@ -97,7 +107,8 @@ export const ButtonAvatar: React.FC<AvatarButtonType> = ({ children, src, clickE
 			aspectRatio: '1:1',
 			padding: 0,
 			borderRadius: '50%',
-			minWidth: 0,
+			minWidth: 'fit-content',
+			minHeight: 'fit-content',
 			width: 'fit-content',
 			height: 'fit-content',
 			'.image-profile': {

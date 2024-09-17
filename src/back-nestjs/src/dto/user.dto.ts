@@ -1,5 +1,6 @@
-import { IsBoolean, IsEmail, IsEnum, IsNumber, IsString, Length, IsIn } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsNumber, IsString, Length, IsIn, IsOptional, ValidateNested } from 'class-validator';
 import { User } from '../entities/user.entity'
+import { Type } from 'class-transformer';
 
 
 export class UserClient {
@@ -13,6 +14,8 @@ export class UserClient {
     {user.greeting ? this.greeting = user.greeting : null;}
     {user.image ? this.image = process.env.ORIGIN_URL_BACK + '/' + user.image : null;}
     this.auth2F = user.auth2F ? true : false;
+
+	this.blockedUsers = (user?.blockedUsers ?? []).map(blockedUser => new UserPublicDTO(blockedUser, null));
   }
 
   @IsNumber()
@@ -36,6 +39,12 @@ export class UserClient {
   @IsString()
   @Length(0, 101)
   greeting: string;
+
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UserPublicDTO)
+  blockedUsers?: UserPublicDTO[];
 
   @IsBoolean()
   auth2F: boolean;

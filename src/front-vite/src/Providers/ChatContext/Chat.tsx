@@ -17,7 +17,7 @@ type ChatContextType = {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userSocket } = useUser();
+  const { user, userSocket } = useUser();
   const [chatProps, setChatProps] = useState<ChatProps>({
     chats: [],
     chatStatus: ChatStatus.Bubble,
@@ -44,6 +44,8 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 	}
 
 	useEffect(() => {
+		if (!user.id) return;
+
 		const getChats = async () => {
 			try {
 				const response = await axios.get(`${BACKEND_URL}/chat`, { withCredentials: true });
@@ -54,7 +56,7 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 		}
 
 		getChats();
-	}, []);
+	}, [user.id]);
 
 	useEffect(() => {
 		if (!chatProps.selected) return;
