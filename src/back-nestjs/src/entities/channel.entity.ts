@@ -1,4 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, JoinTable, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
+import {
+	Entity,
+	PrimaryGeneratedColumn,
+	Column,
+	CreateDateColumn,
+	ManyToOne,
+	OneToMany,
+	ManyToMany,
+	JoinTable,
+	PrimaryColumn,
+	JoinColumn
+} from 'typeorm';
 import { User } from './user.entity';
 
 export enum ChannelType {
@@ -58,6 +69,9 @@ export class Chat {
 
 	@Column()
 	status: number;
+
+	@Column()
+	modified: Date;
 
 	@JoinTable()
 	@ManyToMany(() => User, user => user.chats)

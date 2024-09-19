@@ -11,12 +11,12 @@ export type Message = {
   content: string;
   author: User;
   timestamp: Date;
-  sent?: boolean;
 };
 
 export interface Chat {
   id: number;
   user: UserPublic;
+	modified: Date;
   unreadMsgCount: number;
 }
 

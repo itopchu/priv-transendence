@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import {
   ChannelRole,
+  ChannelStates,
   ChannelType,
   ChannelTypeValues,
   useChannel,

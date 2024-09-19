@@ -10,8 +10,37 @@ type ChatBoxType = {
 	messageLog: Message[];
 }
 
+export const PendingMessages: React.FC<{ messages: Message[] }> = ({ messages }) => {
+	if (!messages.length) return (undefined);
+
+	return (
+		<>
+			{messages.map((msg, index) => {
+				<Stack
+					key={index}
+					flexGrow={1}
+					flexDirection={'row-reverse'}
+				>
+					<ChatBubble
+						sx={{
+							backgroundColor: 'gray',
+						}}
+					>
+						<Typography
+							variant="body1"
+							sx={{ whiteSpace: 'pre-line' }}
+						>
+							{msg.content}
+						</Typography>
+					</ChatBubble>
+				</Stack>
+			})}
+		</>
+	);
+}
+
 export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
-	if (!messageLog.length) return '';
+	if (!messageLog.length) return (undefined);
 
 	const { user } = useUser();
   const navigate = useNavigate();

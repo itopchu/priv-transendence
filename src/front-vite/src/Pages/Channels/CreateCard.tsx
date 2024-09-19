@@ -99,14 +99,14 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 
     try {
 	  const newChannel = await retryOperation(async () => {
-        const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
-            withCredentials: true,
-		    headers: {
-		      'Content-Type': 'multipart/form-data',
-		    },
-        });
-		return (response.data.channel);
-	  });
+			const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
+				withCredentials: true,
+				headers: {
+					'Content-Type': 'multipart/form-data',
+				},
+			});
+			return (response.data.channel);
+		});
       userSocket?.emit('joinChannel', newChannel.id);
     } catch (error: any) {
       setLoading(false);

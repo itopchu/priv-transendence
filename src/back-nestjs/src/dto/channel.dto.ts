@@ -1,5 +1,5 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEnum, IsNumber, isNotEmptyObject, isNotEmpty, IsDate, Validate, ValidateNested } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsDate, ValidateNested } from 'class-validator';
 import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute } from '../entities/channel.entity';
 import { UserClient, UserPublicDTO } from './user.dto';
 import { Type } from 'class-transformer';
@@ -124,6 +124,8 @@ export class ChannelPublicDTO {
 		this.name = channel.name;
 		this.description = channel.description;
 		this.type = channel.type;
+
+		this.bannedUsers = (channel?.bannedUsers ?? []).map(user => new UserPublicDTO(user, null));
 	}
 
 	@IsNumber()
@@ -143,6 +145,12 @@ export class ChannelPublicDTO {
 
 	@IsEnum(ChannelType)
 	type: ChannelType;
+
+	@IsOptional()
+	@ValidateNested()
+	@Type(() => UserPublicDTO)
+	@ValidateNested({ each: true })
+	bannedUsers?: UserPublicDTO[];
 }
 
 

@@ -43,6 +43,7 @@ export class ChatService {
 
 	async createChat(user: User, recipient: User) {
 		const newChat = this.chatRepository.create({
+			modified: Date.now(),
 			status: 0, //change later?
 			users: [user, recipient],
 		});
@@ -60,7 +61,7 @@ export class ChatService {
 			throw new BadRequestException('Empty message');
 		}
 
-		const chat = await this.getChatById(chatId, ['users', 'users.blockedUsers']);
+		const chat = await this.getChatById(chatId, ['users']);
 		if (!chat) {
 			throw new NotFoundException('Chat not found');
 		}
@@ -70,6 +71,9 @@ export class ChatService {
 			throw new UnauthorizedException('Unauthorized: Author is not in chat');
 		}
 
-		return (await this.messageService.createMessage(chat, author, message));
+		const newMessage = await this.messageService.createMessage(chat, author, message);
+		await this.chatRepository.update(chat.id, { modified: Date.now() });
+
+		return (newMessage);
 	}
 }

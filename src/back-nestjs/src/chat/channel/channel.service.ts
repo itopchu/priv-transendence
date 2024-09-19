@@ -191,27 +191,30 @@ export class ChannelService {
 			}
 			await this.transferOwnership(user, candidate.user.id, channel.id);
 		}
-		return (await this.memberService.removeMember(membership));
+		return (await this.memberService.removeMember(membership) as ChannelMember);
 	}
 
 	async removeChannel(channelId: number) {
-		let channel = await this.getChannelById(channelId, ['members', 'log', 'bannedUsers']);
+		let channel = await this.getChannelById(channelId, ['members', 'log', 'bannedUsers', 'mutedUsers']);
 		if (!channel) {
 			throw new NotFoundException('Channel not found');
 		}
 
 		try {
+			if (channel.mutedUsers) {
+				await this.muteRespitory.remove(channel.mutedUsers);
+			}
 			if (channel.log) {
 				await this.messageService.removeMessages(channel.log);
 			}
 			if (channel.members) {
 				await this.memberService.removeMember(channel.members);
 			}
-			channel = await this.channelRespitory.remove(channel);
 			if (channel.image) {
 				const imagePath = path.join('/app/uploads', channel.image);
 				unlinkSync(imagePath);
 			}
+			channel = await this.channelRespitory.remove(channel);
 		} catch(error) {
 			throw new InternalServerErrorException(`Could not delete channel: ${error.message}`);
 		}

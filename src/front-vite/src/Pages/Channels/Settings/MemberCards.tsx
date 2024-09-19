@@ -23,14 +23,13 @@ import {
 	ExpandMore as MuteMenuArrowIcon
 } from '@mui/icons-material';
 import { BarCard } from '../Components/CardComponents';
-import { useChat } from '../../../Providers/ChatContext/Chat';
-import { ChatStatus } from '../../../Layout/Chat/InterfaceChat';
 import { ButtonAvatar, ClickTypography } from '../Components/Components';
 import { FriendshipAttitude, getStatusColor } from '../../Profile/ownerInfo';
 import { User, UserPublic, useUser } from '../../../Providers/UserContext/User';
 import { BACKEND_URL, getUsername, handleError } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { getFriendshipAttitude, onSendMessage, userRelationMenuItems } from './UserCardsUtils';
+import { useChat } from '../../../Providers/ChatContext/Chat';
 
 type MuteOptionsType = { key: string; value: number | null };
 
@@ -99,6 +98,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 }) => {
   const theme = useTheme();
   const { user: localUser, userSocket } = useUser();
+	const { chatProps, changeChatProps } = useChat();
   const navigate = useNavigate();
 
   async function onMute(member: ChannelMember, duration: number | null, menuCloseFunc: () => void) {
@@ -119,11 +119,9 @@ export const MemberCards: React.FC<MemberCardsType> = ({
   const muteMenuItems = (member: ChannelMember, menuCloseFunc: () => void) => (
     MuteOptions.map((mute, index) => {
       return (
-        <React.Fragment key={index}>
-      	<MenuItem onClick={() => onMute(member, mute.value, menuCloseFunc)}>
-      	  {mute.key}
-      	</MenuItem>
-        </React.Fragment>
+				<MenuItem key={index} onClick={() => onMute(member, mute.value, menuCloseFunc)}>
+					{mute.key}
+				</MenuItem>
       );
     })
   )
@@ -293,12 +291,12 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 							onClose={onMenuClose}
 						>
 							{isAdmin && [
-								<MenuItem onClick={() => onModerate(user, 'transfer', channel.id, onMenuClose)}>
+								<MenuItem key={0} onClick={() => onModerate(user, 'transfer', channel.id, onMenuClose)}>
 									Transfer Admin
 								</MenuItem>,
-								<Divider />,
+								<Divider key={1} />,
 							]}
-							<MenuItem onClick={() => onSendMessage(user, onMenuClose)}>Send Message</MenuItem>
+							<MenuItem onClick={() => onSendMessage(user, chatProps, onMenuClose, changeChatProps)}>Send Message</MenuItem>
 							{userRelationMenuItems(member.user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
 							<Divider />
 							<MenuItem onClick={isMemberMuted ? () => onMute(member, null, onMuteMenuClose) : onMuteMenuClick}>
@@ -306,7 +304,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 								{!isMemberMuted && <MuteMenuArrowIcon />}
 							</MenuItem>
 							{isMod && [
-								<Divider />,
+								<Divider key={'div'} />,
 								generateModerateList(member, onMenuClose),
 							]}
 						</Menu>

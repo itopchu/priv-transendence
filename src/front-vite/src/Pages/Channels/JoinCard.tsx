@@ -27,8 +27,6 @@ interface JoinCardType {
 }
 
 export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
-	if (!channel) return undefined;
-
   const { memberships, changeProps } = useChannel();
   const { user, userSocket } = useUser();
 

@@ -34,7 +34,6 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 			newProps.selected.unreadMsgCount = 0;
 		}
 
-		console.log(newProps);
 		setChatProps((prevProps) => ({
 			...prevProps,
 			...newProps,
@@ -49,7 +48,11 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 		const getChats = async () => {
 			try {
 				const response = await axios.get(`${BACKEND_URL}/chat`, { withCredentials: true });
-				setChatProps((prevProps) => ({ ...prevProps, chats: response.data.chats || [] }));
+				const chats: Chat[] = response.data.chats;
+				if (chats) {
+					chats.sort((a, b) => new Date(a.modified).getTime() - new Date(b.modified).getTime());
+					setChatProps((prevProps) => ({ ...prevProps, chats: response.data.chats || [] }));
+				}
 			} catch (error) {
 				handleError('Could not get chats:', error);
 			}

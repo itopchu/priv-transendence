@@ -142,8 +142,8 @@ export class UserService {
       friendship = await this.friendsRepository.createQueryBuilder('friendship')
       .leftJoinAndSelect('friendship.user1', 'user1')
       .leftJoinAndSelect('friendship.user2', 'user2')
-      .where('friendship.user1 = :id AND friendship.attitude1 = :attitude', { id, attitude: FriendshipAttitude.restricted })
-      .orWhere('friendship.user2 = :id AND friendship.attitude2 = :attitude', { id, attitude: FriendshipAttitude.restricted })
+      .where('(user1.id = :id AND friendship.user1Attitude = :attitude1)', { id, attitude1: FriendshipAttitude.restricted })
+      .orWhere('(user2.id = :id AND friendship.user2Attitude = :attitude2)', { id, attitude2: FriendshipAttitude.restricted })
       .getMany();
     } catch (error) {
       console.error("Failed to get restricted friendships:", error);

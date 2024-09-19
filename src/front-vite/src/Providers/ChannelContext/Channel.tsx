@@ -64,9 +64,16 @@ export interface Channel {
 	description: string;
 }
 
-type ChannelUpdateType  = {
-	channel: Channel,
-	updateType: 'updated' | 'deleted',
+const enum UpdateType {
+	updated = 'updated',
+	deleted = 'deleted',
+	created = 'created',
+}
+
+type DataUpdateType  = {
+	channelId: number,
+	content: Channel | ChannelMember,
+	updateType: UpdateType,
 }
 
 type ChannelContextType = {
@@ -75,6 +82,24 @@ type ChannelContextType = {
 	channelProps: ChannelPropsType,
 	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
 	changeProps: (newProps: Partial<ChannelPropsType>) => void,
+}
+
+function updateArray<Type>(prevArray: Type[], newData: DataUpdateType): Type[] {
+	const index = prevArray.findIndex((prevArray: any) => prevArray.id === newData.content.id)
+	if (index === -1) {
+		if (newData.updateType === UpdateType.updated) {
+			return ([...prevArray, newData.content as Type]);
+		}
+		return ([...prevArray]);
+	}
+
+	let updatedArray = [...prevArray];
+	if (newData.updateType === UpdateType.updated) {
+		updatedArray[index] = newData.content as Type;
+	} else {
+		updatedArray.splice(index, 1);
+	}
+	return (updatedArray);
 }
 
 const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
@@ -88,7 +113,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		state: undefined,
 	});
 
-	const { userSocket } = useUser();
+	const { user: localUser, userSocket } = useUser();
 
   const changeProps = (newProps: Partial<ChannelPropsType>) => {
 	  setChannelProps((prev) => ({
@@ -126,38 +151,56 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			}
 		};
 
-		const onChannelUpdate = async () => {
+		async function updateMembership(data: DataUpdateType) {
 			try {
-				const memberships: ChannelMember[] = await retryOperation(async () => {
-					const response = await axios.get(`${BACKEND_URL}/channel/joined`, { withCredentials: true });
-					return (response.data.memberships || []);
+				data.content = await retryOperation(async () => {
+					const response = await axios.get(`${BACKEND_URL}/channel/joined/${data.content.id}`, {
+						withCredentials: true
+					});
+					return (response.data.membership || []);
 				})
-				setMemberships(memberships);
-			} catch(error: any) {
+				setMemberships((prevMemberships) => updateArray(prevMemberships, data));
+			} catch (error: any) {
 				handleError('Unable to update joined channel:',  error);
-				return;
 			}
 		}
 
-		const onPublicChannelUpdate = (data: ChannelUpdateType) => {
-			setPublicChannels((prevChannels) => {
-				const index = prevChannels.findIndex(prevChannel => prevChannel.id === data.channel.id)
-
-				if (index === -1) {
-					if (data.updateType === 'updated') {
-						return ([...prevChannels, data.channel]);
+		const onChannelUpdate = (data: DataUpdateType) => {
+			if (data.content && 'role' in data.content && data.content.user.id === localUser.id) {
+				updateMembership(data);
+			} else {
+				setMemberships((prevMemberships) => {
+					const targetMembershipIndex = prevMemberships.findIndex((membership) =>
+						membership.channel.id === data.channelId
+					)
+					if (targetMembershipIndex === -1) {
+						return (prevMemberships);
 					}
-					return ([...prevChannels]);
-				}
 
-				let updatedChannels = [...prevChannels];
-				if (data.updateType === 'updated') {
-					updatedChannels[index] = data.channel;
-				} else {
-					updatedChannels.splice(index, 1);
-				}
-				return (updatedChannels);
-			});
+					const updatedMemberships = [...prevMemberships];
+					if (!data.content) {
+						updatedMemberships.splice(targetMembershipIndex, 1);
+						return (updatedMemberships);
+					}
+
+					const targetMembership = updatedMemberships[targetMembershipIndex];
+					let targetChannel: Channel;
+
+					if ('role' in data.content) {
+						targetChannel = { ...targetMembership.channel };
+						targetChannel.members = updateArray(targetChannel.members, data);
+					} else {
+						targetChannel = data.content;
+					}
+
+					updatedMemberships[targetMembershipIndex] = { ...targetMembership, channel: targetChannel };
+					return (updatedMemberships);
+				})
+			}
+		}
+
+		const onPublicChannelUpdate = (data: DataUpdateType) => {
+			setPublicChannels((prevChannels) => (updateArray(prevChannels, data)));
 		}
 
 		getJoinedChannels();

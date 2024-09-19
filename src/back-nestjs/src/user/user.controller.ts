@@ -99,6 +99,19 @@ export class UserController {
     }
   }
   
+  @Get('friendship/restricted')
+  @UseGuards(AuthGuard)
+  async getUserRestrictedFriendships(@Res() res: Response, @Req() req: Request) {
+    const user = req.authUser;
+    const friendships = await this.userService.getUserFriendshipRestricted(user.id);
+		const restrictedUsers = (friendships ?? []).map((friendship) => (
+			friendship.user1.id === user.id
+			? new UserPublicDTO(friendship.user1, null)
+			: new UserPublicDTO(friendship.user2, null)
+		))
+		return res.status(200).json({ blockedUsers: restrictedUsers});
+  }
+
   @Get('friendship/:id')
   @UseGuards(AuthGuard)
   async getUserFriendshipAttitude(@Res() res: Response, @Req() req: Request, @Param('id', ParseIntPipe) id: number) {
@@ -112,14 +125,6 @@ export class UserController {
     console.log('getUserFriendshipAttitude in get', friendship);
     const friendshipAttitude = friendship.user1.id === user.id ? friendship.user1Attitude : friendship.user2Attitude;
     return res.status(200).json({friendshipAttitude});
-  }
-
-  @Get('friendship/restricted')
-  @UseGuards(AuthGuard)
-  async getUserRestrictedFriendships(@Res() res: Response, @Req() req: Request) {
-    const user = req.authUser;
-    const friendships = await this.userService.getUserFriendshipRestricted(user.id);
-	return res.status(200).json({ blockedUsers: friendships});
   }
 
   @Post('friendship/:id')

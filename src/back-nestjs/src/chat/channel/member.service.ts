@@ -17,6 +17,9 @@ export class MemberService {
 		.where('membership.id = :id', { id: typeof member === 'number' ?  member : member.id })
 		.leftJoinAndSelect('membership.user', 'user')
 		.leftJoinAndSelect('membership.channel', 'channel')
+		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')
+		.leftJoinAndSelect('channel.members', 'members')
+		.leftJoinAndSelect('members.user', 'channelUsers')
 		.getOne()
 
 		return (membership);
@@ -24,10 +27,13 @@ export class MemberService {
 
 	async getMembershipByChannel(channelId: number, userId: number): Promise<ChannelMember> {
 		const membership = await this.memberRespitory.createQueryBuilder('membership')
-		.innerJoin('membership.user', 'user')
+		.leftJoinAndSelect('membership.user', 'user')
 		.where('user.id = :userId', { userId })
 		.leftJoinAndSelect('membership.channel', 'channel')
 		.andWhere('channel.id = :channelId', { channelId })
+		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')
+		.leftJoinAndSelect('channel.members', 'members')
+		.leftJoinAndSelect('members.user', 'channelUsers')
 		.getOne()
 
 		return (membership);

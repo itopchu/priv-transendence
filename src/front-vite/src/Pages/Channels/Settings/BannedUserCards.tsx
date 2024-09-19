@@ -9,6 +9,7 @@ import { getUsername } from "../utils";
 import { onModerate } from "./MemberCards";
 import { getFriendshipAttitude, onSendMessage, userRelationMenuItems } from "./UserCardsUtils";
 import { FriendshipAttitude } from "../../Profile/ownerInfo";
+import { useChat } from "../../../Providers/ChatContext/Chat";
 
 type BannedUserCardsType = {
 	users: User[],
@@ -19,6 +20,7 @@ export const BannedUserCards: React.FC<BannedUserCardsType> = ({ users, channelI
 	if (!users?.length) return (undefined);
 
   const navigate = useNavigate();
+	const { chatProps, changeChatProps } = useChat();
 
 	const UserCard: React.FC<{ user: User }> = ({ user }) => {
 		const [anchorEl, setAnchorEl] = useState<any>(null);
@@ -96,7 +98,7 @@ export const BannedUserCards: React.FC<BannedUserCardsType> = ({ users, channelI
 						open={Boolean(anchorEl)}
 						onClose={onMenuClose}
 					>
-						<MenuItem onClick={() => onSendMessage(user, onMenuClose)}>Send Message</MenuItem>
+						<MenuItem onClick={() => onSendMessage(user, chatProps, onMenuClose, changeChatProps)}>Send Message</MenuItem>
 						{userRelationMenuItems(user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
 						<Divider />
 						<MenuItem color='error' onClick={() => onModerate(user, 'ban', channelId, onMenuClose)}>

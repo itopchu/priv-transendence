@@ -120,6 +120,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   const [messageLog, setMessageLog] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
 
+	const blockedUsersRef = useRef<User[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -128,8 +129,6 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   );
 
   useEffect(() => {
-		const blockedUsersRef = useRef<User[]>([]);
-
 		const getBlockedUsers = async (): Promise<User[]> => {
       try {
         const response = await axios.get(`${BACKEND_URL}/user/friendship/restricted`, { withCredentials: true });
@@ -137,7 +136,8 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
 					return (response.data.blockedUsers);
 				}
       } catch (error) {
-        console.error(`Failed too retrieve blocked users:${error}`);
+        console.error(`Failed to retrieve blocked users:${error}`);
+				handleError('nice', error);
       }
 			return ([]);
 		}

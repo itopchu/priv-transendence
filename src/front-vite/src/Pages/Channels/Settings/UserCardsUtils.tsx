@@ -3,8 +3,7 @@ import { FriendshipAttitude, FriendshipAttitudeBehaviour } from "../../Profile/o
 import { handleError, BACKEND_URL, getUsername } from "../utils";
 import { User } from "../../../Providers/UserContext/User";
 import { MenuItem } from "@mui/material";
-import { useChat } from "../../../Providers/ChatContext/Chat";
-import { ChatStatus } from "../../../Layout/Chat/InterfaceChat";
+import { ChatProps, ChatStatus } from "../../../Layout/Chat/InterfaceChat";
 
 export async function getFriendshipAttitude(
 	id: number,
@@ -46,55 +45,117 @@ export const userRelationMenuItems = (
 	switch (friendshipAttitude) {
 		case FriendshipAttitude.restricted:
 			return (
-				<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restore); menuCloseFunc(); }} >
+				<MenuItem
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restore);
+						menuCloseFunc();
+					}}
+				>
 					{`Unblock ${username}`}
 				</MenuItem>
 			);
 		case FriendshipAttitude.accepted:
 			return ([
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.remove); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.remove}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.remove);
+						menuCloseFunc();
+					}}
+				>
 					{`Unfriend ${username}`}
 				</MenuItem>),
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.restrict}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
+						menuCloseFunc();
+					}}
+				>
 					{`Block ${username}`}
 				</MenuItem>),
 			]);
 		case FriendshipAttitude.pending:
 			return ([
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.withdraw); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.withdraw}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.withdraw);
+						menuCloseFunc();
+					}}
+				>
 					Withdraw Friend Request
 				</MenuItem>),
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.restrict}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
+						menuCloseFunc();
+					}}
+				>
 					{`Block ${username}`}
 				</MenuItem>),
 			]);
 		case FriendshipAttitude.awaiting:
 			return ([
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.approve); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.approve}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.approve);
+						menuCloseFunc();
+					}}
+				>
 					Accept Friend Request
 				</MenuItem>),
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.decline); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.decline}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.decline);
+						menuCloseFunc();
+					}}
+				>
 					Decline Friend Request
 				</MenuItem>),
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.restrict}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
+						menuCloseFunc();
+					}}
+				>
 					{`Block ${username}`}
 				</MenuItem>),
 			]);
 		default:
 			return ([
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.add); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.add}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.add);
+						menuCloseFunc();
+					}}
+				>
 					Send Friend Request
 				</MenuItem>),
-				(<MenuItem onClick={() => { postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict); menuCloseFunc(); }}>
+				(<MenuItem
+					key={FriendshipAttitudeBehaviour.restrict}
+					onClick={() => {
+						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
+						menuCloseFunc();
+					}}
+				>
 					{`Block ${username}`}
 				</MenuItem>),
 			]);
 	}
 }
 
-export async function onSendMessage(user: User, menuCloseFunc: () => void) {
-	const { chatProps, changeChatProps } = useChat();
-
+export async function onSendMessage(
+	user: User,
+	chatProps: ChatProps,
+	menuCloseFunc: () => void,
+	changeChatProps: (newProps: Partial<ChatProps>) => void,
+) {
 	const chat = chatProps.chats.find((chat) => chat.user.id === user.id);
 	if (chat) {
 		changeChatProps({
