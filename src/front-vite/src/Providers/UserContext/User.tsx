@@ -15,12 +15,13 @@ export interface User {
 }
 
 export interface UserClient extends User {
-  blockedUsers?: User[];
   auth2F?: boolean;
 }
 
+export type UserStatusType = 'online' | 'offline' | 'ingame';
+
 export interface UserPublic extends User {
-  status?: 'online' | 'offline' | 'ingame';
+  status?: UserStatusType;
 }
 
 interface UserContextType {

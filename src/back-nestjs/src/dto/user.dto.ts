@@ -14,8 +14,6 @@ export class UserClient {
     {user.greeting ? this.greeting = user.greeting : null;}
     {user.image ? this.image = process.env.ORIGIN_URL_BACK + '/' + user.image : null;}
     this.auth2F = user.auth2F ? true : false;
-
-	this.blockedUsers = (user?.blockedUsers ?? []).map(blockedUser => new UserPublicDTO(blockedUser, null));
   }
 
   @IsNumber()
@@ -39,12 +37,6 @@ export class UserClient {
   @IsString()
   @Length(0, 101)
   greeting: string;
-
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => UserPublicDTO)
-  blockedUsers?: UserPublicDTO[];
 
   @IsBoolean()
   auth2F: boolean;

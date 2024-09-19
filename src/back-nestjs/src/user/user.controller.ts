@@ -98,32 +98,6 @@ export class UserController {
       return res.status(500).json({ message: 'Failed to update user', error: error.message });
     }
   }
-
-  @Patch('block/:id')
-  @UseGuards(AuthGuard)
-  async blockUser(@Req() req: Request, @Param('id', ParseIntPipe) victimId: number, @Res() res: Response) {
-	if (req.authUser.id === victimId) {
-		throw new BadRequestException('User blocking himself, stop hating yourself...');
-	}
-    const user = await this.userService.getUserByIdWithRel(req.authUser.id, ['blockedUsers']);
-
-	const blockedUserIndex = user.blockedUsers.findIndex((blockedUser) =>  blockedUser.id === victimId);
-	if (blockedUserIndex !== -1) {
-		user.blockedUsers.splice(blockedUserIndex, 1);
-	} else {
-		const victim = await this.userService.getUserById(victimId);
-		if (!victim) {
-			throw new NotFoundException('User not found');
-		}
-		user.blockedUsers.push(victim);
-	}
-	const newUser = await this.userService.updateUser(res, user);
-	if (!newUser) {
-		throw new InternalServerErrorException('Could not block user');
-	}
-	const userClient = new UserClient(newUser);
-	return ({ userClient });
-  }
   
   @Get('friendship/:id')
   @UseGuards(AuthGuard)
@@ -138,6 +112,14 @@ export class UserController {
     console.log('getUserFriendshipAttitude in get', friendship);
     const friendshipAttitude = friendship.user1.id === user.id ? friendship.user1Attitude : friendship.user2Attitude;
     return res.status(200).json({friendshipAttitude});
+  }
+
+  @Get('friendship/restricted')
+  @UseGuards(AuthGuard)
+  async getUserRestrictedFriendships(@Res() res: Response, @Req() req: Request) {
+    const user = req.authUser;
+    const friendships = await this.userService.getUserFriendshipRestricted(user.id);
+	return res.status(200).json({ blockedUsers: friendships});
   }
 
   @Post('friendship/:id')

@@ -51,10 +51,6 @@ export class User {
   @OneToMany(() => Friendship, friendship => friendship.user2)
   friendships2: Friendship[];
 
-  @JoinTable()
-  @ManyToMany(() => User)
-  blockedUsers: User[];
-
   @OneToMany(() => ChannelMember, membership => membership.user)
   memberships: ChannelMember[];
 

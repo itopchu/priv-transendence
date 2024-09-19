@@ -12,6 +12,7 @@ import {
   ChannelRole,
   ChannelType,
   ChannelTypeValues,
+  useChannel,
 } from '../../../Providers/ChannelContext/Channel';
 import {
   EditOff as EditOffIcon,
@@ -24,7 +25,6 @@ import {
   DescriptionBox,
   lonelyBox,
 } from '../Components/Components';
-import { ChannelStates } from '..';
 import { BACKEND_URL, getUsername, handleError, onFileUpload } from '../utils';
 import { SettingsContainer, SettingsDivider, SettingsTextField } from '../Components/SettingsComponents';
 import { ChannelDataType, SettingsBoxType } from './Types';
@@ -32,8 +32,10 @@ import { MemberCards } from './MemberCards';
 import { SettingsUserCardBox } from '../Components/SettingsComponents';
 import { BannedUserCards } from './BannedUserCards';
 
-export const EditDetails: React.FC<SettingsBoxType> = ({ membership, channelProps, changeProps }) => {
+export const EditDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 	if (!membership) return (lonelyBox());
+
+	const { changeProps } = useChannel();
 
   const passwordRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLInputElement>(null);

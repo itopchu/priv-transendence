@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { UserPublic, useUser } from '../../Providers/UserContext/User';
+import { UserPublic, UserStatusType, useUser } from '../../Providers/UserContext/User';
 import { Avatar, Stack, Typography, useTheme, Grid, IconButton, Popover } from '@mui/material';
 import {
   AccountCircle as AccountCircleIcon,
@@ -43,6 +43,20 @@ export enum FriendshipAttitudeBehaviour {
 }
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+
+export function getStatusColor(status: UserStatusType | undefined) {
+  const theme = useTheme();
+
+	if (!status) {
+		return (theme.palette.action.hover);
+	}
+
+	return (
+		status === 'online' ? theme.palette.success.main
+		: status === 'offline' ? theme.palette.error.main
+		: theme.palette.warning.main
+	);
+}
 
 export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const theme = useTheme();
@@ -193,7 +207,6 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   async function handleChatInvite() {
 		if (!visitedUser?.id || !chatProps.chats) return;
 
-		console.log(chatProps.chats);
 		const chat = chatProps.chats.find((chat) => chat.user.id === visitedUser.id);
 		if (chat) {
 			changeChatProps({
@@ -240,11 +253,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             maxHeight: '200px',
             maxWidth: '200px',
             border: '2px solid',
-            borderColor: () => (
-              visitedUser?.status === 'online' ? theme.palette.success.main :
-                visitedUser?.status === 'offline' ? theme.palette.error.main :
-                  visitedUser?.status === 'ingame' ? theme.palette.warning.main : theme.palette.action.hover
-            ),
+            borderColor: getStatusColor(visitedUser?.status),
           }}
           src={visitedUser?.image ?? ''}
           alt="visitedUser"

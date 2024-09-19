@@ -12,17 +12,18 @@ import {
   DescriptionBox,
   lonelyBox,
 } from '../Components/Components';
-import { ChannelStates } from '..';
 import { BACKEND_URL, getUsername, handleError } from '../utils';
-import { ChannelRole, } from '../../../Providers/ChannelContext/Channel';
+import { ChannelRole, ChannelStates, useChannel, } from '../../../Providers/ChannelContext/Channel';
 import { ModeEdit as EditIcon, } from '@mui/icons-material';
 import { SettingsBoxType } from './Types';
 import { SettingsContainer, SettingsDivider, SettingsUserCardBox } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
 
-export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership, channelProps, changeProps }) => {
+export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 	if (!membership) return (lonelyBox());
 
+	const { changeProps } = useChannel();
+	
   const channel = membership.channel;
   const members = channel.members
     .sort((a, b) => getUsername(a).localeCompare(getUsername(b)))

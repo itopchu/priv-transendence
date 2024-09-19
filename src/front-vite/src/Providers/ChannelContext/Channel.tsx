@@ -27,6 +27,18 @@ export enum ChannelRole {
 	member,
 }
 
+export const enum ChannelStates {
+	chat = 'chat',
+	details = 'details',
+	editMode = 'editMode',
+}
+
+export type ChannelPropsType = {
+	selected: Channel | undefined,
+	selectedJoin: Channel | undefined,
+	state: ChannelStates | undefined,
+}
+
 export type ChannelMember = {
 	id: number;
 	user: User;
@@ -60,6 +72,9 @@ type ChannelUpdateType  = {
 type ChannelContextType = {
 	memberships: ChannelMember[],
 	publicChannels: Channel[],
+	channelProps: ChannelPropsType,
+	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
+	changeProps: (newProps: Partial<ChannelPropsType>) => void,
 }
 
 const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
@@ -67,8 +82,20 @@ const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
 export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const [memberships, setMemberships] = useState<ChannelMember[]>([]);
 	const [publicChannels, setPublicChannels] = useState<Channel[]>([]);
+  const [channelProps, setChannelProps] = useState<ChannelPropsType>({
+		selected: undefined,
+		selectedJoin: undefined,
+		state: undefined,
+	});
 
 	const { userSocket } = useUser();
+
+  const changeProps = (newProps: Partial<ChannelPropsType>) => {
+	  setChannelProps((prev) => ({
+		  ...prev,
+		  ...newProps,
+	  }))
+  }
 
 	useEffect(() => {
 		const getJoinedChannels = async () => {
@@ -146,7 +173,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 	}, [userSocket]);
 
 	return (
-		<ChannelContext.Provider value={{ memberships, publicChannels}}>
+		<ChannelContext.Provider value={{ memberships, publicChannels, channelProps, setChannelProps, changeProps }}>
 			{ children }
 		</ChannelContext.Provider>
 	);

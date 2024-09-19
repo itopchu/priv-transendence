@@ -69,11 +69,6 @@ export class ChatService {
 		if (!isInChat) {
 			throw new UnauthorizedException('Unauthorized: Author is not in chat');
 		}
-		const recipient = chat.users.find((user) =>  user.id !== author.id);
-		const isBlocked = recipient?.blockedUsers?.some((user) => user.id === author.id);
-		if (isBlocked) {
-			throw new UnauthorizedException('Unauthorized: Author is blocked');
-		}
 
 		return (await this.messageService.createMessage(chat, author, message));
 	}

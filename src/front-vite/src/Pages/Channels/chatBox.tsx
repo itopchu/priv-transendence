@@ -14,7 +14,7 @@ import {
   CancelScheduleSendRounded as MutedIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
-import { useUser } from '../../Providers/UserContext/User';
+import { User, useUser } from '../../Providers/UserContext/User';
 import { Channel } from '../../Providers/ChannelContext/Channel';
 import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox, ChatBubble } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
@@ -128,17 +128,24 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   );
 
   useEffect(() => {
-		if (!loading) setLoading(true);
+		const blockedUsersRef = useRef<User[]>([]);
 
-    const onMessage = (message: Message) => {
-      if (user?.blockedUsers?.some((blockedUser) => blockedUser.id === message.author.id)) {
-          return;
+		const getBlockedUsers = async (): Promise<User[]> => {
+      try {
+        const response = await axios.get(`${BACKEND_URL}/user/friendship/restricted`, { withCredentials: true });
+				if (response.data.blockedUsers) {
+					return (response.data.blockedUsers);
+				}
+      } catch (error) {
+        console.error(`Failed too retrieve blocked users:${error}`);
       }
-      setMessageLog((prevMessages) => [...prevMessages, message]);
-    };
+			return ([]);
+		}
 
     const getMessageLog = async () => {
       try {
+				blockedUsersRef.current = await getBlockedUsers();
+
         const messageLog = await retryOperation(async () => {
           const response = await axios.get(
             `${BACKEND_URL}/channel/messages/${channel.id}`,
@@ -146,10 +153,11 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
           );
           return response.data.messages || [];
         });
-        messageLog.sort((a: Message, b: Message) => a.id - b.id)
+        messageLog
 					.filter((message: Message) => (
-						user?.blockedUsers?.some((blockedUser) => blockedUser.id === message.author.id)
-					));
+						!blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
+					))
+					.sort((a: Message, b: Message) => a.id - b.id);
 
         setMessageLog(messageLog);
 				setLoading(false);
@@ -158,10 +166,18 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
       }
     };
 
+    const onMessage = (message: Message) => {
+			const isBlockedUser = blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
+			if (isBlockedUser) return;
+
+      setMessageLog((prevMessages) => [...prevMessages, message]);
+    };
+
     getMessageLog();
     userSocket?.on(`channel#${channel.id}Message`, onMessage);
     userSocket?.on(`messageError`, (errMessage: string) => handleError(errMessage, null));
     return () => {
+			setLoading(true);
       userSocket?.off(`channel#${channel.id}Message`, onMessage);
     };
   }, [channel.id, userSocket]);

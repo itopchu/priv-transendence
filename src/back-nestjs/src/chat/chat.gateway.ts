@@ -9,6 +9,7 @@ import { ChannelPublicDTO, ChatClientDTO, MessagePublicDTO } from '../dto/channe
 import { MemberService } from './channel/member.service';
 import { Chat } from 'src/entities/channel.entity';
 import { ChatService } from './chat.service';
+import { FriendshipAttitude } from '../entities/user.entity';
 
 export enum UpdateType {
 	deleted = 'deleted',
@@ -169,8 +170,11 @@ export class ChatGateway {
 			//throw new NotFoundException('Recipient not found');
 		}
 
-		const isBlocked = recipient?.blockedUsers?.some((blockedUser) => blockedUser.id === user.id);
-		if (isBlocked) {
+		const relationship = await this.userService.getUserFriendship(user, recipient);
+		const isRestricted = !relationship ? false : relationship.user1.id === user.id
+			? relationship.user1Attitude === FriendshipAttitude.restricted
+			: relationship.user2Attitude === FriendshipAttitude.restricted
+		if (isRestricted) {
 			throw new UnauthorizedException('Unauthorized: User is blocked');
 		}
 
@@ -180,7 +184,7 @@ export class ChatGateway {
 			chatId: chat.id,
 			message: publicMessage,
 		}
-		const recipientSocket = false; //this.connectedUsers.get(recipient.id);
+		const recipientSocket = this.connectedUsers.get(recipient?.id);
 		if (recipientSocket) {
 			//recipientSocket.emit('directMessage');
 		}

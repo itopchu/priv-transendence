@@ -6,7 +6,7 @@ import {
   Login as LoginIcon,
 	MoreVertSharp as MiscIcon,
 } from '@mui/icons-material';
-import { Channel, useChannel } from '../../Providers/ChannelContext/Channel';
+import { ChannelStates, useChannel } from '../../Providers/ChannelContext/Channel';
 import ChatBox from './chatBox';
 import { JoinCard } from './JoinCard';
 import { lonelyBox } from './Components/Components';
@@ -23,36 +23,10 @@ interface ChannelTypeEvent {
   iconClickEvent: () => void;
 }
 
-export const enum ChannelStates {
-	chat = 'chat',
-	details = 'details',
-	editMode = 'editMode',
-}
-
-export type ChannelPropsType = {
-	selected: Channel | undefined,
-	selectedJoin: Channel | undefined,
-	state: ChannelStates | undefined,
-}
-
-const initialProps = {
-	selected: undefined,
-	state: undefined,
-	selectedJoin: undefined,
-}
-
 const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const [channelProps, setChannelProps] = useState<ChannelPropsType>(initialProps);
-  const { memberships, publicChannels } = useChannel();
-
-  const changeProps = (newProps: Partial<ChannelPropsType>) => {
-	  setChannelProps((prev) => ({
-		  ...prev,
-		  ...newProps,
-	  }))
-  }
+  const { memberships, publicChannels, channelProps, changeProps } = useChannel();
 
   const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, name, isSelected, channelImage, clickEvent, iconClickEvent }) => {
     return (
@@ -191,16 +165,12 @@ const ChannelsPage: React.FC = () => {
 				return (
 					<ChannelDetails
 						membership={memberships.find(membership => membership.channel.id === channelProps?.selected?.id)}
-						channelProps={channelProps}
-						changeProps={changeProps}
 					/>
 				);
 			case ChannelStates.editMode:
 				return (
 					<EditDetails
 						membership={memberships.find(membership => membership.channel.id === channelProps?.selected?.id)}
-						channelProps={channelProps}
-						changeProps={changeProps}
 					/>
 				);
 			default:
@@ -212,7 +182,7 @@ const ChannelsPage: React.FC = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
 		{showCreateCard && (<CreateCard setIsVisible={setShowCreateCard} />)}
-		<JoinCard changeProps={changeProps} channel={channelProps.selectedJoin} />
+		<JoinCard channel={channelProps.selectedJoin} />
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}

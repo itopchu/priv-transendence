@@ -135,6 +135,23 @@ export class UserService {
     }
   }
 
+  async getUserFriendshipRestricted(id: number) {
+    let friendship: Friendship[] | null;
+
+    try {
+      friendship = await this.friendsRepository.createQueryBuilder('friendship')
+      .leftJoinAndSelect('friendship.user1', 'user1')
+      .leftJoinAndSelect('friendship.user2', 'user2')
+      .where('friendship.user1 = :id AND friendship.attitude1 = :attitude', { id, attitude: FriendshipAttitude.restricted })
+      .orWhere('friendship.user2 = :id AND friendship.attitude2 = :attitude', { id, attitude: FriendshipAttitude.restricted })
+      .getMany();
+    } catch (error) {
+      console.error("Failed to get restricted friendships:", error);
+      return null;
+    }
+    return friendship;
+  }
+
   async getUserFriendship(userRequester: User, userResponder: User): Promise<Friendship | null> {
     let friendship: Friendship | null;
     try {

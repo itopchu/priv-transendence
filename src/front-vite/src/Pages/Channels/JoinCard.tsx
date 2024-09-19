@@ -21,17 +21,15 @@ import {
 } from '@mui/material';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
 import { BACKEND_URL, handleError, retryOperation } from './utils';
-import { ChannelPropsType } from '.';
 
 interface JoinCardType {
-  changeProps: (newProps: Partial<ChannelPropsType>) => void;
   channel: Channel | undefined;
 }
 
-export const JoinCard: React.FC<JoinCardType> = ({ changeProps, channel }) => {
+export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 	if (!channel) return undefined;
 
-  const { memberships } = useChannel();
+  const { memberships, changeProps } = useChannel();
   const { user, userSocket } = useUser();
 
   const [loading, setLoading] = useState(false);

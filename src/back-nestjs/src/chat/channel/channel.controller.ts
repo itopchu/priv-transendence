@@ -148,14 +148,16 @@ export class ChannelController {
 	async muteMember(@Req() req: Request,
 		@Param('id', ParseIntPipe) channelId: number,
 		@Body('victimId', ParseIntPipe) victimId: number,
-		@Body('muteUntil', ParseIntPipe) muteUntil: number
+		@Body('muteUntil') muteUntil: string | null
 	) {
+		const duration = muteUntil ?  parseInt(muteUntil, 10) : null;
+
 		const user = req.authUser;
 		if (user.id === victimId) {
 			throw new BadRequestException("Muting yourself..? Just shut up...");
 		}
 
-		await this.channelService.muteMember(user, victimId, muteUntil, channelId);
+		await this.channelService.muteMember(user, victimId, duration, channelId);
 		this.channelGateway.emitChannelUpdate(channelId);
 	}
 

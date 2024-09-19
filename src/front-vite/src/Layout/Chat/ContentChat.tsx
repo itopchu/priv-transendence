@@ -8,11 +8,12 @@ import {
 } from '@mui/icons-material';
 import { ButtonAvatar, ClickTypography } from '../../Pages/Channels/Components/Components';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
-import { useUser } from '../../Providers/UserContext/User';
+import { useEffect, useRef, useState } from 'react';
+import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
 import { getUsername, trimMessage } from '../../Pages/Channels/utils';
 import { ContentChatMessages } from './ContentChatMessages';
+import { getStatusColor } from '../../Pages/Profile/ownerInfo';
 
 const ContentChat = () => {
 	const { chatProps, changeChatProps } = useChat();
@@ -20,6 +21,8 @@ const ContentChat = () => {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+	const [user, setUser] = useState<UserPublic | undefined>(chatProps.selected?.user);
 
   useEffect(() => {
     const element = messagesEndRef.current;
@@ -32,6 +35,21 @@ const ContentChat = () => {
     }
   }, [chatProps.messages]);
 
+	useEffect(() => {
+		function onProfileStatus(updatedUser: UserPublic) {
+			if (updatedUser.id === user?.id) {
+				setUser(updatedUser);
+			}
+		}
+
+		userSocket?.on('profileStatus', onProfileStatus);
+		userSocket?.emit('profileStatus', user?.id);
+
+		return (() => {
+			userSocket?.emit('unsubscribeProfileStatus', user?.id);
+			userSocket?.off('profileStatus');
+		});
+	}, [userSocket]);
 
 	const onSend = () => {
 		if (!inputRef.current) return;
@@ -101,17 +119,21 @@ const ContentChat = () => {
 						<BackIcon sx={{ fontSize: '120%' }} />
 					</IconButton>
 					<ButtonAvatar
-						clickEvent={() => (navigate(`/profile/${chatProps.selected?.user.id}`))}
-						src={chatProps.selected?.user?.image}
+						clickEvent={() => (navigate(`/profile/${user?.id}`))}
+						src={user?.image}
+						avatarSx={{
+							border: '2px solid',
+							borderColor: getStatusColor(user?.status),
+						}}
 					/>
 					<ClickTypography
-						onClick={() => (navigate(`/profile/${chatProps.selected?.user.id}`))}
+						onClick={() => (navigate(`/profile/${user?.id}`))}
 						sx={{
 							overflow: 'hidden',
 							textOverflow: 'ellipsis'
 						}}
 					>
-						{getUsername(chatProps.selected?.user)}
+						{getUsername(user)}
 					</ClickTypography>
 					<Box flexGrow={1} />
 					<IconButton
