@@ -19,6 +19,7 @@ interface GameState {
   bot: boolean;
   ball: Ball;
   score: { player1: number, player2: number };
+  gameEnd?: boolean;
 }
 
 @Injectable()
@@ -58,6 +59,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
         bot: bot,
         ball: { x: 390, y: 190, dx: 2, dy: 2 },
         score: { player1: 0, player2: 0 },
+        gameEnd: false,
       });
       this.setGameInterval(roomId);
     }
@@ -80,6 +82,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   updateBallPosition(roomId: string): void {
     const gameState = this.getGameState(roomId);
     if (!gameState) return;
+    if (gameState.gameEnd) return;
 
     let { x, y, dx, dy } = gameState.ball;
     const { player1, player2 } = gameState;
@@ -123,11 +126,13 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
 
     if (x <= 0) {
       if (++gameState.score.player2 === 5) {
+        gameState.gameEnd =  true;
         this.gateway.gameOver(roomId, false);
       }
       this.resetBall(gameState, false);
     } else if (x >= this.containerWidth - 20) {
       if (++gameState.score.player1 === 5) {
+        gameState.gameEnd = true;
         this.gateway.gameOver(roomId, true);
       }
       this.resetBall(gameState, true);

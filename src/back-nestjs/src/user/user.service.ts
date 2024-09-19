@@ -48,6 +48,7 @@ export class UserService {
     return new UserClient(user);
   }
 
+  
   async getUserByIntraId(intraId: number): Promise<User | null> {
     try {
       const found = await this.userRepository.findOne({ where: { intraId } });
@@ -58,7 +59,7 @@ export class UserService {
       return (null);
     }
   }
-
+  
   async getUserById(id: number): Promise<User | null> {
     try {
       const found = await this.userRepository.findOne({ where: { id } });
@@ -70,20 +71,20 @@ export class UserService {
     }
     return (null);
   }
-
+  
   async updateUser(res: Response, user: User): Promise<User | null> {
     const properties = Object.keys(user);
-
+    
     for (const prop of properties) {
       if (prop === 'id') continue;
-
+      
       try {
         await this.userRepository.update({ id: user.id }, { [prop]: user[prop] });
       } catch (error) {
-
+        
       }
     }
-
+    
     let updatedUser: User | null;
     try {
       updatedUser = await this.userRepository.findOne({ where: { id: user.id } });
@@ -97,39 +98,45 @@ export class UserService {
     }
     return updatedUser;
   }
-
+  
   async searchUsers(search: string): Promise<User[] | null> {
     try {
       const lowerSearch = search.toLowerCase();
       const users = await this.userRepository.createQueryBuilder('user')
-        .where('LOWER(user.nameFirst) LIKE :search', { search: `%${lowerSearch}%` })
-        .orWhere('LOWER(user.nameLast) LIKE :search', { search: `%${lowerSearch}%` })
-        .orWhere('LOWER(user.nameNick) LIKE :search', { search: `%${lowerSearch}%` })
-        .orWhere("LOWER(CONCAT(user.nameFirst, ' ', user.nameLast)) LIKE :search", { search: `%${lowerSearch}%` })
-        .getMany();
+      .where('LOWER(user.nameFirst) LIKE :search', { search: `%${lowerSearch}%` })
+      .orWhere('LOWER(user.nameLast) LIKE :search', { search: `%${lowerSearch}%` })
+      .orWhere('LOWER(user.nameNick) LIKE :search', { search: `%${lowerSearch}%` })
+      .orWhere("LOWER(CONCAT(user.nameFirst, ' ', user.nameLast)) LIKE :search", { search: `%${lowerSearch}%` })
+      .getMany();
       return users;
     } catch (error) {
       console.error('Error searching users:', error);
       return null;
     }
   }
+  
+  async saveGameHistory(history: GameHistory): Promise<void> {
+    await this.gameHistoryRepository.save(history);
+  }
 
   async getUserGamesById(userId: number): Promise<GameHistory[] | null> {
     try {
-      const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['games'] });
+      const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user) {
+        console.error('User not found');
         return null;
       }
-
-      const games = await this.gameHistoryRepository
+  
+      const gameHistories = await this.gameHistoryRepository
         .createQueryBuilder('gameHistory')
-        .leftJoinAndSelect('gameHistory.players', 'player')
-        .where('player.id = :userId', { userId })
+        .leftJoinAndSelect('gameHistory.player1', 'player1')
+        .leftJoinAndSelect('gameHistory.player2', 'player2')
+        .where('player1.id = :userId OR player2.id = :userId', { userId })
         .getMany();
-
-      return games;
+  
+      return gameHistories;
     } catch (error) {
-      console.error('Failed to get user games by id:', error);
+      console.error('Error retrieving game history:', error);
       return null;
     }
   }

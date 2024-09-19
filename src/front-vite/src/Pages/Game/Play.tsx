@@ -1,6 +1,7 @@
 import "./Game.css";
 import { useUser } from "../../Providers/UserContext/User";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 enum PlayerStates {
   notInGame = 0,

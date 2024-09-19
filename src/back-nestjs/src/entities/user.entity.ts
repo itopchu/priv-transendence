@@ -52,8 +52,8 @@ export class User {
   @OneToMany(() => Friendship, friendship => friendship.user2)
   friendships2: Friendship[];
 
-  @ManyToMany(() => GameHistory, gameHistory => gameHistory.players)
-  games: GameHistory[];
+  @OneToMany(() => GameHistory, gameHistory => gameHistory.player1)
+  gameHistories: GameHistory[];
 
   async validate() {
     await validateOrReject(this);
