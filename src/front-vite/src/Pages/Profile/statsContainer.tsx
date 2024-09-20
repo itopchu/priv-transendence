@@ -16,7 +16,8 @@ interface GameHistory {
   player1Score: number;
   player2Score: number;
   winner: boolean;
-  players: UserPublic[];
+  player1: UserPublic;
+  player2: UserPublic;
 }
 
 const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';

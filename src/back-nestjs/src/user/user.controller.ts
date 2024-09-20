@@ -164,13 +164,11 @@ export class UserController {
     if (!games)
       return res.status(404);
 
-    const gamesDTO = games.map(game => {
-      const playersDTO = game.players.map(player => new UserPublicDTO(player, null));
-      return {
-        ...game,
-        players: playersDTO
-      };
-    });
+    const gamesDTO = games.map(game => ({
+      ...game,
+      player1: new UserPublicDTO(game.player1, null),
+      player2: new UserPublicDTO(game.player2, null)
+    }));
 
     return res.status(200).json({gamesDTO});
   }
