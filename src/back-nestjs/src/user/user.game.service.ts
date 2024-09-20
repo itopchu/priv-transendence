@@ -33,6 +33,9 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   private containerWidth = 800;
   private containerHeight = 500;
   private paddleSpeed = 3;
+  private botSpeed = 1;
+  private ballSpeedMult = 1;
+  private gameSpeed = 5;
 
   onModuleInit() {
   }
@@ -46,7 +49,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     if (this.intervalIds.has(roomId)) return;
     const intervalId = setInterval(() => {
       this.updateBallPosition(roomId);
-    }, 5);
+    }, this.gameSpeed);
     this.intervalIds.set(roomId, intervalId);
   }
 
@@ -95,13 +98,11 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     const { player1, player2 } = gameState;
     
     player1.y = Math.max(0, Math.min(this.containerHeight - 100, player1.y + player1.direction * this.paddleSpeed));
-    if (gameState.bot)
-      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + 50 > y ? player2.y - 1 : player2.y + 1 ));
-    else
-      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + player2.direction * this.paddleSpeed));  
+    player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + (gameState.bot ? (player2.y + 50 > y ? -this.botSpeed : this.botSpeed)
+              : player2.direction * this.paddleSpeed)));
 
-    x += dx;
-    y += dy;
+    x += dx * this.ballSpeedMult;
+    y += dy * this.ballSpeedMult;
 
     if (y <= 0) {
       dy = Math.abs(dy);
