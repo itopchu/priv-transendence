@@ -69,6 +69,13 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     return this.gameStates.get(roomId);
   }
 
+  getFliteredGameState(roomId: string): Omit<GameState, 'bot' | 'gameEnd'> {
+    const gameState = this.getGameState(roomId);
+    if (!gameState) return null;
+    const { bot, gameEnd, ...fliteredState } = gameState;
+    return fliteredState;
+  }
+
   updatePlayerPosition(roomId: string, position: boolean, direction: number): void {
     const gameState = this.getGameState(roomId);
     if (!gameState) return;

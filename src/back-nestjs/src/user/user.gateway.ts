@@ -163,7 +163,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('WebSocket server initialized');
     setInterval(() => {
       this.rooms.forEach((players, roomId) => {
-        this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
+        this.server.to(roomId).emit('state', this.gameService.getFliteredGameState(roomId));
       });
     }, 16);
   }
@@ -259,7 +259,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('move', direction);
     if (!client.roomId || client.position === undefined) return
     this.gameService.updatePlayerPosition(client.roomId, client.position, direction);
-    this.server.to(client.roomId).emit('state', this.gameService.getGameState(client.roomId));
+    this.server.to(client.roomId).emit('state', this.gameService.getFliteredGameState(client.roomId));
   }
 
   @SubscribeMessage('info')
