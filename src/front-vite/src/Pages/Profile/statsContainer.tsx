@@ -1,11 +1,16 @@
-import React, { useEffect } from 'react';
-import { UserPublic } from '../../Providers/UserContext/User';
-import { Avatar, Stack, Divider, Typography, useTheme, Box } from '@mui/material';
+import React, { useEffect, useState } from "react";
+import { UserPublic } from "../../Providers/UserContext/User";
 import {
-  EmojiEvents as Cup,
-} from '@mui/icons-material';
-import { useMediaQuery } from '@mui/material';
-import axios from 'axios';
+  Avatar,
+  Stack,
+  Divider,
+  Typography,
+  useTheme,
+  Box,
+} from "@mui/material";
+import { EmojiEvents as Cup } from "@mui/icons-material";
+import { useMediaQuery } from "@mui/material";
+import axios from "axios";
 
 interface StatsContainerProps {
   visitedUser: UserPublic;
@@ -20,46 +25,90 @@ interface GameHistory {
   player2: UserPublic;
 }
 
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
+const BACKEND_URL: string =
+  import.meta.env.ORIGIN_URL_BACK || "http://localhost:4000";
 
-export const StatsContainer: React.FC<StatsContainerProps> = ({ visitedUser }) => {
+export const StatsContainer: React.FC<StatsContainerProps> = ({
+  visitedUser,
+}) => {
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const [games, setGames] = React.useState<GameHistory[]>([]);
-
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
+  const [games, setGames] = useState<GameHistory[]>([]);
 
   useEffect(() => {
     const getGames = async () => {
       try {
-        const response = await axios.get(BACKEND_URL + '/games/' + visitedUser.id, { withCredentials: true });
+        const response = await axios.get(
+          `${BACKEND_URL}/user/games/${visitedUser.id}`,
+          { withCredentials: true }
+        );
+        console.log("Response.data:", response.data);
         if (response.data.gamesDTO) {
           setGames(response.data.gamesDTO);
-          console.log('Games:', response.data.gamesDTO);
         }
       } catch (error) {
-        console.error('Error logging out:', error);
+        setGames([]);
+        console.error("Error getGames:", error);
       }
-    }
+    };
     getGames();
   }, [visitedUser]);
 
-  let gameLine = () => {
+  let gameLine = (game: GameHistory) => {
+    const isPlayer1 = visitedUser.id === game.player1.id;
+    const winner = game.winner ? isPlayer1 : !isPlayer1;
+    const opponent = isPlayer1 ? game.player2 : game.player1;
+    const ownScore = isPlayer1 ? game.player1Score : game.player2Score;
+    const opponentScore = isPlayer1 ? game.player2Score : game.player1Score;
     return (
       <Stack
-        direction={'row'}
+        direction={"row"}
         gap={1}
-        justifyContent={'space-around'}
-        alignContent={'center'}
-        textAlign={'center'}
+        justifyContent={isSmallScreen ? "center" : "space-between"}
+        textAlign={"center"}
         bgcolor={theme.palette.primary.dark}
-        borderRadius={'2em'}
-        padding={'0.3em'}
+        borderRadius={"2em"}
+        paddingY={"0.3em"}
+        paddingX={isSmallScreen ? "1em" : "5em"}
+        alignItems={"center"}
       >
-        <Typography alignContent={'center'} textAlign={'center'}>Type: Custom</Typography>
-        <Typography alignContent={'center'} textAlign={'center'}>Score: 9:15</Typography>
-        <Stack direction={'row'} gap={'1em'}>
-          <Typography alignContent={'center'} textAlign={'center'}>Opponent Name</Typography>
-          <Avatar />
+        <Box
+          bgcolor={
+            winner ? theme.palette.success.light : theme.palette.error.light
+          }
+          borderRadius={"8px"}
+          textAlign={"center"}
+          alignContent={"center"}
+          padding={"0.3em"}
+          width={isSmallScreen ? "auto" : "10ch"}
+          marginBottom={isSmallScreen ? "0.5em" : "0"}
+        >
+          <Typography alignContent={"center"} textAlign={"center"}>
+            {winner ? "Victory" : "Defeat"}
+          </Typography>
+        </Box>
+        <Stack
+          direction={"row"}
+          alignContent={"center"}
+          alignItems={"center"}
+          marginBottom={isSmallScreen ? "0.5em" : "0"}
+        >
+          {winner && (
+            <Cup
+              sx={{ color: theme.palette.secondary.main, marginRight: "0.5em" }}
+            />
+          )}
+          <Typography alignContent={"center"} textAlign={"center"}>
+            {"Score: " + ownScore + " - " + opponentScore}
+          </Typography>
+        </Stack>
+        <Stack direction={"row"} gap={"1em"} alignItems={"center"}>
+          <Avatar src={opponent.image} />
+          <Typography alignContent={"center"} textAlign={"center"}>
+            {opponent.nameNick
+              ? opponent.nameNick
+              : opponent.nameFirst + " " + opponent.nameLast}
+          </Typography>
         </Stack>
       </Stack>
     );
@@ -69,73 +118,72 @@ export const StatsContainer: React.FC<StatsContainerProps> = ({ visitedUser }) =
     return (
       <Stack
         sx={{
-          overflowY: 'scroll',
-          scrollbarWidth: 'none', // For Firefox
-          msOverflowStyle: 'none', // For IE and Edge
-          '&::-webkit-scrollbar': {
-            display: 'none', // For Chrome, Safari, Opera
+          overflowY: "scroll",
+          scrollbarWidth: "none", // For Firefox
+          msOverflowStyle: "none", // For IE and Edge
+          "&::-webkit-scrollbar": {
+            display: "none", // For Chrome, Safari, Opera
           },
         }}
         gap={1}
-        padding={'0.5em'}
+        padding={"0.5em"}
         direction="column"
-        width={'100%'}
-        height={'100%'}
+        width={"100%"}
+        height={"100%"}
         bgcolor={theme.palette.primary.main}
       >
-        {Array.from({ length: 40 }).map((_, index) => (
-          <React.Fragment key={index}>
-            {gameLine()}
-          </React.Fragment>
+        {games.map((game, index) => (
+          <React.Fragment key={index}>{gameLine(game)}</React.Fragment>
         ))}
       </Stack>
     );
   };
 
   let gameStats = () => {
-    // Fetch game stats to show
-    const stat = [
-      { title: 'Total', value: 100, rate: '75%' },
-      { title: 'Vanilla', value: 25, rate: '25%' },
-      { title: 'Custom', value: 8, rate: '8%' },
-    ];
+    const totalGames = games.length;
+    const totalWins = games.reduce((acc, game) => {
+      if ((game.winner === true && game.player1.id === visitedUser.id) || 
+          (game.winner === false && game.player2.id === visitedUser.id)) {
+        return acc + 1;
+      }
+      return acc;
+    }, 0);
+
+    const winPercentage = totalGames > 0 ? (totalWins / totalGames) * 100 : 0;
 
     return (
       <Stack
-        direction={'row'}
-        width={'100%'}
+        direction={"row"}
+        width={"100%"}
         borderBottom={1}
         borderColor={theme.palette.divider}
-        padding={'0.3em'}
-        justifyContent={'space-around'}
-        divider={<Divider orientation='vertical'/>}
+        padding={"0.3em"}
+        justifyContent={"space-around"}
+        divider={<Divider orientation="vertical" />}
         flex={1}
       >
-        {stat.map((item, idx) => (
           <Stack
-            direction={'row'}
-            key={idx}
+            direction={"row"}
             flex={1}
-            gap={'0.3em'}
+            gap={"0.3em"}
             alignItems="center"
             justifyContent="center"
-            overflow={'hidden'}
-            height={'2em'}
+            overflow={"hidden"}
+            height={"2em"}
           >
-            <Typography variant="body2">{`${item.title}`}</Typography>
+            <Typography variant="body2">{`Average victory in games played`}</Typography>
             <Cup sx={{ color: (theme) => theme.palette.secondary.main }} />
-            <Typography variant="body1">{item.rate}</Typography>
+            <Typography variant="body2">{`${winPercentage.toFixed(2)}%`}</Typography>
           </Stack>
-        ))}
       </Stack>
     );
-  }
+  };
 
   return (
     <Stack
-      width={'100%'}
-      maxHeight={isSmallScreen ? '80vh' : '80vh'}
-      overflow={'hidden'}
+      width={"100%"}
+      maxHeight={isSmallScreen ? "80vh" : "80vh"}
+      overflow={"hidden"}
     >
       {gameStats()}
       {gameHistory()}

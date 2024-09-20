@@ -160,10 +160,11 @@ export class UserController {
   
   @Get('games/:id')
   async getUserGamesById(@Res() res: Response, @Param('id', ParseIntPipe) id: number) {
+    console.log('getUserGamesById:', id);
     const games = await this.userService.getUserGamesById(id);
-    if (!games)
+    if (!games) {
       return res.status(404);
-
+    }
     const gamesDTO = games.map(game => ({
       ...game,
       player1: new UserPublicDTO(game.player1, null),
