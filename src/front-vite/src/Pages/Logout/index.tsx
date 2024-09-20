@@ -6,7 +6,7 @@ import axios from "axios";
 const LogoutPage: React.FC = () => {
   const { setUser } = useUser();
   const navigate = useNavigate();
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
 
   useEffect(() => {
     const logout = async () => {

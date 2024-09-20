@@ -10,7 +10,7 @@ export const AuthPage: React.FC = () => {
   const [ TOTPcode, setCode ] = useState("");
   const [ hasError, setHasError ] = useState<boolean>(false);
   const navigate = useNavigate();
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
 
   const handleSubmit = async () => {
     try {

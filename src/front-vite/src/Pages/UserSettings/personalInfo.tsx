@@ -9,7 +9,7 @@ import axios from 'axios';
 export const PersonalInfo: React.FC = () => {
   const theme = useTheme();
   const { user, setUser } = useUser();
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
 
   const handleFileSelect = async (file: File) => {
     if (!file) return;

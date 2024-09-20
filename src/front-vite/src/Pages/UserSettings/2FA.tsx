@@ -11,7 +11,7 @@ export const Auth2F: React.FC = () => {
   const [isScanned, setIsScanned] = useState<boolean>(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [hasError, setHasError] = useState<boolean>(false);
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
 
   useEffect(() => {
     setAuth2FEnabled(user?.auth2F);

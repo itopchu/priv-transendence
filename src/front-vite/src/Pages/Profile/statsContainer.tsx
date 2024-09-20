@@ -1,19 +1,47 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { UserPublic } from '../../Providers/UserContext/User';
 import { Avatar, Stack, Divider, Typography, useTheme, Box } from '@mui/material';
 import {
   EmojiEvents as Cup,
 } from '@mui/icons-material';
 import { useMediaQuery } from '@mui/material';
-
+import axios from 'axios';
 
 interface StatsContainerProps {
   visitedUser: UserPublic;
 }
 
+interface GameHistory {
+  id: number;
+  player1Score: number;
+  player2Score: number;
+  winner: boolean;
+  player1: UserPublic;
+  player2: UserPublic;
+}
+
+const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
+
 export const StatsContainer: React.FC<StatsContainerProps> = ({ visitedUser }) => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const [games, setGames] = React.useState<GameHistory[]>([]);
+
+
+  useEffect(() => {
+    const getGames = async () => {
+      try {
+        const response = await axios.get(BACKEND_URL + '/games/' + visitedUser.id, { withCredentials: true });
+        if (response.data.gamesDTO) {
+          setGames(response.data.gamesDTO);
+          console.log('Games:', response.data.gamesDTO);
+        }
+      } catch (error) {
+        console.error('Error logging out:', error);
+      }
+    }
+    getGames();
+  }, [visitedUser]);
 
   let gameLine = () => {
     return (
