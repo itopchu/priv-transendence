@@ -1,6 +1,7 @@
 import "./Game.css";
 import { useUser } from "../../Providers/UserContext/User";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 enum PlayerStates {
   notInGame = 0,
@@ -22,7 +23,6 @@ const Play = () => {
     player1: { y: 150, direction: 0 },
     player2: { y: 150, direction: 0 },
     ball: { x: 390, y: 190, dx: 0, dy: 0 },
-    bot: false,
     score: { player1: 0, player2: 0 },
   });
 

@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { User } from './user.entity';
 
 @Entity()
@@ -15,7 +15,9 @@ export class GameHistory {
   @Column({ nullable: false })
   winner: boolean;
 
-  @ManyToMany(() => User, user => user.games)
-  @JoinTable()
-  players: User[];
+  @ManyToOne(() => User, user => user.gameHistories)
+  player1: User;
+
+  @ManyToOne(() => User, user => user.gameHistories)
+  player2: User;
 }

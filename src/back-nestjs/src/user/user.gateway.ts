@@ -163,7 +163,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('WebSocket server initialized');
     setInterval(() => {
       this.rooms.forEach((players, roomId) => {
-        this.server.to(roomId).emit('state', this.gameService.getGameState(roomId));
+        this.server.to(roomId).emit('state', this.gameService.getFliteredGameState(roomId));
       });
     }, 16);
   }
@@ -259,7 +259,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('move', direction);
     if (!client.roomId || client.position === undefined) return
     this.gameService.updatePlayerPosition(client.roomId, client.position, direction);
-    this.server.to(client.roomId).emit('state', this.gameService.getGameState(client.roomId));
+    this.server.to(client.roomId).emit('state', this.gameService.getFliteredGameState(client.roomId));
   }
 
   @SubscribeMessage('info')
@@ -302,12 +302,29 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roomId = this.leaveGameId(client.authUser.id);
       if (!roomId) return;
     }
-    this.emitGameOver(roomId, client.position === false);
+    this.gameOver(roomId, client.position === false);
   }
 
-  emitGameOver(roomId: string, winner: boolean): void {
-    const room = this.rooms.get(roomId)
+  async gameOver(roomId: string, winner: boolean): Promise<void> {
+    const room = this.rooms.get(roomId);
     if (!room) return;
+    const game = this.gameService.getGameState(roomId);
+    if (!game) return;
+
+    if (!game.bot) {
+      const history = new GameHistory();
+      history.player1Score = game.score.player1;
+      history.player2Score = game.score.player2;
+      history.winner = winner;
+
+      const player1 = await this.userService.getUserById(room.find(player => player.position)?.userId);
+      const player2 = await this.userService.getUserById(room.find(player => !player.position)?.userId);
+      history.player1 = player1;
+      history.player2 = player2;
+  
+      await this.userService.saveGameHistory(history);
+    }
+  
     room.forEach(player => {
       this.resetClient(player.client);
       if (player.position === winner) {
@@ -358,10 +375,5 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.leave(client.roomId);
     client.roomId = undefined;
     client.position = undefined;
-  }
-
-  gameOver(roomId: string, winner: boolean): void {
-    console.log('gameOver', roomId, winner);
-    this.emitGameOver(roomId, winner);
   }
 }

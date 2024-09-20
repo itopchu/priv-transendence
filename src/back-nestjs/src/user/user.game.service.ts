@@ -19,6 +19,7 @@ interface GameState {
   bot: boolean;
   ball: Ball;
   score: { player1: number, player2: number };
+  gameEnd?: boolean;
 }
 
 @Injectable()
@@ -32,6 +33,9 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   private containerWidth = 800;
   private containerHeight = 500;
   private paddleSpeed = 3;
+  private botSpeed = 1;
+  private ballSpeedMult = 1;
+  private gameSpeed = 5;
 
   onModuleInit() {
   }
@@ -45,7 +49,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     if (this.intervalIds.has(roomId)) return;
     const intervalId = setInterval(() => {
       this.updateBallPosition(roomId);
-    }, 5);
+    }, this.gameSpeed);
     this.intervalIds.set(roomId, intervalId);
   }
 
@@ -58,6 +62,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
         bot: bot,
         ball: { x: 390, y: 190, dx: 2, dy: 2 },
         score: { player1: 0, player2: 0 },
+        gameEnd: false,
       });
       this.setGameInterval(roomId);
     }
@@ -65,6 +70,13 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
 
   getGameState(roomId: string): GameState {
     return this.gameStates.get(roomId);
+  }
+
+  getFliteredGameState(roomId: string): Omit<GameState, 'bot' | 'gameEnd'> {
+    const gameState = this.getGameState(roomId);
+    if (!gameState) return null;
+    const { bot, gameEnd, ...fliteredState } = gameState;
+    return fliteredState;
   }
 
   updatePlayerPosition(roomId: string, position: boolean, direction: number): void {
@@ -80,18 +92,17 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   updateBallPosition(roomId: string): void {
     const gameState = this.getGameState(roomId);
     if (!gameState) return;
+    if (gameState.gameEnd) return;
 
     let { x, y, dx, dy } = gameState.ball;
     const { player1, player2 } = gameState;
     
     player1.y = Math.max(0, Math.min(this.containerHeight - 100, player1.y + player1.direction * this.paddleSpeed));
-    if (gameState.bot)
-      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + 50 > y ? player2.y - 1 : player2.y + 1 ));
-    else
-      player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + player2.direction * this.paddleSpeed));  
+    player2.y = Math.max(0, Math.min(this.containerHeight - 100, player2.y + (gameState.bot ? (player2.y + 50 > y ? -this.botSpeed : this.botSpeed)
+              : player2.direction * this.paddleSpeed)));
 
-    x += dx;
-    y += dy;
+    x += dx * this.ballSpeedMult;
+    y += dy * this.ballSpeedMult;
 
     if (y <= 0) {
       dy = Math.abs(dy);
@@ -123,11 +134,13 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
 
     if (x <= 0) {
       if (++gameState.score.player2 === 5) {
+        gameState.gameEnd =  true;
         this.gateway.gameOver(roomId, false);
       }
       this.resetBall(gameState, false);
     } else if (x >= this.containerWidth - 20) {
       if (++gameState.score.player1 === 5) {
+        gameState.gameEnd = true;
         this.gateway.gameOver(roomId, true);
       }
       this.resetBall(gameState, true);
