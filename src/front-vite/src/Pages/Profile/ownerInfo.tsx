@@ -39,7 +39,7 @@ export enum FriendshipAttitudeBehaviour {
   decline = 'decline',
 }
 
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost:4000';
 
 export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const theme = useTheme();

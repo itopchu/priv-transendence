@@ -163,6 +163,15 @@ export class UserController {
     const games = await this.userService.getUserGamesById(id);
     if (!games)
       return res.status(404);
-    return res.status(200).json(games);
+
+    const gamesDTO = games.map(game => {
+      const playersDTO = game.players.map(player => new UserPublicDTO(player, null));
+      return {
+        ...game,
+        players: playersDTO
+      };
+    });
+
+    return res.status(200).json({gamesDTO});
   }
 }
