@@ -54,6 +54,7 @@ const Play = () => {
         } else {
           setPlayerState(PlayerStates.Lose);
         }
+        setIsPlaying(false);
       });
 
       userSocket.on("playerState", (playerState: number) => {
@@ -83,7 +84,7 @@ const Play = () => {
     } , [countDown]);
 
     useEffect(() => {
-      if (playerState === PlayerStates.notInGame || playerState === PlayerStates.inQueue) {
+      if (playerState !== PlayerStates.player1_left && playerState !== PlayerStates.player2_right) {
         setMePaused(false);
         setIsPlaying(false);
         setCountDown(0);
@@ -121,14 +122,14 @@ const Play = () => {
     };
     
     useEffect(() => {
-      if (playerState === PlayerStates.notInGame || playerState === PlayerStates.inQueue) return;
+      if (!isPlaying) return;
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
       return () => {
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
       };
-    }, [isKeyPressed, playerState]);
+    }, [isKeyPressed, isPlaying]);
     
     const joinQueue = () => {
       userSocket?.emit("joinQueue");
@@ -155,7 +156,7 @@ const Play = () => {
     };
     
     const leave = () => {
-      if (playerState === PlayerStates.inGame) {
+      if (playerState === PlayerStates.player1_left || playerState === PlayerStates.player2_right) {
         setPlayerState(PlayerStates.notInGame);
       }
       userSocket?.emit("leaveGame");
