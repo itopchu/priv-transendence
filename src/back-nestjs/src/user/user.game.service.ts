@@ -32,10 +32,10 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   private intervalIds: Map<string, NodeJS.Timeout> = new Map(); // roomId -> intervalId
   private containerWidth = 800;
   private containerHeight = 500;
-  private paddleSpeed = 3;
-  private botSpeed = 1;
-  private ballSpeedMult = 1;
-  private gameSpeed = 5;
+  private paddleSpeed = 15;
+  private botSpeed = 5;
+  private ballSpeedMult = 5;
+  private gameSpeed = 16;
 
   onModuleInit() {
   }
@@ -126,8 +126,10 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
     ) {
       dx = -dx;
       if (x <= 20) {
+        x = 20;
         dy = paddleHit(player1.y);
       } else {
+        x = this.containerWidth - 40;
         dy = paddleHit(player2.y);
       }
     }
@@ -152,7 +154,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
   resetBall(game: GameState, lastScored: boolean): void {
     const angle = Math.random() * Math.PI / 4 - Math.PI / 8;
     const speed = 2;
-    const dx = lastScored ? -speed * Math.cos(angle) : speed * Math.cos(angle);
+    const dx = lastScored ? -speed : speed;
     const dy = speed * Math.sin(angle);
 
     game.ball = {
