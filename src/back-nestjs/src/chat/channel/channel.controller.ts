@@ -27,8 +27,8 @@ import {
 	MessagePublicDTO,
 	UpdateChannelDto,
 	UpdateMemberDto
-} from '../../dto/channel.dto';
-import { Channel, ChannelRoles, ChannelType } from '../../entities/channel.entity';
+} from '../../dto/chat.dto';
+import { Channel, ChannelRoles, ChannelType } from '../../entities/chat.entity';
 import { ChannelService } from './channel.service';
 import { AuthGuard } from '../../auth/auth.guard';
 import { multerOptions } from '../../user/user.controller';

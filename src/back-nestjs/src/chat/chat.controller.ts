@@ -2,7 +2,7 @@ import { BadRequestException, Controller, Get, NotFoundException, Param, ParseIn
 import { Request } from "express";
 import { AuthGuard } from '../auth/auth.guard';
 import { ChatService } from "./chat.service";
-import { ChatClientDTO, MessagePublicDTO } from "../dto/channel.dto";
+import { ChatClientDTO, MessagePublicDTO } from "../dto/chat.dto";
 import { UserService } from "../user/user.service";
 import { ChatGateway } from "./chat.gateway";
 import { FriendshipAttitude } from "../entities/user.entity";

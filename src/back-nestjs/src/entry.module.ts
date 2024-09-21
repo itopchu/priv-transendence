@@ -10,7 +10,7 @@ import { ChatModule } from './chat/chat.module';
 import { GameModule } from './game/game.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { Channel, ChannelMember, Message, Mute, Chat } from './entities/channel.entity';
+import { Channel, ChannelMember, Message, Mute, Chat } from './entities/chat.entity';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({

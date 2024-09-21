@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChannelService } from './channel/channel.service';
 import { ChannelController } from './channel/channel.controller';
 import { ChatGateway } from './chat.gateway';
-import { Channel, ChannelMember, Message, Mute, Chat } from '../entities/channel.entity';
+import { Channel, ChannelMember, Message, Mute, Chat } from '../entities/chat.entity';
 import { UserModule } from '../user/user.module';
 import { MessageService } from './message/message.service';
 import { MemberService } from './channel/member.service';

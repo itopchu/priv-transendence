@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Chat, Message, Channel } from "../../entities/channel.entity";
+import { Chat, Message, Channel } from "../../entities/chat.entity";
 import { User } from "../../entities/user.entity";
 import { Repository } from "typeorm";
 

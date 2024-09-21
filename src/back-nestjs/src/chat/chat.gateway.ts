@@ -5,9 +5,9 @@ import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
 import { NotFoundException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ChannelPublicDTO, ChatClientDTO, MemberClientDTO, MessagePublicDTO } from '../dto/channel.dto';
+import { ChannelPublicDTO, ChatClientDTO, MemberClientDTO, MessagePublicDTO } from '../dto/chat.dto';
 import { MemberService } from './channel/member.service';
-import { Chat } from '../entities/channel.entity';
+import { Chat } from '../entities/chat.entity';
 import { ChatService } from './chat.service';
 import { FriendshipAttitude } from '../entities/user.entity';
 

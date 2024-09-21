@@ -1,6 +1,6 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
 import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsDate, ValidateNested, IsBoolean } from 'class-validator';
-import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute } from '../entities/channel.entity';
+import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute } from '../entities/chat.entity';
 import { UserClient, UserPublicDTO } from './user.dto';
 import { Type } from 'class-transformer';
 

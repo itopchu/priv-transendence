@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { UpdateMemberDto } from "../../dto/channel.dto";
-import { ChannelMember, Channel, ChannelRoles } from "../../entities/channel.entity";
+import { UpdateMemberDto } from "../../dto/chat.dto";
+import { ChannelMember, Channel, ChannelRoles } from "../../entities/chat.entity";
 import { User } from "../../entities/user.entity";
 import { Repository } from "typeorm";
 

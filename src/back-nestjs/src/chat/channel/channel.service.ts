@@ -14,11 +14,11 @@ import {
 	ChannelType,
 	Message,
     Mute
-} from '../../entities/channel.entity';
+} from '../../entities/chat.entity';
 import {
 	CreateChannelDto,
 	UpdateChannelDto,
-} from '../../dto/channel.dto';
+} from '../../dto/chat.dto';
 import { MessageService } from '../message/message.service';
 import { MemberService } from './member.service';
 import { User } from '../../entities/user.entity';
