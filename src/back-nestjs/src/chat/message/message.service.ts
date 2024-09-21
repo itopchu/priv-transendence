@@ -14,8 +14,8 @@ export class MessageService {
 	async getChannelLog(channelId: number): Promise<Message[]>  {
 		const log = await this.messageRespitory.createQueryBuilder('msg')
 		.innerJoin('msg.channel', 'channel')
-		.leftJoinAndSelect('msg.author', 'author')
 		.where('channel.id = :id', { id: channelId })
+		.leftJoinAndSelect('msg.author', 'author')
 		.getMany();
 
 		return (log);

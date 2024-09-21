@@ -30,11 +30,10 @@ export enum ChannelRole {
 export const enum ChannelStates {
 	chat = 'chat',
 	details = 'details',
-	editMode = 'editMode',
 }
 
 export type ChannelPropsType = {
-	selected: Channel | undefined,
+	selected: ChannelMember | undefined,
 	selectedJoin: Channel | undefined,
 	state: ChannelStates | undefined,
 }
@@ -44,6 +43,7 @@ export type ChannelMember = {
 	user: User;
 	channel: Channel;
 	role: ChannelRole;
+	isMuted: boolean;
 }
 
 export type MutedUser = {
@@ -113,7 +113,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		state: undefined,
 	});
 
-	const { user: localUser, userSocket } = useUser();
+	const { userSocket } = useUser();
 
   const changeProps = (newProps: Partial<ChannelPropsType>) => {
 	  setChannelProps((prev) => ({
@@ -151,51 +151,47 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			}
 		};
 
-		async function updateMembership(data: DataUpdateType) {
+		async function updateMemberships(data: DataUpdateType) {
 			try {
-				data.content = await retryOperation(async () => {
-					const response = await axios.get(`${BACKEND_URL}/channel/joined/${data.content.id}`, {
+				const membership: ChannelMember | null = await retryOperation(async () => {
+					const response = await axios.get(`${BACKEND_URL}/channel/joined/${data.channelId}`, {
 						withCredentials: true
 					});
-					return (response.data.membership || []);
+					return (response.data.membership);
 				})
+				if (!membership) return;
+
+				data.content = membership;
 				setMemberships((prevMemberships) => updateArray(prevMemberships, data));
+				setChannelProps((prevProps) => {
+					if (prevProps?.selected?.id === membership.id) {
+						return ({ ...prevProps, selected: membership });
+					}
+					return (prevProps);
+				});
 			} catch (error: any) {
 				handleError('Unable to update joined channel:',  error);
 			}
 		}
 
 		const onChannelUpdate = (data: DataUpdateType) => {
-			if (data.content && 'role' in data.content && data.content.user.id === localUser.id) {
-				updateMembership(data);
+			if (data.updateType === UpdateType.updated) {
+				updateMemberships(data);
 			} else {
 				setMemberships((prevMemberships) => {
-					const targetMembershipIndex = prevMemberships.findIndex((membership) =>
-						membership.channel.id === data.channelId
-					)
-					if (targetMembershipIndex === -1) {
+					const deletedMembership = prevMemberships.find((membership) => membership.channel.id === data.channelId);
+					if (!deletedMembership) {
 						return (prevMemberships);
 					}
-
-					const updatedMemberships = [...prevMemberships];
-					if (!data.content) {
-						updatedMemberships.splice(targetMembershipIndex, 1);
-						return (updatedMemberships);
+					data.content = deletedMembership;
+					return (updateArray(prevMemberships, data));
+				});
+				setChannelProps((prevProps) => {
+					if (prevProps?.selected?.channel.id === data.channelId) {
+						return ({ ...prevProps, selected: undefined, state: undefined });
 					}
-
-					const targetMembership = updatedMemberships[targetMembershipIndex];
-					let targetChannel: Channel;
-
-					if ('role' in data.content) {
-						targetChannel = { ...targetMembership.channel };
-						targetChannel.members = updateArray(targetChannel.members, data);
-					} else {
-						targetChannel = data.content;
-					}
-
-					updatedMemberships[targetMembershipIndex] = { ...targetMembership, channel: targetChannel };
-					return (updatedMemberships);
-				})
+					return (prevProps);
+				});
 			}
 		}
 

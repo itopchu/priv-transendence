@@ -11,6 +11,7 @@ import { GameModule } from './game/game.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { Channel, ChannelMember, Message, Mute, Chat } from './entities/channel.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   controllers: [AuthController, UserController],
@@ -18,6 +19,7 @@ import { Channel, ChannelMember, Message, Mute, Chat } from './entities/channel.
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UserModule,
+	ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/',

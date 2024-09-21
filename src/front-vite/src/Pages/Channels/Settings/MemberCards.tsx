@@ -149,7 +149,8 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 		const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
 
 		const membername = getUsername(user);
-		const isDiffUser = user.id === localUser.id;
+		const isDiffUser = user.id !== localUser.id;
+		const isModeratable = isAdmin || (member.role > ChannelRole.moderator && isMod);
 		const isMemberMuted = channel?.mutedUsers?.some(
 			(mutedUser) => mutedUser.userId === user.id
 		);
@@ -161,7 +162,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 				}
 			}
 
-			getFriendshipAttitude(member.user.id, setFriendshipAttitude);
+			//getFriendshipAttitude(member.user.id, setFriendshipAttitude);
 			userSocket?.on('profileStatus', onProfileStatus);
 			userSocket?.emit('profileStatus', user.id);
 
@@ -298,13 +299,13 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 							]}
 							<MenuItem onClick={() => onSendMessage(user, chatProps, onMenuClose, changeChatProps)}>Send Message</MenuItem>
 							{userRelationMenuItems(member.user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
-							<Divider />
-							<MenuItem onClick={isMemberMuted ? () => onMute(member, null, onMuteMenuClose) : onMuteMenuClick}>
-								{`${isMemberMuted ? 'Unmute' : 'Mute'} ${membername}`}
-								{!isMemberMuted && <MuteMenuArrowIcon />}
-							</MenuItem>
-							{isMod && [
-								<Divider key={'div'} />,
+							{isModeratable && [
+								<Divider key={'div1'} />,
+								<MenuItem key={'mute'} onClick={isMemberMuted ? () => onMute(member, null, onMuteMenuClose) : onMuteMenuClick}>
+									{`${isMemberMuted ? 'Unmute' : 'Mute'} ${membername}`}
+									{!isMemberMuted && <MuteMenuArrowIcon />}
+								</MenuItem>,
+								<Divider key={'div2'} />,
 								generateModerateList(member, onMenuClose),
 							]}
 						</Menu>
@@ -327,8 +328,8 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 
   return (
     <>
-      {members.map((member, index) => (
-				<MemberCard key={index} member={member} />
+      {members.map((member) => (
+				<MemberCard key={member.id} member={member} />
       ))}
     </>
   );

@@ -1,5 +1,5 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsDate, ValidateNested } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsDate, ValidateNested, IsBoolean } from 'class-validator';
 import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute } from '../entities/channel.entity';
 import { UserClient, UserPublicDTO } from './user.dto';
 import { Type } from 'class-transformer';
@@ -206,7 +206,7 @@ export class ChatClientDTO {
 	constructor(chat: Chat, userId: number) {
 		this.id = chat.id;
 
-		const otherUser = chat.users[0] //chat.users[0].id === userId ? chat.users[1] : chat.users[0];
+		const otherUser = chat.users[0].id === userId ? chat.users[1] : chat.users[0];
 		this.user = new UserPublicDTO(otherUser, null);
 		this.log = (chat?.log ?? []).map(message => new MessagePublicDTO(message));
 	}
@@ -230,6 +230,9 @@ export class MemberClientDTO {
 		this.user = new UserClient(member.user);
 		this.channel = new ChannelClientDTO(member.channel);
 		this.role = member.role;
+		this.isMuted = member.channel.mutedUsers.some(
+			(mute) => mute.user.id === member.user.id
+		)
 	}
 
 	@IsNumber()
@@ -245,4 +248,8 @@ export class MemberClientDTO {
 
 	@IsEnum(ChannelRoles)
 	role: ChannelRoles;
+
+	@IsNotEmpty()
+	@IsBoolean()
+	isMuted: Boolean
 }

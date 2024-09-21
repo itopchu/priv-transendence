@@ -12,7 +12,6 @@ import ChatBox from './chatBox';
 import { JoinCard } from './JoinCard';
 import { lonelyBox } from './Components/Components';
 import { ChannelDetails } from './Settings/ChannelDetails';
-import { EditDetails } from './Settings/EditDetails';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
@@ -26,7 +25,7 @@ interface ChannelTypeEvent {
 
 const ChannelsPage: React.FC = () => {
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallScreen = false//useMediaQuery(theme.breakpoints.down('md'));
   const [showCreateCard, setShowCreateCard] = useState(false);
   const { memberships, publicChannels, channelProps, changeProps } = useChannel();
 
@@ -123,10 +122,10 @@ const ChannelsPage: React.FC = () => {
 							name={channel.name}
 							component={<MiscIcon />}
 							newColor={"white"}
-							isSelected={channel.id === channelProps?.selected?.id}
+							isSelected={membership.id === channelProps?.selected?.id}
 							channelImage={channel?.image}
-							clickEvent={() => changeProps({ selected: channel, state: ChannelStates.chat })}
-							iconClickEvent={() =>  changeProps({ selected: channel, state: ChannelStates.details })}
+							clickEvent={() => changeProps({ selected: membership, state: ChannelStates.chat })}
+							iconClickEvent={() =>  changeProps({ selected: membership, state: ChannelStates.details })}
 						/>
 					);
 				})}
@@ -168,18 +167,10 @@ const ChannelsPage: React.FC = () => {
 
 		switch (channelProps.state) {
 			case ChannelStates.chat:
-				return (<ChatBox channel={channelProps.selected} />);
+				return (<ChatBox membership={channelProps.selected} />);
 			case ChannelStates.details:
 				return (
-					<ChannelDetails
-						membership={memberships.find(membership => membership.channel.id === channelProps?.selected?.id)}
-					/>
-				);
-			case ChannelStates.editMode:
-				return (
-					<EditDetails
-						membership={memberships.find(membership => membership.channel.id === channelProps?.selected?.id)}
-					/>
+					<ChannelDetails membership={channelProps.selected} />
 				);
 			default:
 				return (lonelyBox());

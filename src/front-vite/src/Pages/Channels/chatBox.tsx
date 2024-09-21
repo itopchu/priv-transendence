@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
-import { Channel } from '../../Providers/ChannelContext/Channel';
+import { ChannelMember } from '../../Providers/ChannelContext/Channel';
 import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox, ChatBubble } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
 import { LoadingBox } from './Components/CardComponents';
@@ -107,11 +107,11 @@ const TextBar = styled(Box)(({ theme }) => ({
 }));
 
 interface ChatBoxType {
-  channel: Channel;
+  membership: ChannelMember;
 }
 
-const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
-	if (!channel) return (lonelyBox());
+const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
+	if (!membership) return (lonelyBox());
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -124,9 +124,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isMuted = channel.mutedUsers?.some(
-    (mutedUser) => mutedUser.userId === user.id
-  );
+	const channel = membership.channel;
 
   useEffect(() => {
 		const getBlockedUsers = async (): Promise<User[]> => {
@@ -153,13 +151,13 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
           );
           return response.data.messages || [];
         });
-        messageLog
+        const filteredMessages = messageLog
 					.filter((message: Message) => (
 						!blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
 					))
 					.sort((a: Message, b: Message) => a.id - b.id);
 
-        setMessageLog(messageLog);
+        setMessageLog(filteredMessages);
 				setLoading(false);
       } catch (error: any) {
         handleError('Unable to get message log:', error);
@@ -363,7 +361,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
               fullWidth
               multiline
               maxRows={4}
-              disabled={isMuted}
+              disabled={membership.isMuted}
               InputProps={{
                 disableUnderline: true,
                 sx: {
@@ -378,10 +376,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ channel }) => {
                   onSend();
                 }
               }}
-              placeholder={isMuted ? 'You are muted...' : 'Type a message...'}
+              placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
             />
-            <IconButton disabled={isMuted} onClick={onSend}>
-              {isMuted ? <MutedIcon /> : <SendIcon />}
+            <IconButton disabled={membership.isMuted} onClick={onSend}>
+              {membership.isMuted ? <MutedIcon /> : <SendIcon />}
             </IconButton>
           </TextBar>
           <ChatMessages ref={messagesEndRef}>{generateMessages()}</ChatMessages>

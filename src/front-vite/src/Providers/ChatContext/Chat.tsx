@@ -69,7 +69,10 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
 			try {
 				const response = await axios.get(`${BACKEND_URL}/chat/messages/${chatProps.selected.id}`, { withCredentials: true });
-				changeChatProps({ messages: response.data.messages });
+				if (response.data.messages) {
+					const messages = response.data.messages.sort((a: Message, b: Message) => a.id - b.id)
+					changeChatProps({ messages: messages });
+				}
 			} catch (error) {
 				handleError('Could not get chats:', error);
 			}

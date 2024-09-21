@@ -21,11 +21,9 @@ import {
 import { Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-    ChannelClientDTO,
 	ChannelPublicDTO,
 	CreateChannelDto,
 	MemberClientDTO,
-	MemberPublicDTO,
 	MessagePublicDTO,
 	UpdateChannelDto,
 	UpdateMemberDto
@@ -71,15 +69,20 @@ export class ChannelController {
 
 	@Get('joined/:id')
 	@UseGuards(AuthGuard)
-	async getMembership(@Req() req: Request, @Param('id', ParseIntPipe) membershipId: number) {
+	async getMembershipByChannel(@Req() req: Request, @Param('id', ParseIntPipe) channelId: number) {
 		const user = req.authUser;
 
-		const membership = await this.memberService.getMembershipById(membershipId);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, [
+			'user',
+			'channel',
+			'channel.members',
+			'channel.members.user',
+			'channel.mutedUsers',
+			'channel.mutedUsers.user',
+			'channel.bannedUsers',
+		]);
 		if (!membership) {
 			throw new NotFoundException("Membership not found");
-		}
-		if (membership.user.id !== user.id) {
-			throw new UnauthorizedException("Unauthorized: Not user's membership");
 		}
 
 		return ({ membership: new MemberClientDTO(membership) });
@@ -117,8 +120,8 @@ export class ChannelController {
 	) {
 		const user = req.authUser;
 
-		const newMember = await this.channelService.joinChannel(user, channelId, password);
-		this.channelGateway.emitMemberUpdate(channelId, new MemberPublicDTO(newMember), UpdateType.updated);
+		await this.channelService.joinChannel(user, channelId, password);
+		this.channelGateway.emitMemberJoined(channelId, user.id);
 	}
 
 	@Post('create')
@@ -137,12 +140,11 @@ export class ChannelController {
 
 		try {
 			const newChannel = await this.channelService.createChannel(user, createChannelDto, image);
-			const publicChannel = new ChannelPublicDTO(newChannel);
-
 			if (newChannel.type !== ChannelType.private) {
+				const publicChannel = new ChannelPublicDTO(newChannel);
 				this.channelGateway.emitPublicChannelUpdate(publicChannel, UpdateType.updated);
 			}
-			return ({ channel: publicChannel });
+			this.channelGateway.emitMemberJoined(newChannel.id, user.id);
 		} catch(error) {
 			throw new InternalServerErrorException(`Channel creation failed: ${error.message}`);
 		}
@@ -158,7 +160,7 @@ export class ChannelController {
 
 		const kickedMember = await this.channelService.kickMember(user, victimId, channelId);
 		if (!Array.isArray(kickedMember)) {
-			this.channelGateway.emitMemberLeft(victimId, new MemberPublicDTO(kickedMember), channelId);
+			this.channelGateway.emitMemberLeft(victimId, channelId);
 		}
 	}
 
@@ -169,7 +171,7 @@ export class ChannelController {
 		@Body('victimId', ParseIntPipe) victimId: number,
 		@Body('muteUntil') muteUntil: string | null
 	) {
-		const duration = muteUntil ?  parseInt(muteUntil, 10) : null;
+		const duration = muteUntil ? parseInt(muteUntil, 10) : null;
 
 		const user = req.authUser;
 		if (user.id === victimId) {
@@ -177,8 +179,7 @@ export class ChannelController {
 		}
 
 		await this.channelService.muteMember(user, victimId, duration, channelId);
-		const mutedMember = await this.memberService.getMembershipByChannel(channelId, victimId);
-		this.channelGateway.emitMemberUpdate(channelId, new MemberPublicDTO(mutedMember), UpdateType.updated);
+		this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
 	}
 
 	@Patch('ban/:id')
@@ -189,9 +190,36 @@ export class ChannelController {
 			throw new BadRequestException("Banning yourself..? Now that's going to far");
 		}
 
-		const member = await this.channelService.banUser(user, victimId, channelId);
-		if (!Array.isArray(member)) {
-			this.channelGateway.emitMemberLeft(victimId, new MemberPublicDTO(member), channelId);
+		const channel = await this.channelService.getChannelById(channelId, ['members', 'members.user', 'bannedUsers']);
+		if (!channel) {
+			throw new NotFoundException('Channel not found');
+		}
+		const userMembership = channel.members.find((membership) => membership.user.id === user.id)
+		if (!userMembership) {
+			throw new NotFoundException('User not found');
+		}
+
+		const isBanned = channel.bannedUsers.some((user) => user.id === victimId)
+		if (isBanned) {
+			if (userMembership.role > ChannelRoles.moderator) {
+				throw new UnauthorizedException('Unauthorized: Insufficient privileges');
+			}
+			await this.channelService.unbanUser(victimId, channel);
+			this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
+		} else {
+			const victimMembership = channel.members.find((membership) => membership.user.id === victimId)
+			if (!victimMembership) {
+				throw new NotFoundException('Victim not found');
+			}
+
+			if (userMembership.role > victimMembership.role) {
+				throw new UnauthorizedException('Unauthorized: Insufficient privileges');
+			}
+			await this.channelService.banUser(victimMembership, channel);
+			this.channelGateway.emitMemberLeft(victimId, channelId);
+		}
+		if (channel.type !== ChannelType.private) {
+			this.channelGateway.emitToClientPublicUpdate(victimId, new ChannelPublicDTO(channel), UpdateType.updated);
 		}
 	}
 
@@ -207,10 +235,8 @@ export class ChannelController {
 			throw new BadRequestException("You are already THE admin FOOL");
 		}
 
-		const members = await this.channelService.transferOwnership(user, victimId, channelId);
-		const publicMembers = members.map((member) => new MemberPublicDTO(member));
-		this.channelGateway.emitMemberUpdate(channelId, publicMembers[0], UpdateType.updated);
-		this.channelGateway.emitMemberUpdate(channelId, publicMembers[1], UpdateType.updated);
+		await this.channelService.transferOwnership(user, victimId, channelId);
+		this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
 	}
 
 	@Patch(':id')
@@ -236,16 +262,14 @@ export class ChannelController {
 			updateChannelDto.password = await this.channelService.hashPassword(updateChannelDto.password);
 		}
 
-		await this.channelService.updateChannel(user, channelId, updateChannelDto, image);
-		const updatedChannel = await this.channelService
-			.getChannelById(channelId, ['members', 'members.user', 'bannedUsers', 'mutedUsers']);
+		const oldChannel = await this.channelService.updateChannel(user, channelId, updateChannelDto, image);
+		const updatedChannel = await this.channelService.getChannelById(channelId, ['bannedUsers']);
 
-		if (updatedChannel.type !== ChannelType.private
-			|| updateChannelDto.type && updateChannelDto.type !== ChannelType.private)
+		if (updatedChannel.type !== ChannelType.private || oldChannel.type !== ChannelType.private)
 		{
 			this.channelGateway.emitPublicChannelUpdate(new ChannelPublicDTO(updatedChannel), UpdateType.updated);
 		}
-		this.channelGateway.emitMemberUpdate(channelId, new ChannelClientDTO(updatedChannel), UpdateType.updated);
+		this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
 	}
 
 	@Patch('/member/:id')
@@ -261,17 +285,28 @@ export class ChannelController {
 		if (!Object.keys(updateMemberDto).length) {
 			return;
 		}
-		const member = await this.memberService.getMembershipById(memberId);
+
+		const member = await this.memberService.getMembershipById(memberId, ['channel', 'user']);
 		if (!member) {
 			throw new NotFoundException('Member not found');
 		}
 		if (updateMemberDto.role === ChannelRoles.admin)  {
 			throw new BadRequestException('Unable to promote to admin');
 		}
+
+		const userMembership = await this.memberService.getMembershipByChannel(member.channel.id, user.id, []);
+		if (!userMembership) {
+			throw new UnauthorizedException('Unauthorized: Membership not found');
+		}
+		if (userMembership.id === member.id) {
+			throw new BadRequestException('User changing its own membership, Stop messing around!');
+		}
+		if (userMembership.role > member.role) {
+			throw new UnauthorizedException('Unauthorized: Insufficient privileges');
+		}
 		
-		await this.memberService.updateMember(user, member, updateMemberDto);
-		const updatedMember = await this.memberService.getMembershipById(memberId);
-		this.channelGateway.emitMemberUpdate(member.channel.id, new MemberPublicDTO(updatedMember), UpdateType.updated);
+		await this.memberService.updateMember(member.id, updateMemberDto);
+		this.channelGateway.emitMemberUpdate(member.channel.id, UpdateType.updated);
 	}
 	
 	@Delete(':id')
@@ -300,7 +335,7 @@ export class ChannelController {
 	async leaveChannel(@Req() req: Request, @Param('id', ParseIntPipe) membershipId: number) {
 		const user = req.authUser;
 
-		const membership = await this.memberService.getMembershipById(membershipId);
+		const membership = await this.memberService.getMembershipById(membershipId, ['channel']);
 		if (!membership) {
 			throw new NotFoundException('Member not found');
 		}
@@ -312,7 +347,7 @@ export class ChannelController {
 			}
 			this.channelGateway.emitChannelDeleted(membership.channel.id);
 		} else {
-			this.channelGateway.emitMemberLeft(user.id, new MemberPublicDTO(membership), membership.channel.id);
+			this.channelGateway.emitMemberLeft(user.id, membership.channel.id);
 		}
 		return (leftChannel);
 	}

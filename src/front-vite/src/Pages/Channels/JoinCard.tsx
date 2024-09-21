@@ -27,13 +27,16 @@ interface JoinCardType {
 }
 
 export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
+	if (!channel) return (null);
+
   const { memberships, changeProps } = useChannel();
-  const { user, userSocket } = useUser();
+  const { user } = useUser();
 
   const [loading, setLoading] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const alreadyJoined = memberships.some((member) => member.channel.id === channel.id);
+	console.log(channel);
   const isBanned = channel.bannedUsers
 		? channel.bannedUsers.some((bannedUser) => bannedUser.id === user.id)
 		: false;
@@ -52,14 +55,16 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
     };
 
     try {
-	  const JoinedChannel: Channel = await retryOperation(async () =>{
-	    const response = await axios.post(`${BACKEND_URL}/channel/join/${channel.id}`, payload, {
-            withCredentials: true,
-          }
-		);
-		return (response.data.channel);
-	  })
-      userSocket?.emit('joinChannel', JoinedChannel.id);
+			await retryOperation(async () =>{
+				const response = await axios.post(
+					`${BACKEND_URL}/channel/join/${channel.id}`,
+					payload,
+					{
+						withCredentials: true,
+					}
+				);
+				return (response.data.channel);
+			})
     } catch (error: any) {
 	  handleError('Could not join channel: ', error);
       setLoading(false);

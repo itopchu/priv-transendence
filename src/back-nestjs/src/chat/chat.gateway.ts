@@ -5,7 +5,7 @@ import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
 import { NotFoundException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ChannelClientDTO, ChannelPublicDTO, ChatClientDTO, MemberClientDTO, MemberPublicDTO, MessagePublicDTO } from '../dto/channel.dto';
+import { ChannelPublicDTO, ChatClientDTO, MemberClientDTO, MessagePublicDTO } from '../dto/channel.dto';
 import { MemberService } from './channel/member.service';
 import { Chat } from '../entities/channel.entity';
 import { ChatService } from './chat.service';
@@ -28,24 +28,23 @@ export class ChatGateway {
 	@WebSocketServer()
 	server: Server;
 
-  private connectedUsers: Map<number, UserSocket> = new Map();
+	private connectedUsers: Map<number, UserSocket> = new Map();
 	
 	@Cron(CronExpression.EVERY_MINUTE)
 	async checkMutes() {
 		const expiredMutes = await this.channelService.getExpiredMutes();
 
-		console.log('noffin', expiredMutes);
-		for (const mute of expiredMutes ?? []) {
+		Promise.all(expiredMutes.map(async (mute) => {
 			try {
 				await this.channelService.removeMute(mute.userId, mute.channelId);
-				const membership = await this.memberService.getMembershipByChannel(mute.channelId, mute.userId);
+				const membership = await this.memberService.getMembershipByChannel(mute.channelId, mute.userId, []);
 				if (membership) {
-					this.emitMemberUpdate(mute.channelId, new MemberPublicDTO(membership), UpdateType.updated);
+					this.emitMemberUpdate(mute.channelId, UpdateType.updated);
 				}
 			} catch (error) {
 				console.error(`Cron: Could not unmute user: ${error.message}`);
 			}
-		}
+		}))
 	}
 
 	async handleConnection(client: Socket) {
@@ -90,7 +89,7 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, []);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
@@ -112,7 +111,7 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, ['channel']);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
@@ -167,7 +166,7 @@ export class ChatGateway {
     }
 
 	try {
-		const chat = await this.chatService.getChatById(payload.chatId, ['users', 'users.blockedUsers']);
+		const chat = await this.chatService.getChatById(payload.chatId, ['users']);
 		if (!chat) {
 			throw new NotFoundException('Chat not found');
 		}
@@ -193,7 +192,7 @@ export class ChatGateway {
 		}
 		const recipientSocket = this.connectedUsers.get(recipient?.id);
 		if (recipientSocket) {
-			recipientSocket.emit('directMessage');
+			recipientSocket.emit('directMessage', messageData);
 		}
 		client.emit('directMessage', messageData);
 		//client.emit('messageSent', message.timestamp);
@@ -208,31 +207,56 @@ export class ChatGateway {
 		const recipientSocket = this.connectedUsers.get(recipient.id);
 
 		if (recipientSocket) {
-			recipientSocket .emit('newChat', new ChatClientDTO(chat, recipient.id));
+			recipientSocket.emit('newChat', new ChatClientDTO(chat, recipient.id));
 		}
 	}
 
-	emitMemberUpdate(channelId: number, content: MemberPublicDTO | ChannelClientDTO | null, updateType: UpdateType) {
-		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, { channelId, content, updateType });
+	emitMemberUpdate(channelId: number, updateType: UpdateType) {
+		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, { channelId, updateType });
 	}
 
 	emitPublicChannelUpdate(content: ChannelPublicDTO, updateType: UpdateType) {
 		this.server.to('channelPublicUpdate').emit('newPublicChannelUpdate', { content, updateType });
 	}
+	
+	emitToClientUpdate(userId: number, channelId: number, updateType: UpdateType) {
+		const userSocket = this.connectedUsers.get(userId);
+		if (!userSocket) return;
+
+		userSocket.emit(`channelUpdate#${channelId}`, { channelId, updateType });
+	}
+
+	emitToClientPublicUpdate(userId: number, content: ChannelPublicDTO, updateType: UpdateType) {
+		const userSocket = this.connectedUsers.get(userId);
+		if (!userSocket) return;
+
+		userSocket.emit('channelPublicUpdate', { content, updateType });
+	}
 
 	emitChannelDeleted(channelId: number) {
-		this.emitMemberUpdate(channelId, null, UpdateType.deleted);
+		this.emitMemberUpdate(channelId, UpdateType.deleted);
 		this.server.socketsLeave(`channelUpdate#${channelId}`);
 		this.server.socketsLeave(`channel#${channelId}`);
 	}
 
-	emitMemberLeft(userId: number, content: MemberPublicDTO, channelId: number) {
+	emitMemberJoined(channelId: number, userId: number) {
 		const userSocket = this.connectedUsers.get(userId);
 
-		this.emitMemberUpdate(channelId, content, UpdateType.deleted);
+		if (userSocket) {
+			userSocket.join(`channelUpdate#${channelId}`);
+			userSocket.join(`channel#${channelId}`);
+		}
+		this.emitMemberUpdate(channelId, UpdateType.updated);
+	}
+
+	emitMemberLeft(userId: number, channelId: number) {
+		const userSocket = this.connectedUsers.get(userId);
+
 		if (userSocket) {
 			userSocket.leave(`channelUpdate#${channelId}`);
 			userSocket.leave(`channel#${channelId}`);
+			userSocket.emit('newChannelUpdate', { channelId, UpdateType: UpdateType.deleted });
 		}
+		this.emitMemberUpdate(channelId, UpdateType.updated);
 	}
 }

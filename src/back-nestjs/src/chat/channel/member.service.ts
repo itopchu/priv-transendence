@@ -12,29 +12,23 @@ export class MemberService {
 		private memberRespitory: Repository<ChannelMember>,
 	) {}
 
-	async getMembershipById(member: number | ChannelMember): Promise<ChannelMember> {
-		const membership = await this.memberRespitory.createQueryBuilder('membership')
-		.where('membership.id = :id', { id: typeof member === 'number' ?  member : member.id })
-		.leftJoinAndSelect('membership.user', 'user')
-		.leftJoinAndSelect('membership.channel', 'channel')
-		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')
-		.leftJoinAndSelect('channel.members', 'members')
-		.leftJoinAndSelect('members.user', 'channelUsers')
-		.getOne()
+	async getMembershipById(member: number | ChannelMember, requestedRelations: string[]): Promise<ChannelMember> {
+		const membership = await this.memberRespitory.findOne({
+			where: { id: typeof member === 'number' ?  member : member.id },
+			relations: requestedRelations,
+		})
 
 		return (membership);
 	}
 
-	async getMembershipByChannel(channelId: number, userId: number): Promise<ChannelMember> {
-		const membership = await this.memberRespitory.createQueryBuilder('membership')
-		.leftJoinAndSelect('membership.user', 'user')
-		.where('user.id = :userId', { userId })
-		.leftJoinAndSelect('membership.channel', 'channel')
-		.andWhere('channel.id = :channelId', { channelId })
-		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')
-		.leftJoinAndSelect('channel.members', 'members')
-		.leftJoinAndSelect('members.user', 'channelUsers')
-		.getOne()
+	async getMembershipByChannel(channelId: number, userId: number, requestedRelations: string[]): Promise<ChannelMember> {
+		const membership = await this.memberRespitory.findOne({
+			where: {
+				user: { id: userId },
+				channel: { id: channelId },
+			},
+			relations: requestedRelations,
+		})
 
 		return (membership);
 	}
@@ -45,6 +39,8 @@ export class MemberService {
 		.where('user.id = :id', { id: user.id })
 		.leftJoinAndSelect('membership.channel', 'channel')
 		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')
+		.leftJoinAndSelect('channel.mutedUsers', 'mutedUsers')
+		.leftJoinAndSelect('mutedUsers.user', 'mute')
 		.leftJoinAndSelect('channel.members', 'members')
 		.leftJoinAndSelect('members.user', 'channelUsers')
 		.getMany();
@@ -65,29 +61,9 @@ export class MemberService {
 		}
 	}
 
-	async updateMember(user: User, member: number | ChannelMember, updateMemberDto: UpdateMemberDto) {
-		if (typeof member === 'number' || !member.channel) {
-			member = await this.getMembershipById(member);
-			if (!member) {
-				throw new NotFoundException('Member not found');
-			}
-		}
-
-		const userMembership = await this.getMembershipByChannel(member.channel.id, user.id);
-		if (!userMembership) {
-			throw new UnauthorizedException('Unauthorized: Membership not found');
-		}
-
-		if (userMembership.id === member.id) {
-			throw new BadRequestException('User changing its own membership, Stop messing around!');
-		}
-
-		if (userMembership.role > member.role) {
-			throw new UnauthorizedException('Unauthorized: Insufficient privileges');
-		}
-
+	async updateMember(memberId: number, updateMemberDto: UpdateMemberDto) {
 		try {
-			return (await this.memberRespitory.update(member.id, updateMemberDto));
+			return (await this.memberRespitory.update(memberId, updateMemberDto));
 		} catch (error) {
 			console.error(error.message);
 			throw new InternalServerErrorException(`Could not update member: ${error.message}`);

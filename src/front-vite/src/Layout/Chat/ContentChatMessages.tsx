@@ -11,7 +11,7 @@ type ChatBoxType = {
 }
 
 export const PendingMessages: React.FC<{ messages: Message[] }> = ({ messages }) => {
-	if (!messages.length) return (undefined);
+	if (!messages.length) return (null);
 
 	return (
 		<>
@@ -46,7 +46,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
   const navigate = useNavigate();
 	const theme = useTheme();
 
-	const timeSeparation = 3 * 60 * 1000; // 2 min in milisecondes
+	const timeSeparation = 10 * 60 * 1000; // 10 min in milisecondes
 
 	return (
 		<>
@@ -69,7 +69,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
 				const timestamp = formatDate(msg.timestamp);
 
 				return (
-					<React.Fragment key={index}>
+					<React.Fragment key={msg.id}>
 						{isPrevDiffTime && (
 							<Box flexGrow={1} paddingTop={3} >
 								<Divider sx={{ color: 'text.secondary' }} >
@@ -84,7 +84,6 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
 							}}
 						/>
 						<Stack
-							key={index}
 							direction={'row'}
 							spacing={1}
 							paddingTop={isNewMsgBlock ? 3 : 0}

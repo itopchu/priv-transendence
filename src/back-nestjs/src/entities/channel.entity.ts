@@ -73,8 +73,8 @@ export class Chat {
 	@Column()
 	modified: Date;
 
-	@JoinTable()
 	@ManyToMany(() => User, user => user.chats)
+	@JoinTable()
 	users: User[];
 
 	@OneToMany(() => Message, message => message.chat)

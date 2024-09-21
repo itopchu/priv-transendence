@@ -17,7 +17,7 @@ type BannedUserCardsType = {
 }
 
 export const BannedUserCards: React.FC<BannedUserCardsType> = ({ users, channelId }) => {
-	if (!users?.length) return (undefined);
+	if (!users?.length) return (null);
 
   const navigate = useNavigate();
 	const { chatProps, changeChatProps } = useChat();
@@ -112,9 +112,9 @@ export const BannedUserCards: React.FC<BannedUserCardsType> = ({ users, channelI
 	
 	return (
 		<>
-			{users.map((user) => {
-				<UserCard user={user} />
-			})};
+			{users.map((user) => (
+				<UserCard key={user.id} user={user} />
+			))}
 		</>
 	);
 }

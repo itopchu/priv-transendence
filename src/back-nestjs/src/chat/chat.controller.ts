@@ -53,7 +53,7 @@ export class ChatController {
 			throw new BadRequestException('User dming themselves, try making some friends maybe?');
 		}
 
-		const recipient = await this.userService.getUserByIdWithRel(recipientId, ['blockedUsers']);
+		const recipient = await this.userService.getUserById(recipientId);
 		if (!recipient) {
 			throw new NotFoundException('Recipient not found');
 		}

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { InjectRepository } from "@nestjs/typeorm";
 import { Chat, Message } from "../entities/channel.entity";
 import { User } from "../entities/user.entity";
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 import { MessageService } from "./message/message.service";
 
 @Injectable()
@@ -29,10 +29,15 @@ export class ChatService {
 
 	async getUserChats(user: User) {
 		try {
-			const chats = await this.chatRepository.createQueryBuilder('chat')
+			const chatIds = await this.chatRepository.createQueryBuilder('chat')
 				.leftJoinAndSelect('chat.users', 'users')
 				.where('users.id = :id', { id: user.id })
-				.getMany()
+				.getRawMany()
+
+			const chats = await this.chatRepository.find({
+				where: { id: In(chatIds.map(chat => chat.chat_id)) },
+				relations: ['users'],
+			});
 
 			return (chats);
 		} catch (error) {
@@ -43,7 +48,7 @@ export class ChatService {
 
 	async createChat(user: User, recipient: User) {
 		const newChat = this.chatRepository.create({
-			modified: Date.now(),
+			modified: new Date(),
 			status: 0, //change later?
 			users: [user, recipient],
 		});
@@ -72,7 +77,7 @@ export class ChatService {
 		}
 
 		const newMessage = await this.messageService.createMessage(chat, author, message);
-		await this.chatRepository.update(chat.id, { modified: Date.now() });
+		await this.chatRepository.update(chat.id, { modified: new Date() });
 
 		return (newMessage);
 	}

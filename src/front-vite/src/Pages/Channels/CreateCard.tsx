@@ -37,7 +37,7 @@ const initialChannelData: ChannelDataType = {
 };
 
 const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
-  const { user, userSocket } = useUser();
+  const { user } = useUser();
   const passwordRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -86,28 +86,27 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
     setLoading(true);
 
     const payload = new FormData();
-	payload.append('type', channelData.type);
-	if (channelData.image) {
-		payload.append('image', channelData.image);
-	}
-	if (channelData.type === 'protected' && passwordRef.current) {
-		payload.append('password', passwordRef.current.value);
-	}
-	if  (nameRef.current) {
-		payload.append('name', nameRef.current.value);
-	}
+			payload.append('type', channelData.type);
+		if (channelData.image) {
+			payload.append('image', channelData.image);
+		}
+		if (channelData.type === 'protected' && passwordRef.current) {
+			payload.append('password', passwordRef.current.value);
+		}
+		if  (nameRef.current) {
+			payload.append('name', nameRef.current.value);
+		}
 
     try {
-	  const newChannel = await retryOperation(async () => {
-			const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
-				withCredentials: true,
-				headers: {
-					'Content-Type': 'multipart/form-data',
-				},
+			await retryOperation(async () => {
+				const response = await axios.post(`${BACKEND_URL}/channel/create`, payload, {
+					withCredentials: true,
+					headers: {
+						'Content-Type': 'multipart/form-data',
+					},
+				});
+				return (response.data.channel);
 			});
-			return (response.data.channel);
-		});
-      userSocket?.emit('joinChannel', newChannel.id);
     } catch (error: any) {
       setLoading(false);
       handleError('Could not create channel: ', error);
