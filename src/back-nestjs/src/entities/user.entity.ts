@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, PrimaryColumn, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate, ManyToMany } from 'typeorm';
 import { IsAscii, Length, validateOrReject, IsOptional, IsEmail, IsInt, IsEnum } from 'class-validator';
 import { GameHistory } from './game.history.entity';
+import { ChannelMember, Chat } from './chat.entity';
 
 @Entity()
 @Unique(['nameNick'])
@@ -54,6 +55,12 @@ export class User {
 
   @OneToMany(() => GameHistory, gameHistory => gameHistory.player1)
   gameHistories: GameHistory[];
+
+  @OneToMany(() => ChannelMember, membership => membership.user)
+  memberships: ChannelMember[];
+
+  @ManyToMany(() => Chat, chat => chat.users)
+  chats: Chat[];
 
   async validate() {
     await validateOrReject(this);

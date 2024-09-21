@@ -1,13 +1,15 @@
+DOCKER_CMP := docker compose
+
 all:
-	docker-compose up --build
+	@$(DOCKER_CMP) up --build
 
 down:
-	@docker-compose -f docker-compose.yml down
+	@$(DOCKER_CMP) -f docker-compose.yml down
 
 clean:
-	@docker-compose down --remove-orphans
-	@docker-compose down --rmi all
-	@docker-compose down -v
+	@$(DOCKER_CMP) down --remove-orphans
+	@$(DOCKER_CMP) down --rmi all
+	@$(DOCKER_CMP) down -v
 
 fclean: clean
 	@docker volume prune -f

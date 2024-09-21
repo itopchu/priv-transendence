@@ -59,7 +59,20 @@ export class UserService {
       return (null);
     }
   }
-  
+
+  async getUserByIdWithRel(id: number, relations: string[]): Promise<User | null> {
+    try {
+      const found = await this.userRepository.findOne({
+		  where: { id },
+		  relations: relations,
+	  });
+      return found;
+    } catch (error) {
+      console.error("Failed to get user by id:", error);
+    }
+    return (null);
+  }
+
   async getUserById(id: number): Promise<User | null> {
     try {
       const found = await this.userRepository.findOne({ where: { id } });
@@ -166,6 +179,23 @@ export class UserService {
       console.error("Failed to get user friends by id:", error);
       return null;
     }
+  }
+
+  async getUserFriendshipRestricted(id: number) {
+    let friendship: Friendship[] | null;
+
+    try {
+      friendship = await this.friendsRepository.createQueryBuilder('friendship')
+      .leftJoinAndSelect('friendship.user1', 'user1')
+      .leftJoinAndSelect('friendship.user2', 'user2')
+      .where('(user1.id = :id AND friendship.user1Attitude = :attitude1)', { id, attitude1: FriendshipAttitude.restricted })
+      .orWhere('(user2.id = :id AND friendship.user2Attitude = :attitude2)', { id, attitude2: FriendshipAttitude.restricted })
+      .getMany();
+    } catch (error) {
+      console.error("Failed to get restricted friendships:", error);
+      return null;
+    }
+    return friendship;
   }
 
   async getUserFriendship(userRequester: User, userResponder: User): Promise<Friendship | null> {

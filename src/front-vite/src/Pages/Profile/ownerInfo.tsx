@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { UserPublic, useUser } from "../../Providers/UserContext/User";
+import { UserPublic, UserStatusType, useUser } from '../../Providers/UserContext/User';
 import {
   Avatar,
   Stack,
@@ -22,6 +22,9 @@ import {
 } from "@mui/icons-material";
 import { darken, alpha } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
+import { useChat } from '../../Providers/ChatContext/Chat';
+import { ChatStatus } from '../../Layout/Chat/InterfaceChat';
+import { handleError } from '../Channels/utils';
 import axios from "axios";
 
 interface VisitedInfoProps {
@@ -49,12 +52,27 @@ export enum FriendshipAttitudeBehaviour {
 const BACKEND_URL: string =
   import.meta.env.ORIGIN_URL_BACK || "http://localhost:4000";
 
+export function getStatusColor(status: UserStatusType | undefined) {
+  const theme = useTheme();
+
+	if (!status) {
+		return (theme.palette.action.hover);
+	}
+
+	return (
+		status === 'online' ? theme.palette.success.main
+		: status === 'offline' ? theme.palette.error.main
+		: theme.palette.warning.main
+	);
+}
+
 export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
   const [friendshipAttitude, setFriendshipAttitude] =
     useState<FriendshipAttitude>(FriendshipAttitude.available);
   const { user } = useUser();
+	const { chatProps, changeChatProps } = useChat();
 
   useEffect(() => {
     const getFriendshipAttitude = async () => {
@@ -202,8 +220,32 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
     console.log("game invite");
   }
 
-  function handleChatInvite() {
-    console.log("chat invite");
+  async function handleChatInvite() {
+		if (!visitedUser?.id || !chatProps.chats) return;
+
+		const chat = chatProps.chats.find((chat) => chat.user.id === visitedUser.id);
+		if (chat) {
+			changeChatProps({
+				selected: chat,
+				chatStatus: ChatStatus.Chatbox,
+			});
+			return;
+		}
+
+		try {
+			const response = await axios.post(`${BACKEND_URL}/chat/${visitedUser?.id}`, null, { withCredentials: true});
+			console.log(response);
+			const newChat = response.data.chat;
+			if (newChat) {
+				changeChatProps({
+					chats: [newChat],
+					selected: newChat,
+					chatStatus: ChatStatus.Chatbox,
+				});
+			}
+		} catch (error) {
+			handleError('Could not create chat:', error);
+		}
   }
 
   let imagePart = () => {
@@ -227,14 +269,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             maxHeight: "200px",
             maxWidth: "200px",
             border: "2px solid",
-            borderColor: () =>
-              visitedUser?.status === "online"
-                ? theme.palette.success.main
-                : visitedUser?.status === "offline"
-                ? theme.palette.error.main
-                : visitedUser?.status === "ingame"
-                ? theme.palette.warning.main
-                : theme.palette.action.hover,
+            borderColor: getStatusColor(visitedUser?.status),
           }}
           src={visitedUser?.image ?? ""}
           alt="visitedUser"

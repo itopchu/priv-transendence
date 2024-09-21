@@ -1,29 +1,27 @@
 import React from 'react';
-import { ChatProps, ChatStatus, ChatRoom } from './InterfaceChat';
-import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography } from '@mui/material';
+import { ChatStatus, Chat } from './InterfaceChat';
+import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography, Avatar } from '@mui/material';
 import { darken, alpha, useTheme } from '@mui/material/styles';
 import { Add as AddIcon, Settings as SettingsIcon, Logout as LogoutIcon } from '@mui/icons-material';
+import { useChat } from '../../Providers/ChatContext/Chat';
+import { getUsername } from '../../Pages/Channels/utils';
 
-interface ContentDrawerProps {
-  chatProps: ChatProps;
-  setChatProps: React.Dispatch<React.SetStateAction<ChatProps>>;
-}
-
-const ContentDrawer: React.FC<ContentDrawerProps> = ({ chatProps, setChatProps }) => {
+const ContentDrawer = () => {
   const theme = useTheme();
+	const { chatProps, changeChatProps } = useChat();
 
-  const toggleChatStatus = (status: ChatStatus, selection: ChatRoom | null) => {
-    setChatProps({ ...chatProps, chatStatus: status, selected: selection });
+  const toggleChatStatus = (status: ChatStatus, selection: Chat | undefined) => {
+		changeChatProps({ chatStatus: status, selected: selection });
   };
 
   const handleSearchClick = () => {
     if (chatProps.searchPrompt == '') {
-      setChatProps({ ...chatProps, searchPrompt: 'Search...' });
+			changeChatProps({ searchPrompt: 'Search...' });
     }
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setChatProps({ ...chatProps, searchPrompt: event.target.value });
+    changeChatProps({ searchPrompt: event.target.value });
     console.log('Search Prompt onChange activated: ', chatProps.searchPrompt);
   };
 
@@ -64,8 +62,8 @@ const ContentDrawer: React.FC<ContentDrawerProps> = ({ chatProps, setChatProps }
       <Box sx={{ height: '0', color: 'transparent', bgcolor: 'transparent' }}>
         <Divider orientation="horizontal" />
       </Box>
-      {chatProps.chatRooms.map((chatRoom, index) => (
-        <Stack key={index} direction={'row'} onClick={() => toggleChatStatus(ChatStatus.Chatbox, chatRoom)}
+      {chatProps.chats.map((chat, index) => (
+        <Stack key={index} direction={'row'} onClick={() => toggleChatStatus(ChatStatus.Chatbox, chat)}
           sx={{
             cursor: 'pointer',
             justifyContent: 'space-between',
@@ -73,23 +71,11 @@ const ContentDrawer: React.FC<ContentDrawerProps> = ({ chatProps, setChatProps }
             alignItems: 'center',
           }}
         >
-          <Stack direction={'row'} spacing={2} alignContent='center' alignItems={'center'} marginY={theme.spacing(.5)}>
-            {chatRoom.icon}
+					<Avatar src={chat.user?.image} />
+          <Stack direction={'row'} flexGrow={1} justifyContent={'space-evenly'}>
             <Typography sx={{ '&:hover': { color: theme.palette.secondary.dark } }}>
-              {chatRoom.name}
+              {getUsername(chat.user)}
             </Typography>
-          </Stack>
-          <Stack direction={'row'} spacing={2} alignContent='center' alignItems={'center'} marginY={theme.spacing(.5)}>
-            <Stack onClick={(event) => { event.stopPropagation(); toggleChatStatus(ChatStatus.Settings, chatRoom); }}
-              sx={{ cursor: 'pointer', '&:hover': { color: theme.palette.secondary.dark } }}
-            >
-              <SettingsIcon />
-            </Stack>
-            <Stack onClick={(event) => { event.stopPropagation(); toggleChatStatus(ChatStatus.Bubble, null); }}
-              sx={{ cursor: 'pointer', '&:hover': { color: theme.palette.error.dark } }}
-            >
-              <LogoutIcon />
-            </Stack>
           </Stack>
         </Stack>
       ))}
@@ -97,8 +83,8 @@ const ContentDrawer: React.FC<ContentDrawerProps> = ({ chatProps, setChatProps }
   );
 
   const handleClose = () => {
-    if (chatProps.selected == null)
-      toggleChatStatus(ChatStatus.Bubble, null);
+    if (chatProps.selected == undefined)
+			changeChatProps({ chatStatus: ChatStatus.Bubble });
   }
 
   return (

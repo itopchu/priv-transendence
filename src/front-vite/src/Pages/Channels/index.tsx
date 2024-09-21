@@ -1,34 +1,46 @@
-import React, { ReactNode, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Divider, Typography, Button, IconButton, Container, useTheme, Stack } from '@mui/material';
-import { styled } from '@mui/system';
-import { io, Socket } from 'socket.io-client';
+import React, { useState } from 'react';
+import { Divider, Typography, IconButton, Container, useTheme, Stack, Avatar, useMediaQuery, Box } from '@mui/material';
+import CreateCard from './CreateCard';
 import {
   Add as AddIcon,
-  Group as GroupIcon,
-  Cancel as CancelIcon,
-  Logout as LogoutIcon,
   Login as LoginIcon,
+	MoreVertSharp as MiscIcon,
+	KeyboardBackspace as BackIcon,
 } from '@mui/icons-material';
+import { ChannelStates, useChannel } from '../../Providers/ChannelContext/Channel';
+import ChatBox from './chatBox';
+import { JoinCard } from './JoinCard';
+import { lonelyBox } from './Components/Components';
+import { ChannelDetails } from './Settings/ChannelDetails';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
   newColor: string;
+  name: string;
+  isSelected: boolean;
+  channelImage: string | undefined;
   clickEvent: () => void;
+  iconClickEvent: () => void;
 }
 
 const ChannelsPage: React.FC = () => {
   const theme = useTheme();
-  const navigate = useNavigate();
+  const isSmallScreen = false//useMediaQuery(theme.breakpoints.down('md'));
+  const [showCreateCard, setShowCreateCard] = useState(false);
+  const { memberships, publicChannels, channelProps, changeProps } = useChannel();
 
-  const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, clickEvent }) => {
+	const returnToChannels = () => {
+		changeProps({ selected: undefined, state: undefined });
+	}
+
+  const ChannelLine: React.FC<ChannelTypeEvent> = ({ component, newColor, name, isSelected, channelImage, clickEvent, iconClickEvent }) => {
     return (
       <Stack
         direction={'row'}
         gap={2}
         paddingX={'0.5em'}
         onClick={clickEvent}
-        bgcolor={theme.palette.primary.main}
+        bgcolor={isSelected ? theme.palette.primary.dark : theme.palette.primary.main}
         justifyContent={'space-between'}
         alignItems={'center'}
         textAlign={'center'}
@@ -37,6 +49,9 @@ const ChannelsPage: React.FC = () => {
           width: '100%',
           cursor: 'pointer',
           transition: 'padding-left ease-in-out 0.3s, padding-right ease-in-out 0.3s, border-radius ease-in-out 0.3s, background-color ease-in-out 0.3s',
+					paddingLeft: isSelected ? '1em' : '0.5em',
+					paddingRight: isSelected ? '0.02em' : '0em',
+					borderRadius: isSelected ? '1.9em' : '0em',
           '&:hover': {
             bgcolor: theme.palette.primary.dark,
             borderRadius: '2em',
@@ -45,17 +60,17 @@ const ChannelsPage: React.FC = () => {
           },
         }}
       >
-        <GroupIcon sx={{ width: '10%' }} />
+        <Avatar src={channelImage} sx={{ width: '1.5em', height: '1.5em' }} />
         <Typography noWrap sx={{
           maxWidth: '78%',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap'
         }}>
-          Welcome to the jungle
+          {name}
         </Typography>
         <IconButton
-        onClick={(event) => { event.stopPropagation(); clickEvent }}
+        onClick={(event) => { event.stopPropagation(); iconClickEvent(); }}
         sx={{
           minWidth: '10%',
           width: '40px',
@@ -70,45 +85,63 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
-  let getAvailableChannels = () => {
+  let generateAvailableChannels = () => {
+		if (isSmallScreen && channelProps.selected) return;
+		if (!publicChannels.length) return;
+
     return (
       <Stack gap={1}>
-        {Array.from({ length: 5 }, (_, index) => (
-          <ChannelLine key={index} component={<LoginIcon />} newColor={"green"} clickEvent={() => console.log(`Channel ${index + 1} clicked`)} />
+        {publicChannels.map((channel, index) => (
+          <ChannelLine
+						key={index}
+						name={channel.name}
+						component={<LoginIcon />}
+						newColor={"green"}
+						isSelected={false}
+						channelImage={channel?.image}
+						clickEvent={() => changeProps({ selectedJoin: channel })}
+						iconClickEvent={() => changeProps({ selectedJoin: channel })}
+					/>
         ))}
       </Stack>
     );
   };
 
-  let getJoinedChannels = () => {
-    return (
-      <Stack gap={1}>
-        {Array.from({ length: 5 }, (_, index) => (
-          <ChannelLine key={index} component={<LogoutIcon />} newColor={"red"} clickEvent={() => console.log(`Channel ${index + 1} clicked`)} />
-        ))}
-      </Stack>
-    );
-  };
+  let generateJoinedChannels = () => {
+		if (isSmallScreen && channelProps.selected) return;
+		if (!memberships.length) return;
 
-  let channelCreationSection = () => {
-    return (
-      <Box
-        height={'80vh'}
-        bgcolor={theme.palette.primary.light}
-      >
-        channel creation part
-      </Box>
-    );
+		return (
+			<Stack gap={1}>
+				{memberships.map((membership, _) => {
+					const channel = membership.channel;
+
+					return (
+						<ChannelLine
+							key={channel.id}
+							name={channel.name}
+							component={<MiscIcon />}
+							newColor={"white"}
+							isSelected={membership.id === channelProps?.selected?.id}
+							channelImage={channel?.image}
+							clickEvent={() => changeProps({ selected: membership, state: ChannelStates.chat })}
+							iconClickEvent={() =>  changeProps({ selected: membership, state: ChannelStates.details })}
+						/>
+					);
+				})}
+			</Stack>
+		);
   };
 
   let createChannelButton = () => {
     return (
       <Stack
+        minWidth={'218px'}
         maxWidth={'100%'}
         height={'48px'}
         direction={'row'}
-        justifyContent={'center'}
         alignItems={'center'}
+				paddingLeft={theme.spacing(3.2)}
         gap={1}
         bgcolor={theme.palette.primary.main}
         sx={{
@@ -119,6 +152,7 @@ const ChannelsPage: React.FC = () => {
             bgcolor: theme.palette.primary.dark,
           },
         }}
+				onClick={() => {setShowCreateCard(true)}}
       >
         <AddIcon />
         <Typography>
@@ -128,9 +162,33 @@ const ChannelsPage: React.FC = () => {
     );
   };
 
+	const renderChannelState = () => {
+		if (!channelProps.selected) return (isSmallScreen ? undefined : lonelyBox());
+
+		switch (channelProps.state) {
+			case ChannelStates.chat:
+				return (<ChatBox membership={channelProps.selected} />);
+			case ChannelStates.details:
+				return (
+					<ChannelDetails membership={channelProps.selected} />
+				);
+			default:
+				return (lonelyBox());
+		}
+	}
+
   let pageContainer = () => {
     return (
       <Container sx={{ padding: theme.spacing(3) }}>
+				{isSmallScreen && channelProps?.selected && (
+          <Box sx={{ alignSelf: 'flex-start' }}>
+            <IconButton onClick={returnToChannels}>
+							<BackIcon sx={{ fontSize: '36px' }} />
+            </IconButton>
+          </Box>
+        )}
+				{showCreateCard && (<CreateCard setIsVisible={setShowCreateCard} />)}
+				{channelProps.selectedJoin && <JoinCard channel={channelProps.selectedJoin} />}
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}
@@ -152,14 +210,15 @@ const ChannelsPage: React.FC = () => {
               divider={<Divider orientation='horizontal' flexItem />}
               gap={2}
             >
-              {getJoinedChannels()}
-              {getAvailableChannels()}
+              {generateJoinedChannels()}
+              {generateAvailableChannels()}
             </Stack>
           </Stack>
           <Stack
             width={'100%'}
+						overflow={'auto'}
           >
-            {channelCreationSection()}
+						{renderChannelState()}
           </Stack>
         </Stack>
       </Container>
@@ -167,7 +226,7 @@ const ChannelsPage: React.FC = () => {
   };
 
   return (
-    pageContainer()
+      pageContainer()
   );
 };
 

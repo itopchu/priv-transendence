@@ -6,10 +6,12 @@ import { UserController } from './user/user.controller';
 import { AuthModule } from './auth/auth.module';
 import { User, Friendship } from './entities/user.entity';
 import { UserModule } from './user/user.module';
-// import { ChannelsModule } from './channels/channels.module';
+import { ChatModule } from './chat/chat.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { GameHistory } from './entities/game.history.entity';
+import { Channel, ChannelMember, Message, Mute, Chat } from './entities/chat.entity';
+import { ScheduleModule } from '@nestjs/schedule';
+import { join } from 'path';
 
 @Module({
   controllers: [AuthController, UserController],
@@ -17,6 +19,7 @@ import { GameHistory } from './entities/game.history.entity';
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UserModule,
+		ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/',
@@ -31,11 +34,11 @@ import { GameHistory } from './entities/game.history.entity';
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
-        entities: [User, Friendship, GameHistory],
+        entities: [User, Friendship, GameHistory, Channel, Chat, ChannelMember, Message, Mute],
         synchronize: true,
       })
     }),
-    // ChannelsModule,
+    ChatModule,
   ],
 })
 

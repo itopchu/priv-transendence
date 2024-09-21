@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FriendshipAttitude, FriendshipAttitudeBehaviour, User } from '../entities/user.entity'
 
-const multerOptions = {
+export const multerOptions = {
   limits: {
     fileSize: 5 * 1024 * 1024, // 5 MB
   },
@@ -107,6 +107,19 @@ export class UserController {
       return res.status(404);
     const usersDTO = users.map(user => new UserPublicDTO(user, null));
     return res.status(200).json(usersDTO);
+  }
+
+  @Get('friendship/restricted')
+  @UseGuards(AuthGuard)
+  async getUserRestrictedFriendships(@Res() res: Response, @Req() req: Request) {
+    const user = req.authUser;
+    const friendships = await this.userService.getUserFriendshipRestricted(user.id);
+		const restrictedUsers = (friendships ?? []).map((friendship) => (
+			friendship.user1.id === user.id
+			? new UserPublicDTO(friendship.user1, null)
+			: new UserPublicDTO(friendship.user2, null)
+		))
+		return res.status(200).json({ blockedUsers: restrictedUsers});
   }
 
   @Get('friendship/:id')

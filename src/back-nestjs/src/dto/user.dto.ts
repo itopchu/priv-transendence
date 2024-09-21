@@ -1,5 +1,6 @@
-import { IsBoolean, IsEmail, IsEnum, IsNumber, IsString, Length, IsIn } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsNumber, IsString, Length, IsIn, IsOptional, ValidateNested } from 'class-validator';
 import { User } from '../entities/user.entity'
+import { Type } from 'class-transformer';
 
 
 export class UserClient {
