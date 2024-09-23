@@ -116,8 +116,8 @@ export class UserController {
     const friendships = await this.userService.getUserFriendshipRestricted(user.id);
 		const restrictedUsers = (friendships ?? []).map((friendship) => (
 			friendship.user1.id === user.id
-			? new UserPublicDTO(friendship.user1, null)
-			: new UserPublicDTO(friendship.user2, null)
+			? new UserPublicDTO(friendship.user2, null)
+			: new UserPublicDTO(friendship.user1, null)
 		))
 		return res.status(200).json({ blockedUsers: restrictedUsers});
   }

@@ -8,7 +8,7 @@ import {
   CustomFormLabel,
   ButtonBar,
   CustomCardContent,
-  LoadingBox,
+  CardLoadingBox,
 } from './Components/CardComponents';
 import {
   ButtonGroup,
@@ -119,11 +119,11 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   return (
     <>
       <Overlay onClick={onCancel} />
-      <CenteredCard sx={{ display: 'flex', flexDirection: 'column' }}>
+      <CenteredCard>
         {loading &&
-					<LoadingBox>
+					<CardLoadingBox>
 						<CircularProgress size={80} />
-					</LoadingBox>
+					</CardLoadingBox>
 				}
 				<CustomCardContent 
 					sx={{

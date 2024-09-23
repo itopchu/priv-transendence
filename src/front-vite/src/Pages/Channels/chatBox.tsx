@@ -8,6 +8,7 @@ import {
   styled,
   IconButton,
   CircularProgress,
+  InputBase,
 } from '@mui/material';
 import {
   SendRounded as SendIcon,
@@ -18,7 +19,7 @@ import { User, useUser } from '../../Providers/UserContext/User';
 import { ChannelMember } from '../../Providers/ChannelContext/Channel';
 import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox, ChatBubble } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
-import { LoadingBox } from './Components/CardComponents';
+import { LoadingBox } from './Components/Components';
 import { BACKEND_URL, getUsername, handleError, retryOperation, trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import axios from 'axios';
@@ -97,7 +98,6 @@ const ChatMessages = styled(Stack)(({ theme }) => ({
 
 const TextBar = styled(Box)(({ theme }) => ({
   display: 'flex',
-	position: 'sticky',
   alignItems: 'center',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
@@ -151,6 +151,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
           );
           return response.data.messages || [];
         });
+				console.log(blockedUsersRef);
         const filteredMessages = messageLog
 					.filter((message: Message) => (
 						!blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
@@ -349,43 +350,33 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
   return (
     <ChatContainer>
+			<TextBar>
+				<InputBase
+					fullWidth
+					multiline
+					maxRows={4}
+					disabled={membership.isMuted || loading}
+					inputRef={inputRef}
+					onKeyDown={(e) => {
+						if (e.key === 'Enter' && !e.shiftKey) {
+							e.preventDefault();
+							onSend();
+						}
+					}}
+					placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
+				/>
+				<IconButton disabled={membership.isMuted} onClick={onSend}>
+					{membership.isMuted ? <MutedIcon /> : <SendIcon />}
+				</IconButton>
+			</TextBar>
       {loading ? (
         <LoadingBox>
           <CircularProgress size={100} />
         </LoadingBox>
       ) : (
-        <>
-          <TextBar>
-            <TextField
-              variant="standard"
-              fullWidth
-              multiline
-              maxRows={4}
-              disabled={membership.isMuted}
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  color: 'white',
-                  padding: '7px',
-                },
-              }}
-              inputRef={inputRef}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  onSend();
-                }
-              }}
-              placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
-            />
-            <IconButton disabled={membership.isMuted} onClick={onSend}>
-              {membership.isMuted ? <MutedIcon /> : <SendIcon />}
-            </IconButton>
-          </TextBar>
-          <ChatMessages ref={messagesEndRef}>{generateMessages()}</ChatMessages>
-        </>
+				<ChatMessages ref={messagesEndRef}>{generateMessages()}</ChatMessages>
       )}
-    </ChatContainer>
+		</ChatContainer>
   );
 };
 

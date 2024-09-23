@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Divider, Typography, IconButton, Container, useTheme, Stack, Avatar, useMediaQuery, Box } from '@mui/material';
+import { Input, Divider, Typography, IconButton, Container, useTheme, Stack, Avatar, useMediaQuery, Box, CircularProgress } from '@mui/material';
 import CreateCard from './CreateCard';
 import {
-  Add as AddIcon,
   Login as LoginIcon,
 	MoreVertSharp as MiscIcon,
 	KeyboardBackspace as BackIcon,
@@ -10,8 +9,9 @@ import {
 import { ChannelStates, useChannel } from '../../Providers/ChannelContext/Channel';
 import ChatBox from './chatBox';
 import { JoinCard } from './JoinCard';
-import { lonelyBox } from './Components/Components';
+import { lonelyBox, SearchBar, LoadingBox } from './Components/Components';
 import { ChannelDetails } from './Settings/ChannelDetails';
+import { ChannelFilters, ChannelLineHeader, SelectedChannelHeader } from './Header/Header';
 
 interface ChannelTypeEvent {
   component: React.ReactNode;
@@ -27,7 +27,7 @@ const ChannelsPage: React.FC = () => {
   const theme = useTheme();
   const isSmallScreen = false//useMediaQuery(theme.breakpoints.down('md'));
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const { memberships, publicChannels, channelProps, changeProps } = useChannel();
+  const { channelLineProps, channelProps, changeProps } = useChannel();
 
 	const returnToChannels = () => {
 		changeProps({ selected: undefined, state: undefined });
@@ -87,17 +87,17 @@ const ChannelsPage: React.FC = () => {
 
   let generateAvailableChannels = () => {
 		if (isSmallScreen && channelProps.selected) return;
-		if (!publicChannels.length) return;
+		if (!channelLineProps.channels.length) return;
 
     return (
       <Stack gap={1}>
-        {publicChannels.map((channel, index) => (
+        {channelLineProps.channels.map((channel) => (
           <ChannelLine
-						key={index}
+						key={channel.id}
 						name={channel.name}
 						component={<LoginIcon />}
 						newColor={"green"}
-						isSelected={false}
+						isSelected={Boolean(channelProps.selectedJoin)}
 						channelImage={channel?.image}
 						clickEvent={() => changeProps({ selectedJoin: channel })}
 						iconClickEvent={() => changeProps({ selectedJoin: channel })}
@@ -108,12 +108,11 @@ const ChannelsPage: React.FC = () => {
   };
 
   let generateJoinedChannels = () => {
-		if (isSmallScreen && channelProps.selected) return;
-		if (!memberships.length) return;
+		if (!channelProps.memberships.length) return;
 
 		return (
 			<Stack gap={1}>
-				{memberships.map((membership, _) => {
+				{channelProps.memberships.map((membership) => {
 					const channel = membership.channel;
 
 					return (
@@ -133,35 +132,6 @@ const ChannelsPage: React.FC = () => {
 		);
   };
 
-  let createChannelButton = () => {
-    return (
-      <Stack
-        minWidth={'218px'}
-        maxWidth={'100%'}
-        height={'48px'}
-        direction={'row'}
-        alignItems={'center'}
-				paddingLeft={theme.spacing(3.2)}
-        gap={1}
-        bgcolor={theme.palette.primary.main}
-        sx={{
-          cursor: 'pointer',
-          transition: 'background-color ease-in-out 0.3s, border-radius ease-in-out 0.3s',
-          '&:hover': {
-            borderRadius: '2em',
-            bgcolor: theme.palette.primary.dark,
-          },
-        }}
-				onClick={() => {setShowCreateCard(true)}}
-      >
-        <AddIcon />
-        <Typography>
-          Create a Channel
-        </Typography>
-      </Stack>
-    );
-  };
-
 	const renderChannelState = () => {
 		if (!channelProps.selected) return (isSmallScreen ? undefined : lonelyBox());
 
@@ -169,9 +139,7 @@ const ChannelsPage: React.FC = () => {
 			case ChannelStates.chat:
 				return (<ChatBox membership={channelProps.selected} />);
 			case ChannelStates.details:
-				return (
-					<ChannelDetails membership={channelProps.selected} />
-				);
+				return (<ChannelDetails membership={channelProps.selected} />);
 			default:
 				return (lonelyBox());
 		}
@@ -179,7 +147,9 @@ const ChannelsPage: React.FC = () => {
 
   let pageContainer = () => {
     return (
-      <Container sx={{ padding: theme.spacing(3) }}>
+      <Container
+				sx={{ padding: theme.spacing(3), position: 'relative' }}
+			>
 				{isSmallScreen && channelProps?.selected && (
           <Box sx={{ alignSelf: 'flex-start' }}>
             <IconButton onClick={returnToChannels}>
@@ -192,32 +162,58 @@ const ChannelsPage: React.FC = () => {
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}
-          divider={<Divider orientation='vertical' flexItem />}
-          padding={'1em'}
+					divider={<Divider orientation='vertical' />}
+          padding={'.7em'}
         >
           <Stack
-            padding={'1em'}
-            gap={1}
             direction={'column'}
             height={'80vh'}
             bgcolor={theme.palette.primary.light}
-            divider={<Divider flexItem />}
-            width={'250px'}
+						sx={{
+							minWidth: '250px',
+							width: '250px',
+							overflowY: 'auto',
+						}}
           >
-            {createChannelButton()}
-            <Stack
-              sx={{ overflowY: 'auto', maxHeight: '100%' }}
-              divider={<Divider orientation='horizontal' flexItem />}
-              gap={2}
-            >
-              {generateJoinedChannels()}
-              {generateAvailableChannels()}
-            </Stack>
+						<ChannelLineHeader AddIconClick={() => setShowCreateCard(true)} />
+						<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
+						<Stack
+							padding='1em'
+							sx={{ overflowY: 'auto', maxHeight: '100%' }}
+							divider={<Divider orientation='horizontal' flexItem />}
+							gap={1}
+						>
+							<SearchBar
+								sx={{
+									"&.Mui-focused": {
+										backgroundColor: theme.palette.primary.main,
+									}
+								}}
+							/>
+							{!channelLineProps.loading
+								&& channelLineProps.filter === ChannelFilters.myChannels
+									? generateJoinedChannels()
+									: generateAvailableChannels()
+							}
+						</Stack>
+						{channelLineProps.loading && (
+							<LoadingBox>
+								<CircularProgress size={70} />
+							</LoadingBox>
+						)}
           </Stack>
           <Stack
             width={'100%'}
+            height={'80vh'}
 						overflow={'auto'}
+						sx={{ position: 'relative' }}
           >
+						{channelProps.selected && channelProps.state === ChannelStates.chat && (
+							<>
+								<SelectedChannelHeader/>
+								<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
+							</>
+						)}
 						{renderChannelState()}
           </Stack>
         </Stack>

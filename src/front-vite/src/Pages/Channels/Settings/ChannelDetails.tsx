@@ -249,23 +249,29 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
                 : 'Enter channel name...'
             }
           />
-          {isAdmin && (
-            <>
-              {(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
-                <SettingsTextField
-                  inputRef={passwordRef}
-                  variant="standard"
-                  placeholder={
-                    passwordRef.current?.value.length
-                      ? undefined
-                      : 'Enter a password...'
-                  }
-                  type="password"
-                />
-              )}
-              {generateButtonGroup()}
-            </>
-          )}
+          {isAdmin
+						? (
+							<>
+								{(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
+									<SettingsTextField
+										inputRef={passwordRef}
+										variant="standard"
+										placeholder={
+											passwordRef.current?.value.length
+												? undefined
+												: 'Enter a password...'
+										}
+										type="password"
+									/>
+								)}
+								{generateButtonGroup()}
+							</>
+          ) : (
+						<Typography variant="body1" color={'textSecondary'}>
+							{`${channel.type} • ${members.length}\
+								${members.length > 1 ? 'members' : 'member'}`}
+						</Typography>
+					)}
         </Stack>
       </Stack>
       <DescriptionBox sx={{ width: '65%' }}>

@@ -1,5 +1,16 @@
 import { Upload } from "@mui/icons-material";
-import { Avatar, Box, Button, styled, Typography } from "@mui/material";
+import {
+	Avatar,
+	Box,
+	Button,
+	InputAdornment,
+	InputBase,
+	styled,
+	Typography
+} from "@mui/material";
+import {
+	Search as SearchIcon,
+} from '@mui/icons-material'
 import React, { ReactElement } from "react";
 
 export const CustomAvatar = styled(Avatar)(({ theme }) => ({
@@ -8,7 +19,7 @@ export const CustomAvatar = styled(Avatar)(({ theme }) => ({
   borderColor: theme.palette.primary.dark,
 }));
 
-export interface AvatarButtonType {
+export interface IAvatarButton {
 	src?: string;
 	clickEvent?: () => void;
 	children?: ReactElement[];
@@ -16,7 +27,13 @@ export interface AvatarButtonType {
 	sx?: object;
 }
 
-export interface ImageInputType {
+export interface ISearchBar {
+	sx?: object;
+	boxSx?: object;
+	style?: object;
+}
+
+export interface IImageInput {
 	children?: ReactElement[];
 	onFileInput?: (file: File) => void;
 }
@@ -64,7 +81,7 @@ export const AvatarUploadIcon = styled(Upload)(({ theme }) => ({
 	  fontSize: '4em',
 }));
 
-export const ImageInput: React.FC<ImageInputType> = ({ children, onFileInput }) => {
+export const ImageInput: React.FC<IImageInput> = ({ children, onFileInput }) => {
 	return (
 	  <input
 		type="file"
@@ -100,7 +117,15 @@ export const ChatBubble = styled(Box)(({ theme }) => ({
   overflow: 'auto',
 }));
 
-export const ButtonAvatar: React.FC<AvatarButtonType> = ({ children, src, clickEvent, avatarSx, sx }) => {
+export const LoadingBox = styled(Box)(() => ({
+	display: 'flex',
+	flexGrow: 1,
+	justifyContent: 'center',
+	alignItems: 'center',
+	overflow: 'visible',
+}));
+
+export const ButtonAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx }) => {
 	return (
 		<Button
 		  component="label"
@@ -125,7 +150,7 @@ export const ButtonAvatar: React.FC<AvatarButtonType> = ({ children, src, clickE
 	);
 }
 
-export const UploadAvatar: React.FC<AvatarButtonType> = ({ children, src, clickEvent, avatarSx, sx }) => (
+export const UploadAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx }) => (
 	<ButtonAvatar
 		src={src}
 		clickEvent={clickEvent}
@@ -161,3 +186,30 @@ export const lonelyBox = () => (
 	</Box>
 )
 
+export const SearchBar: React.FC<ISearchBar> = ({ sx, boxSx, style }) => (
+	<Box
+		sx={{
+			position: "relative",
+			...boxSx
+		}}
+		style={{
+			...style
+		}}
+	>
+		<InputBase
+			placeholder="Search"
+			endAdornment={
+				<InputAdornment position='end' >
+					<SearchIcon />
+				</InputAdornment>
+			}
+			sx={{
+				height: "2em",
+				borderRadius: "0.5em",
+				padding: "0.2em 0.5em",
+				backgroundColor: (theme) => theme.palette.primary.dark,
+				...sx
+			}}
+		/>
+	</Box>
+)

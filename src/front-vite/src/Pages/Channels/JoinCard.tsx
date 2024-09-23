@@ -9,7 +9,7 @@ import {
   Overlay,
   TextFieldWrapper,
   CustomCardContent,
-  LoadingBox,
+  CardLoadingBox,
 } from './Components/CardComponents';
 import {
   Button,
@@ -29,13 +29,13 @@ interface JoinCardType {
 export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 	if (!channel) return (null);
 
-  const { memberships, changeProps } = useChannel();
+  const { channelProps, changeProps } = useChannel();
   const { user } = useUser();
 
   const [loading, setLoading] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  const alreadyJoined = memberships.some((member) => member.channel.id === channel.id);
+  const alreadyJoined = channelProps.memberships.some((member) => member.channel.id === channel.id);
 	console.log(channel);
   const isBanned = channel.bannedUsers
 		? channel.bannedUsers.some((bannedUser) => bannedUser.id === user.id)
@@ -79,9 +79,9 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
       <Overlay onClick={onCancel} />
       <CenteredCard sx={{ overflow: 'auto' }}>
         {loading ? (
-          <LoadingBox>
+          <CardLoadingBox>
             <CircularProgress size={80} />
-          </LoadingBox>
+          </CardLoadingBox>
         ) : (
           <CustomCardContent>
 						<Stack spacing={1.6} alignItems={'center'} >

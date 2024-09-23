@@ -94,14 +94,13 @@ export class ChannelService {
 		return (expiredMutes);
 	}
 
-	async getPublicChannels(): Promise<Channel[]> {
-		return (await this.channelRespitory.find({
-			where: [
-				{ type: ChannelType.public },
-				{ type: ChannelType.protected },
-			],
+	async getPublicChannels(channelType: ChannelType): Promise<Channel[]> {
+		const channels = await this.channelRespitory.find({
+			where: { type: channelType },
 			relations: ['bannedUsers'],
-		}));
+		});
+
+		return (channels);
 	}
 
 	async createChannel(creator: User, createChannelDto: CreateChannelDto, image: Express.Multer.File): Promise<Channel> {

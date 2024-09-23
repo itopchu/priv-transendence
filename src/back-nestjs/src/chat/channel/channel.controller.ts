@@ -16,7 +16,8 @@ import {
 	UnauthorizedException,
 	Delete,
 	UseInterceptors,
-	UploadedFile
+	UploadedFile,
+    ParseEnumPipe
 } from '@nestjs/common';
 import { Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -99,10 +100,11 @@ export class ChannelController {
 		return ({ memberships: clientMemberships });
 	}
 
-	@Get('public')
-	async getPublicChannels() {
+	@Get('public/:type')
+	@UseGuards(AuthGuard)
+	async getPublicChannels(@Param('type', new ParseEnumPipe(ChannelType)) channelType: ChannelType) {
 		try {
-			const channels = await this.channelService.getPublicChannels();
+			const channels = await this.channelService.getPublicChannels(channelType);
 
 			const publicChannels = channels.map(channel => new ChannelPublicDTO(channel));
 			return ({ channels: publicChannels });
