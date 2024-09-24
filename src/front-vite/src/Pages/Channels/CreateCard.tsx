@@ -19,8 +19,9 @@ import {
   Stack,
 } from '@mui/material';
 import { AvatarUploadIcon, ImageInput, UploadAvatar } from './Components/Components';
-import { ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Channel';
+import { useChannel } from '../../Providers/ChannelContext/Channel';
 import { BACKEND_URL, handleError, onFileUpload, retryOperation } from './utils';
+import { ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
 
 interface CreateCardType {
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -38,6 +39,7 @@ const initialChannelData: ChannelDataType = {
 
 const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   const { user } = useUser();
+	const { changeProps } = useChannel();
   const passwordRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -107,6 +109,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 				});
 				return (response.data.channel);
 			});
+			changeProps({ state: ChannelStates.chat });
     } catch (error: any) {
       setLoading(false);
       handleError('Could not create channel: ', error);

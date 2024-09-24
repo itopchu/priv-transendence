@@ -1,6 +1,5 @@
-import React from 'react';
-import { ChatProps, ChatStatus } from './InterfaceChat';
-import { Box, Fab, useTheme } from '@mui/material';
+import { ChatStatus } from './InterfaceChat';
+import { Box, Fab  } from '@mui/material';
 import { Chat as ChatIcon } from '@mui/icons-material';
 import { useChat } from '../../Providers/ChatContext/Chat';
 

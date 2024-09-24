@@ -14,15 +14,6 @@ interface Chat {
 export const Chat: React.FC = () => {
 	const { chatProps } = useChat();
 
-  // parameters - will be added later
-  function VerifyUser(): boolean {
-    return (true);
-  }
-
-  function GetChatRooms(): Chat[] {
-
-  }
-
   const renderChatContent = () => {
     switch (chatProps.chatStatus) {
       case ChatStatus.Drawer:
@@ -33,11 +24,7 @@ export const Chat: React.FC = () => {
         return <ContentBubble />;
     }
   };
-  // return (
-  //   {chatStatus === ChatStatus.Bubble && (<ChatBubble chatProps={chatProps} setChatProps={setChatProps} />)}
-  //   {chatStatus === ChatStatus.Drawer && (<ChatDrawer chatProps={chatProps} setChatProps={setChatProps} />)}
-  //   {chatStatus === ChatStatus.Chatbox && (<ChatBox chatProps={chatProps} setChatProps={setChatProps} />)}
-  // );
+
   return (
     <div >
       {renderChatContent()}

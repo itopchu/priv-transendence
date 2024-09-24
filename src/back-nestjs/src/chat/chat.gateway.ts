@@ -147,6 +147,7 @@ export class ChatGateway {
 		
 		if (channelId === -1) {
 			const rooms = Array.from(client.rooms);
+			console.log('leave all');
 
 			rooms.forEach(room => {
 				if (room.slice(0, RoomInitials.channelUpdate.length) === RoomInitials.channelUpdate) {
@@ -196,11 +197,13 @@ export class ChatGateway {
 		}
 
 		const relationship = await this.userService.getUserFriendship(user, recipient);
-		if (relationship.user1Attitude === FriendshipAttitude.restricted) {
-			throw new UnauthorizedException(`Unauthorized: ${relationship.user1.nameFirst} is blocked`);
-		}
-		if (relationship.user2Attitude === FriendshipAttitude.restricted) {
-			throw new UnauthorizedException(`Unauthorized: ${relationship.user2.nameFirst} is blocked`);
+		if (relationship) {
+			if (relationship.user1Attitude === FriendshipAttitude.restricted) {
+				throw new UnauthorizedException(`Unauthorized: ${relationship.user1.nameFirst} is blocked`);
+			}
+			if (relationship.user2Attitude === FriendshipAttitude.restricted) {
+				throw new UnauthorizedException(`Unauthorized: ${relationship.user2.nameFirst} is blocked`);
+			}
 		}
 
 		const message = await this.chatService.logMessage(chat.id, user, payload.content);
@@ -238,8 +241,9 @@ export class ChatGateway {
 		const onlineMembersCount = this.server.sockets.adapter.rooms.get(room)?.size || 0
 
 		if (!channelId) {
-			channelId = Number(room.slice(RoomInitials.channelUpdate.length + 1));
+			channelId = Number(room.slice(RoomInitials.channelUpdate.length));
 		}
+
 		this.server.to(room).emit('onlineMembersCount', {
 			channelId,
 			content: onlineMembersCount,

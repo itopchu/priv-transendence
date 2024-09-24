@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Channel, useChannel } from '../../Providers/ChannelContext/Channel';
+import { useChannel } from '../../Providers/ChannelContext/Channel';
 import axios from 'axios';
 import { useUser } from '../../Providers/UserContext/User';
 import {
@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
 import { BACKEND_URL, handleError, retryOperation } from './utils';
+import { Channel } from '../../Providers/ChannelContext/Types';
 
 interface JoinCardType {
   channel: Channel | undefined;

@@ -1,89 +1,16 @@
 import axios from "axios";
 import React, { useContext, useEffect, useState, createContext } from "react";
-import { User, useUser } from "../../Providers/UserContext/User";
+import { useUser } from "../../Providers/UserContext/User";
 import { BACKEND_URL, handleError, retryOperation } from "../../Pages/Channels/utils";
-import { ChannelFilters, getChannelTypeFromFilter } from "../../Pages/Channels/Header/Header";
-
-export enum ChannelType {
-	private = 'private',
-	protected = 'protected',
-	public = 'public',
-}
-
-export const ChannelTypeValues: ChannelType[] = [
-	ChannelType.private,
-	ChannelType.protected,
-	ChannelType.public
-];
-
-export const ChannelRoleValues: string[] = [
-	'admin',
-	'moderator',
-	'member',
-]
-
-export enum ChannelRole {
-	admin,
-	moderator,
-	member,
-}
-
-export const enum ChannelStates {
-	chat = 'chat',
-	details = 'details',
-}
-
-export type ChannelLinePropsType = {
-	filter: ChannelFilters,
-	channels: Channel[],
-	hidden: boolean,
-	loading: boolean,
-}
-
-export type ChannelPropsType = {
-	memberships: ChannelMember[],
-	selected: ChannelMember | undefined,
-	selectedJoin: Channel | undefined,
-	state: ChannelStates | undefined,
-}
-
-export type ChannelMember = {
-	id: number;
-	user: User;
-	channel: Channel;
-	role: ChannelRole;
-	isMuted: boolean;
-}
-
-export type MutedUser = {
-	userId: number;
-	channelId: number;
-	user: User;
-	muteUntil: Date;
-}
-
-export interface Channel {
-	id: number;
-	image?: string;
-	name: string;
-	bannedUsers?: User[];
-	mutedUsers?: MutedUser[];
-	onlineMembers?: number;
-	members: ChannelMember[];
-	type: ChannelType;
-	description: string;
-}
-
-const enum UpdateType {
-	updated = 'updated',
-	deleted = 'deleted',
-}
-
-export type DataUpdateType  = {
-	channelId: number,
-	content: any,
-	updateType: UpdateType,
-}
+import {
+	ChannelFilters,
+	ChannelLinePropsType,
+	ChannelMember,
+	ChannelPropsType,
+	DataUpdateType,
+	UpdateType
+} from "./Types";
+import { getChannelTypeFromFilter, UpdatePropArray } from "./utils";
 
 type ChannelContextType = {
 	channelProps: ChannelPropsType,
@@ -92,24 +19,6 @@ type ChannelContextType = {
 	setChannelLineProps: React.Dispatch<React.SetStateAction<ChannelLinePropsType>>,
 	changeProps: (newProps: Partial<ChannelPropsType>) => void,
 	changeLineProps: (newProps: Partial<ChannelLinePropsType>) => void,
-}
-
-export function UpdatePropArray<Type>(prevArray: Type[], newData: DataUpdateType): Type[] {
-	const index = prevArray.findIndex((prevArray: any) => prevArray.id === newData.content.id)
-	if (index === -1) {
-		if (newData.updateType === UpdateType.updated) {
-			return ([...prevArray, newData.content as Type]);
-		}
-		return ([...prevArray]);
-	}
-
-	let updatedArray = [...prevArray];
-	if (newData.updateType === UpdateType.updated) {
-		updatedArray[index] = newData.content as Type;
-	} else {
-		updatedArray.splice(index, 1);
-	}
-	return (updatedArray);
 }
 
 const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
@@ -176,7 +85,10 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 				setChannelProps((prevProps) => ({
 					...prevProps,
 					memberships: UpdatePropArray(prevProps.memberships, data),
-					selected: prevProps.selected?.id === membership.id ? membership : prevProps.selected,
+					selected: prevProps.selected
+						? prevProps.selected.id === membership.id
+							? membership : prevProps.selected
+						: membership,
 				}));
 			} catch (error: any) {
 				handleError('Unable to update joined channel:',  error);
@@ -252,6 +164,12 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			userSocket?.off('newPublicChannelUpdate');
 		}
 	}, [channelLineProps.filter, userSocket]);
+
+	useEffect(() => {
+		if (channelLineProps.filter !== ChannelFilters.myChannels) return;
+
+		changeLineProps({ channels: channelProps.memberships.map((membership) => membership.channel)});
+	}, [channelProps.memberships]);
 
 	return (
 		<ChannelContext.Provider

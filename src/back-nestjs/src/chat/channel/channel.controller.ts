@@ -22,6 +22,7 @@ import {
 import { Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+    ChannelClientDTO,
 	ChannelPublicDTO,
 	CreateChannelDto,
 	MemberClientDTO,
@@ -147,6 +148,7 @@ export class ChannelController {
 				this.channelGateway.emitPublicChannelUpdate(publicChannel, UpdateType.updated);
 			}
 			this.channelGateway.emitMemberJoined(newChannel.id, user.id);
+			return ({ channel: new ChannelClientDTO(newChannel) });
 		} catch(error) {
 			throw new InternalServerErrorException(`Channel creation failed: ${error.message}`);
 		}

@@ -1,10 +1,10 @@
 import React from "react";
-import { formatDate, getTimeDiff } from "../../Pages/Channels/chatBox";
 import { Message } from "./InterfaceChat";
 import { Box, Divider, Stack, Typography, useTheme } from "@mui/material";
 import { ButtonAvatar, ChatBubble } from "../../Pages/Channels/Components/Components";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
+import { formatDate, getTimeDiff } from "../../Providers/ChannelContext/utils";
 
 type ChatBoxType = {
 	messageLog: Message[];

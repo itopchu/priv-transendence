@@ -4,7 +4,7 @@ import {
   ChannelMember,
   ChannelRole,
   ChannelRoleValues,
-} from '../../../Providers/ChannelContext/Channel';
+} from '../../../Providers/ChannelContext/Types';
 import React, { useEffect, useState } from 'react';
 import {
   Box,

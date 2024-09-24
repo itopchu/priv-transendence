@@ -11,7 +11,7 @@ import {
 import {
 	Search as SearchIcon,
 } from '@mui/icons-material'
-import React, { ReactElement } from "react";
+import React, { forwardRef, ReactElement } from "react";
 
 export const CustomAvatar = styled(Avatar)(({ theme }) => ({
   margin: '0 auto',
@@ -31,6 +31,9 @@ export interface ISearchBar {
 	sx?: object;
 	boxSx?: object;
 	style?: object;
+	value?: string;
+	ref?: any;
+	inputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export interface IImageInput {
@@ -186,7 +189,7 @@ export const lonelyBox = () => (
 	</Box>
 )
 
-export const SearchBar: React.FC<ISearchBar> = ({ sx, boxSx, style }) => (
+export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, style, value, inputChange }, ref) => (
 	<Box
 		sx={{
 			position: "relative",
@@ -198,6 +201,9 @@ export const SearchBar: React.FC<ISearchBar> = ({ sx, boxSx, style }) => (
 	>
 		<InputBase
 			placeholder="Search"
+			inputRef={ref}
+			value={value}
+			onChange={inputChange}
 			endAdornment={
 				<InputAdornment position='end' >
 					<SearchIcon />
@@ -212,4 +218,4 @@ export const SearchBar: React.FC<ISearchBar> = ({ sx, boxSx, style }) => (
 			}}
 		/>
 	</Box>
-)
+))
