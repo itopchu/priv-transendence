@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useContext, useEffect, useState, createContext } from "react";
 import { useUser } from "../../Providers/UserContext/User";
-import { BACKEND_URL, handleError, retryOperation } from "../../Pages/Channels/utils";
+import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
 import {
 	ChannelFilters,
 	ChannelLinePropsType,
@@ -10,7 +10,7 @@ import {
 	DataUpdateType,
 	UpdateType
 } from "./Types";
-import { getChannelTypeFromFilter, UpdatePropArray } from "./utils";
+import { getChannelTypeFromFilter, updatePropArray,  retryOperation } from "./utils";
 import { useMediaQuery, useTheme } from "@mui/material";
 
 type ChannelContextType = {
@@ -91,7 +91,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 				data.content = membership;
 				setChannelProps((prevProps) => ({
 					...prevProps,
-					memberships: UpdatePropArray(prevProps.memberships, data),
+					memberships: updatePropArray(prevProps.memberships, data),
 					selected: prevProps.selected
 						? prevProps.selected.id === membership.id
 							? membership : prevProps.selected
@@ -114,7 +114,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 					data.content = deletedMembership;
 					return ({
 						...prevProps,
-						memberships: UpdatePropArray(prevProps.memberships, data),
+						memberships: updatePropArray(prevProps.memberships, data),
 						selected: prevProps.selected?.id === deletedMembership.id ? undefined : prevProps.selected,
 					});
 				});
@@ -157,7 +157,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 
 			setChannelLineProps((prevProps) => ({
 				...prevProps,
-				channels: UpdatePropArray(prevProps.channels, data),
+				channels: updatePropArray(prevProps.channels, data),
 			}));
 		}
 

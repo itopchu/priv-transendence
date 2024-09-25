@@ -1,4 +1,4 @@
-import { User } from "../UserContext/User";
+import { User, UserPublic } from "../UserContext/User";
 
 export type formatDateType = {
 	date: string;
@@ -69,6 +69,12 @@ export type ChannelMember = {
 	isMuted: boolean;
 }
 
+export type ChannelMemberPublic = {
+	id: number;
+	user: UserPublic;
+	role: ChannelRole;
+}
+
 export type MutedUser = {
 	userId: number;
 	channelId: number;
@@ -83,7 +89,7 @@ export interface Channel {
 	bannedUsers?: User[];
 	mutedUsers?: MutedUser[];
 	onlineMembers?: number;
-	members: ChannelMember[];
+	members: ChannelMemberPublic[];
 	type: ChannelType;
 	description: string;
 }

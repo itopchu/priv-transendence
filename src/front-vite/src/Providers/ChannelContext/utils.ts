@@ -4,7 +4,7 @@ export function getChannelTypeFromFilter(filter: ChannelFilters) {
 	return (filter === ChannelFilters.protected ? ChannelType.protected : ChannelType.public);
 }
 
-export function UpdatePropArray<Type>(prevArray: Type[], newData: DataUpdateType): Type[] {
+export function updatePropArray<Type>(prevArray: Type[], newData: DataUpdateType): Type[] {
 	const index = prevArray.findIndex((prevArray: any) => prevArray.id === newData.content.id)
 	if (index === -1) {
 		if (newData.updateType === UpdateType.updated) {
@@ -76,4 +76,27 @@ export function isDiffDate(date1: Date, date2: Date): boolean {
   normalizedDate2.setHours(0, 0, 0, 0);
 
   return (normalizedDate1.getTime() !== normalizedDate2.getTime());
+}
+
+const RETRY_DELAY = 1000;
+export async function retryOperation (operation: () => Promise<any>, retries = 3): Promise<any> {
+	for (let attempt = 1;; ++attempt) {
+		try {
+			return (await operation());
+		} catch (error: any) {
+			if (error.response){
+				const statusCode = error.response.status;
+				if (statusCode < 500 || statusCode > 600) {
+					throw error;
+				}
+			}
+
+			if (attempt < retries) {
+				console.warn(`Attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`);
+				await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+			} else {
+				throw error;
+			}
+		}
+	}
 }

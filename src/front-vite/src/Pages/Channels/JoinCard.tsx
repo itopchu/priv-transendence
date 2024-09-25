@@ -20,8 +20,9 @@ import {
   Typography,
 } from '@mui/material';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
-import { BACKEND_URL, handleError, retryOperation } from './utils';
+import { BACKEND_URL, handleError } from './utils';
 import { Channel } from '../../Providers/ChannelContext/Types';
+import { retryOperation } from '../../Providers/ChannelContext/utils';
 
 interface JoinCardType {
   channel: Channel | undefined;

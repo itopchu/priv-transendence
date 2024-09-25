@@ -1,7 +1,13 @@
 import { Box, Divider, styled, TextField } from "@mui/material";
 import { CustomScrollBox } from "../Components/Components";
 
-export const SettingsTextField = styled(TextField)(() => ({
+export const SettingsTextField = styled(TextField)(({ theme }) => ({
+	'& input': {
+		textAlign: 'center',
+		[theme.breakpoints.up('sm')]: {
+			textAlign: 'left',
+		},
+	},
   '& .MuiInputBase-input': {
     padding: '0px 4px',
     fontSize: '1.5rem',

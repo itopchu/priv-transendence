@@ -4,13 +4,19 @@ import { handleError, BACKEND_URL, getUsername } from "../utils";
 import { User } from "../../../Providers/UserContext/User";
 import { MenuItem } from "@mui/material";
 import { ChatProps, ChatStatus } from "../../../Layout/Chat/InterfaceChat";
+import { useEffect } from "react";
 
 export async function getFriendshipAttitude(
 	id: number,
 	setFunc: React.Dispatch<React.SetStateAction<FriendshipAttitude>>,
+	controller: AbortController,
 ) {
 	try {
-		const response = await axios.get(`${BACKEND_URL}/user/friendship/${id}`, { withCredentials: true });
+		const response = await axios.get(`${BACKEND_URL}/user/friendship/${id}`, {
+				withCredentials: true,
+				signal: controller.signal,
+			}
+		);
 		if (response.data.friendshipAttitude) {
 			setFunc(response.data.friendshipAttitude);
 		}
@@ -18,6 +24,22 @@ export async function getFriendshipAttitude(
 		console.error(`Relationship not found:${error}`)
 	}
 }
+
+export const useFriendshipAttitude = (
+	id: number | null,
+	setFunc: React.Dispatch<React.SetStateAction<FriendshipAttitude>>,
+) => {
+	useEffect(() => {
+		if (!id) return;
+
+		const controller = new AbortController();
+		getFriendshipAttitude(id, setFunc, controller);
+
+		return () => {
+			controller.abort;
+		};
+	}, [id]);
+};
 
 export async function postStatus(
 	id: number,

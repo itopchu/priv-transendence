@@ -20,8 +20,9 @@ import {
 } from '@mui/material';
 import { AvatarUploadIcon, ImageInput, UploadAvatar } from './Components/Components';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
-import { BACKEND_URL, handleError, onFileUpload, retryOperation } from './utils';
+import { BACKEND_URL, handleError, onFileUpload } from './utils';
 import { ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
+import { retryOperation } from '../../Providers/ChannelContext/utils';
 
 interface CreateCardType {
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -109,7 +110,6 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 				});
 				return (response.data.channel);
 			});
-			changeProps({ state: ChannelStates.chat });
     } catch (error: any) {
       setLoading(false);
       handleError('Could not create channel: ', error);

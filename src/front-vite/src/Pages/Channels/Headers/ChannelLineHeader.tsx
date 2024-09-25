@@ -1,7 +1,8 @@
 import { Fab, Stack, Typography, useTheme } from "@mui/material";
 import {useChannel } from "../../../Providers/ChannelContext/Channel";
 import {  Channel, ChannelFilters, ChannelFilterValues, ChannelType } from "../../../Providers/ChannelContext/Types"
-import { BACKEND_URL, handleError, retryOperation } from "../utils";
+import { retryOperation } from "../../../Providers/ChannelContext/utils";
+import { BACKEND_URL, handleError } from "../utils";
 import axios from "axios";
 import {
   Add as AddIcon,
@@ -12,15 +13,18 @@ export const ChannelLineHeader: React.FC<{AddIconClick: () => void}> = ({ AddIco
 	const { channelProps, channelLineProps: lineProps, changeLineProps } = useChannel();
 
 	const getPublicChannels = async (type: ChannelType) => {
-		changeLineProps({ loading: true });
 		try {
 			const channels: Channel[] = await retryOperation(async () => {
-				const response = await axios.get(`${BACKEND_URL}/channel/public/${type}`, { withCredentials: true });
+				const response = await axios.get(`${BACKEND_URL}/channel/public/${type}`, {
+					withCredentials: true,
+				});
 				return (response.data.channels || []);
 			})
 			changeLineProps({ channels });
 		} catch(error) {
-			handleError(`Unable to get ${type} channels:`,  error);
+			if (!axios.isCancel(error)) {
+				handleError(`Unable to get ${type} channels:`,  error);
+			}
 		}
 		changeLineProps({ loading: false });
 	};

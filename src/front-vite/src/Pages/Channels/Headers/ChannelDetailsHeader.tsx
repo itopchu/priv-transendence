@@ -1,5 +1,5 @@
-import { Box, IconButton, Stack, styled, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { ButtonAvatar, ClickTypography, HeaderIconButton, SearchBar } from "../Components/Components";
+import { Stack, styled, useMediaQuery, useTheme } from "@mui/material";
+import { HeaderIconButton } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
 import {
 	ModeEdit as EditIcon,
@@ -36,7 +36,6 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 	onEditClick,
 }) => {
 	const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('xs'));
 
 	const { channelProps, channelLineProps, changeProps, changeLineProps } = useChannel();
 

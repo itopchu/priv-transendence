@@ -18,11 +18,11 @@ import { User, useUser } from '../../Providers/UserContext/User';
 import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox, ChatBubble } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
 import { LoadingBox } from './Components/Components';
-import { BACKEND_URL, getUsername, handleError, retryOperation, trimMessage } from './utils';
+import { BACKEND_URL, getUsername, handleError,  trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import { ChatBoxHeader } from './Headers/ChatBoxHeader';
 import { ChannelMember } from '../../Providers/ChannelContext/Types';
-import { formatDate, getTimeDiff, isDiffDate } from '../../Providers/ChannelContext/utils';
+import { formatDate, getTimeDiff, isDiffDate, retryOperation, } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
@@ -39,7 +39,7 @@ const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
 const TextBar = styled(Box)(({ theme }) => ({
   display: 'flex',
 	minWidth: '250px',
-	width: '93%',
+	width: '100%',
   alignItems: 'center',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
@@ -313,8 +313,9 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 				sx={{
 					flexGrow: 1,
 					backgroundColor: theme.palette.primary.light,
-					alignItems: 'center',
+					alignItems: 'flex-start',
 					paddingBottom: '1em',
+					paddingInline: '20px',
 				}}
 			>
 				<TextBar>

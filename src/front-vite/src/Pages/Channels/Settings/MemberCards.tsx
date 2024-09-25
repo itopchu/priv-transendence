@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {
   Channel,
-  ChannelMember,
+  ChannelMemberPublic,
   ChannelRole,
   ChannelRoleValues,
 } from '../../../Providers/ChannelContext/Types';
@@ -28,7 +28,7 @@ import { FriendshipAttitude, getStatusColor } from '../../Profile/ownerInfo';
 import { User, UserPublic, useUser } from '../../../Providers/UserContext/User';
 import { BACKEND_URL, getUsername, handleError } from '../utils';
 import { useNavigate } from 'react-router-dom';
-import { getFriendshipAttitude, onSendMessage, userRelationMenuItems } from './UserCardsUtils';
+import { onSendMessage, useFriendshipAttitude, userRelationMenuItems } from './UserCardsUtils';
 import { useChat } from '../../../Providers/ChatContext/Chat';
 
 type MuteOptionsType = { key: string; value: number | null };
@@ -45,13 +45,13 @@ const ModerateOptions: string[] = ['kick', 'ban'];
 
 type MemberCardsType = {
   channel: Channel;
-  members: ChannelMember[];
+  members: ChannelMemberPublic[];
   editMode: boolean;
   isAdmin: boolean;
   isMod: boolean;
 };
 
-const onChangeRole = async (member: ChannelMember, newRole: ChannelRole) => {
+const onChangeRole = async (member: ChannelMemberPublic, newRole: ChannelRole) => {
 	const payload = {
 		role: newRole,
 	};
@@ -97,11 +97,76 @@ export const MemberCards: React.FC<MemberCardsType> = ({
   isMod,
 }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { user: localUser, userSocket } = useUser();
 	const { chatProps, changeChatProps } = useChat();
-  const navigate = useNavigate();
 
-  async function onMute(member: ChannelMember, duration: number | null, menuCloseFunc: () => void) {
+	const [menuId, setMenuId] = useState<number | null>(null);
+	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+	const [muteAnchorEl, setMuteAnchorEl] = useState<HTMLElement | null>(null);
+	const	[publicMembers, setPublicMembers] = useState<ChannelMemberPublic[]>(members);
+	const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
+
+	useFriendshipAttitude(menuId, setFriendshipAttitude);
+
+	useEffect(() => {
+		function onProfileStatus(updatedUser: UserPublic) {
+			setPublicMembers((prev) => {
+				let member = members.find((member) => member.user.id === updatedUser.id);
+				const targetIndex = prev.findIndex((member) => member.user.id === updatedUser.id);
+				const updatedArray = [...prev];
+
+				if (!member) {
+					if (targetIndex !== -1) {
+						updatedArray.slice(targetIndex, 1);
+						return (updatedArray);
+					}
+					return (prev);
+				}
+
+				if (targetIndex === -1) {
+					return (prev);
+				}
+
+				member.user = updatedUser;
+				updatedArray[targetIndex] = member;
+				return (updatedArray);
+			});
+		}
+		
+		setPublicMembers(members);
+		userSocket?.on('profileStatus', onProfileStatus);
+		members.forEach((member) => {
+			userSocket?.emit('profileStatus', member.user.id);
+		})
+
+		return (() => {
+			members.forEach((member) => {
+				userSocket?.emit('unsubscribeProfileStatus', member.user.id);
+			})
+			userSocket?.off('profileStatus');
+		});
+	}, [userSocket, channel.id, members]);
+
+	const onMenuClick = (event: React.MouseEvent<HTMLElement>, menuId: number) => {
+		setAnchorEl(event.currentTarget);
+		setMenuId(menuId);
+	};
+
+	const onMenuClose = () => {
+		setAnchorEl(null);
+		setMenuId(null);
+	};
+
+	const onMuteMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+		setMuteAnchorEl(event.currentTarget);
+	};
+
+	const onMuteMenuClose = () => {
+		setMuteAnchorEl(null);
+	};
+
+  async function onMute(member: ChannelMemberPublic, duration: number | null, menuCloseFunc: () => void) {
     const payload = {
       victimId: member.user.id,
       muteUntil: duration,
@@ -116,7 +181,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
     }
   };
 
-  const muteMenuItems = (member: ChannelMember, menuCloseFunc: () => void) => (
+  const muteMenuItems = (member: ChannelMemberPublic, menuCloseFunc: () => void) => (
     MuteOptions.map((mute, index) => {
       return (
 				<MenuItem key={index} onClick={() => onMute(member, mute.value, menuCloseFunc)}>
@@ -126,7 +191,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
     })
   )
 
-  const generateModerateList = (member: ChannelMember, menuCloseFunc: () => void) => (
+  const generateModerateList = (member: ChannelMemberPublic, menuCloseFunc: () => void) => (
 		ModerateOptions.map((option, index) => {
 			const capitalizedOption = option.charAt(0).toUpperCase() + option.slice(1);
 
@@ -142,198 +207,157 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 		})
 	)
 
-	const MemberCard: React.FC<{ member: ChannelMember }> = ({ member }) => {
-		const [anchorEl, setAnchorEl] = useState<any>(null);
-		const [muteAnchorEl, setMuteAnchorEl] = useState<any>(null);
-		const [user, setUser] = useState<UserPublic>(member.user)
-		const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
-
-		const membername = getUsername(user);
-		const isDiffUser = user.id !== localUser.id;
-		const isModeratable = isAdmin || (member.role > ChannelRole.moderator && isMod);
-		const isMemberMuted = channel?.mutedUsers?.some(
-			(mutedUser) => mutedUser.userId === user.id
-		);
-
-		useEffect(() => {
-			function onProfileStatus(updatedUser: UserPublic) {
-				if (updatedUser.id === user.id) {
-					setUser(updatedUser);
-				}
-			}
-
-			//getFriendshipAttitude(member.user.id, setFriendshipAttitude);
-			userSocket?.on('profileStatus', onProfileStatus);
-			userSocket?.emit('profileStatus', user.id);
-
-			return (() => {
-				userSocket?.emit('unsubscribeProfileStatus', user.id);
-				userSocket?.off('profileStatus');
-			});
-		}, [userSocket]);
-
-		const onMuteMenuClick = (event: any) => {
-			setMuteAnchorEl(event.currentTarget);
-		};
-
-		const onMuteMenuClose = () => {
-			setMuteAnchorEl(null);
-		};
-
-		const onMenuClick = (event: any) => {
-			setAnchorEl(event.currentTarget);
-		};
-
-		const onMenuClose = () => {
-			setAnchorEl(null);
-		};
-
-		return (
-			<BarCard>
-				<ButtonAvatar
-					src={user?.image}
-					clickEvent={() => {
-						navigate(`/profile/${user.id}`);
-					}}
-					avatarSx={{
-						width: 56,
-						height: 56,
-						border: '3px solid',
-						borderColor: getStatusColor(user?.status),
-					}}
-					sx={{
-						marginRight: 2,
-						boxShadow: theme.shadows[5],
-					}}
-				/>
-
-				<Stack
-					spacing={editMode && member.role !== ChannelRole.admin ? -1 : 0}
-				>
-					<Stack direction="row" spacing={1}>
-						<ClickTypography
-							variant="h3"
-							fontSize="1.1em"
-							fontWeight="bold"
-							onClick={() => {
-								navigate(`/profile/${user.id}`);
-							}}
-						>
-							{membername}
-						</ClickTypography>
-
-						{editMode && member.role !== ChannelRole.admin ? (
-							<FormControl variant="standard" sx={{ width: 'auto' }}>
-								<Select
-									sx={{
-										height: '50%',
-										fontSize: 'small',
-										marginTop: '2px',
-									}}
-									value={ChannelRoleValues[member.role]}
-								>
-									{ChannelRoleValues.map((role, index) => {
-										if (index === 0) return;
-
-										return (
-											<MenuItem
-												key={index}
-												value={role}
-												onClick={() =>
-													onChangeRole(member, index as ChannelRole)
-												}
-											>
-												{role}
-											</MenuItem>
-										);
-									})}
-								</Select>
-							</FormControl>
-						) : (
-							<Typography
-								variant="caption"
-								color="textSecondary"
-								fontSize=".8em"
-								alignSelf="flex-end"
-							>
-								{ChannelRoleValues[member.role]}
-							</Typography>
-						)}
-					</Stack>
-
-					<Box
-						maxHeight="3.6em"
-						maxWidth="31em"
-						overflow="hidden"
-						textOverflow="ellipsis"
-					>
-						<Typography
-							variant="body1"
-							color="textSecondary"
-							sx={{
-								display: '-webkit-box',
-								WebkitLineClamp: 2,
-								WebkitBoxOrient: 'vertical',
-							}}
-						>
-							{user.greeting}
-						</Typography>
-					</Box>
-				</Stack>
-
-				{isDiffUser && (
-					<Box sx={{ marginLeft: 'auto' }}>
-						<IconButton onClick={onMenuClick}>
-							<MemberMenuIcon />
-						</IconButton>
-						<Menu
-							anchorEl={anchorEl}
-							open={Boolean(anchorEl)}
-							onClose={onMenuClose}
-						>
-							{isAdmin && [
-								<MenuItem key={0} onClick={() => {
-									if (!confirm(`Are you sure you want to transfer ownership to ${membername}?`)) return;
-									onModerate(user, 'transfer', channel.id, onMenuClose)}}
-								>
-									Transfer Admin
-								</MenuItem>,
-								<Divider key={1} />,
-							]}
-							<MenuItem onClick={() => onSendMessage(user, chatProps, onMenuClose, changeChatProps)}>Send Message</MenuItem>
-							{userRelationMenuItems(member.user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
-							{isModeratable && [
-								<Divider key={'div1'} />,
-								<MenuItem key={'mute'} onClick={isMemberMuted ? () => onMute(member, null, onMuteMenuClose) : onMuteMenuClick}>
-									{`${isMemberMuted ? 'Unmute' : 'Mute'} ${membername}`}
-									{!isMemberMuted && <MuteMenuArrowIcon />}
-								</MenuItem>,
-								<Divider key={'div2'} />,
-								generateModerateList(member, onMenuClose),
-							]}
-						</Menu>
-						<Menu
-							anchorEl={muteAnchorEl}
-							open={Boolean(muteAnchorEl)}
-							onClose={onMuteMenuClose}
-							anchorOrigin={{
-								vertical: 'bottom',
-								horizontal: 'right',
-							}}
-						>
-							{muteMenuItems(member, onMuteMenuClose)}
-						</Menu>
-					</Box>
-				)}
-			</BarCard>
-		);
-	}
-
   return (
     <>
-      {members.map((member) => (
-				<MemberCard key={member.id} member={member} />
-      ))}
+      {publicMembers.map((member) => {
+				const membername = getUsername(member.user);
+				const isDiffUser = member.user.id !== localUser.id;
+				const isModeratable = isAdmin || (member.role > ChannelRole.moderator && isMod);
+				const canChangeRole = editMode && isDiffUser && member.role !== ChannelRole.admin;
+				const isMemberMuted = channel?.mutedUsers?.some(
+					(mutedUser) => mutedUser.userId === member.user.id
+				);
+
+				return (
+					<BarCard>
+						<ButtonAvatar
+							src={member.user?.image}
+							clickEvent={() => {
+								navigate(`/profile/${member.user.id}`);
+							}}
+							avatarSx={{
+								width: 56,
+								height: 56,
+								border: '3px solid',
+								borderColor: getStatusColor(member.user?.status),
+							}}
+							sx={{
+								marginRight: 2,
+								boxShadow: theme.shadows[5],
+							}}
+						/>
+
+						<Stack
+							spacing={canChangeRole ? -1 : 0}
+						>
+							<Stack direction="row" spacing={1}>
+								<ClickTypography
+									variant="h3"
+									fontSize="1.1em"
+									fontWeight="bold"
+									onClick={() => {
+										navigate(`/profile/${member.user.id}`);
+									}}
+								>
+									{membername}
+								</ClickTypography>
+
+								{canChangeRole ? (
+									<FormControl variant="standard" sx={{ width: 'auto' }}>
+										<Select
+											sx={{
+												height: '50%',
+												fontSize: 'small',
+												marginTop: '2px',
+											}}
+											value={ChannelRoleValues[member.role]}
+										>
+											{ChannelRoleValues.map((role, index) => {
+												if (index === 0) return;
+
+												return (
+													<MenuItem
+														key={index}
+														value={role}
+														onClick={() =>
+															onChangeRole(member, index as ChannelRole)
+														}
+													>
+														{role}
+													</MenuItem>
+												);
+											})}
+										</Select>
+									</FormControl>
+								) : (
+									<Typography
+										variant="caption"
+										color="textSecondary"
+										fontSize=".8em"
+										alignSelf="flex-end"
+									>
+										{ChannelRoleValues[member.role]}
+									</Typography>
+								)}
+							</Stack>
+
+							<Box
+								maxHeight="3.6em"
+								maxWidth="31em"
+								overflow="hidden"
+								textOverflow="ellipsis"
+							>
+								<Typography
+									variant="body1"
+									color="textSecondary"
+									sx={{
+										display: '-webkit-box',
+										WebkitLineClamp: 2,
+										WebkitBoxOrient: 'vertical',
+									}}
+								>
+									{member.user.greeting}
+								</Typography>
+							</Box>
+						</Stack>
+
+						{isDiffUser && (
+							<Box sx={{ marginLeft: 'auto' }}>
+								<IconButton onClick={(event) => onMenuClick(event, member.id)}>
+									<MemberMenuIcon />
+								</IconButton>
+								<Menu
+									anchorEl={anchorEl}
+									open={Boolean(anchorEl) && menuId === member.id}
+									onClose={onMenuClose}
+								>
+									{isAdmin && [
+										<MenuItem key={'transfer'} onClick={() => {
+											if (!confirm(`Are you sure you want to transfer ownership to ${membername}?`)) return;
+											onModerate(member.user, 'transfer', channel.id, onMenuClose)}}
+										>
+											Transfer Admin
+										</MenuItem>,
+										<Divider key={'dev1'} />,
+									]}
+									<MenuItem onClick={() => onSendMessage(member.user, chatProps, onMenuClose, changeChatProps)}>Send Message</MenuItem>
+									{userRelationMenuItems(member.user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
+									{isModeratable && [
+										<Divider key={'div2'} />,
+										<MenuItem key={'mute'} onClick={isMemberMuted ? () => onMute(member, null, onMuteMenuClose) : onMuteMenuClick}>
+											{`${isMemberMuted ? 'Unmute' : 'Mute'} ${membername}`}
+											{!isMemberMuted && <MuteMenuArrowIcon />}
+										</MenuItem>,
+										<Divider key={'div3'} />,
+										generateModerateList(member, onMenuClose),
+									]}
+								</Menu>
+								<Menu
+									anchorEl={muteAnchorEl}
+									open={Boolean(muteAnchorEl) && menuId === member.id}
+									onClose={onMuteMenuClose}
+									anchorOrigin={{
+										vertical: 'bottom',
+										horizontal: 'right',
+									}}
+								>
+									{muteMenuItems(member, onMuteMenuClose)}
+								</Menu>
+							</Box>
+						)}
+					</BarCard>
+				);
+      })}
     </>
   );
 };

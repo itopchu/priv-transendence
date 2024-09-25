@@ -52,6 +52,11 @@ export const ChatBoxHeader = () => {
 					spacing={-1}
 				>
 					<ClickTypography
+						sx={{
+							whiteSpace: 'nowrap',
+							overflow: 'hidden',
+							textOverflow: 'ellipsis',
+						}}
 						onClick={() => changeProps({ state: ChannelStates.details })}
 					>
 						{channel.name}

@@ -41,7 +41,6 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 
 	const	theme = useTheme()
 	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
-	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
 	const { changeProps } = useChannel();
 	const [editMode, setEditMode] = useState(false);
@@ -70,7 +69,6 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
   const [channelData, setChannelData] = useState(initialChannelData);
 
   const toggleEditMode = () => {
-		console.log('toggling');
     setEditMode(!editMode);
   };
 
@@ -168,6 +166,17 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
     }
   };
 
+	const ChannelStatus = () => (
+		<Typography
+			alignSelf={isTinyScreen ? 'center' : undefined}
+			variant="body1"
+			color={'textSecondary'}
+		>
+			{`${channel.type} • ${members.length}\
+				${members.length > 1 ? 'members' : 'member'}`}
+		</Typography>
+	);
+
   const ChannelDetails = () => (
     <>
       <Stack
@@ -185,21 +194,14 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
           <Typography variant="h5" fontWeight="bold">
             {channel.name}
           </Typography>
-
-          <Typography
-						alignSelf={isTinyScreen ? 'center' : undefined}
-						variant="body1"
-						color={'textSecondary'}
-					>
-            {`${channel.type} • ${members.length}\
-							${members.length > 1 ? 'members' : 'member'}`}
-          </Typography>
+          <ChannelStatus />
         </Stack>
       </Stack>
 
       <DescriptionBox sx={{ width: '65%',  minWidth: '20em' }}>
         <Typography
 					sx={{
+						overflowY: 'auto',
 						wordBreak: 'break-word',
 						whiteSpace: 'pre-wrap',
 					}}
@@ -271,10 +273,7 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 								{generateButtonGroup()}
 							</>
           ) : (
-						<Typography variant="body1" color={'textSecondary'}>
-							{`${channel.type} • ${members.length}\
-								${members.length > 1 ? 'members' : 'member'}`}
-						</Typography>
+						<ChannelStatus />
 					)}
         </Stack>
       </Stack>
@@ -285,6 +284,12 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
           fullWidth
           multiline
           maxRows={4}
+					sx={{
+						flexGrow: 1,
+						'& textarea': {
+							textAlign: 'center',
+						},
+					}}
           placeholder={
             descriptionRef.current?.value === ''
               ? undefined
