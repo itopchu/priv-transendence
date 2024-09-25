@@ -3,7 +3,7 @@ import { useUser } from '../../Providers/UserContext/User';
 import axios from 'axios';
 import {
   CenteredCard,
-  Overlay,
+  CardOverlay,
   TextFieldWrapper,
   CustomFormLabel,
   ButtonBar,
@@ -121,7 +121,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 
   return (
     <>
-      <Overlay onClick={onCancel} />
+      <CardOverlay onClick={onCancel} />
       <CenteredCard>
         {loading &&
 					<CardLoadingBox>

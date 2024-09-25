@@ -1,15 +1,14 @@
 import {
-    IconButton,
 	Stack,
 	Typography,
 	useMediaQuery,
 	useTheme
 } from "@mui/material";
 import {
-	KeyboardArrowLeft as HideChannelLineIcon,
-	KeyboardArrowRight as ShowChannelLineIcon,
+	Menu as ShowChannelLineIcon,
+	MenuOpen as HideChannelLineIcon,
 } from "@mui/icons-material"
-import { ButtonAvatar, ClickTypography, SearchBar } from "../Components/Components";
+import { ButtonAvatar, ClickTypography, HeaderIconButton, SearchBar } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
 import { ChannelStates } from "../../../Providers/ChannelContext/Types";
 
@@ -20,6 +19,7 @@ export const ChatBoxHeader = () => {
 	const channel = channelProps.selected?.channel;
 	if (!channel) return;
 
+  const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
 	return (
@@ -31,31 +31,42 @@ export const ChatBoxHeader = () => {
 				height: '64px',
 				bgcolor: theme.palette.primary.main,
 				alignItems: 'center',
+				justifyContent: 'space-between',
 			}}
 		>
-			<IconButton onClick={() => changeLineProps({ hidden: !channelLineProps.hidden })} >
-				{!channelLineProps.hidden ? <HideChannelLineIcon fontSize="large" /> : <ShowChannelLineIcon fontSize="large" />}
-			</IconButton>
-			<ButtonAvatar
-				src={channel.image}
-				avatarSx={{ height: '55px', width: '55px' }}
-				clickEvent={() => changeProps({ state: ChannelStates.details })}
+			<HeaderIconButton
+				onClick={() => changeLineProps({ hidden: !channelLineProps.hidden })}
+				Icon={!channelLineProps.hidden ? HideChannelLineIcon : ShowChannelLineIcon}
 			/>
-			<Stack spacing={-1} >
-				<ClickTypography
-					onClick={() => changeProps({ state: ChannelStates.details })}
+
+			<Stack direction={'row'} alignItems={'center'} gap={0.7} >
+				<ButtonAvatar
+					src={channel.image}
+					avatarSx={ isTinyScreen
+						? { height: '40px', width: '40px' }
+						: { height: '55px', width: '55px'} }
+					clickEvent={() => changeProps({ state: ChannelStates.details })}
+				/>
+				<Stack display={isTinyScreen || (isSmallScreen && !channelLineProps.hidden)
+						? 'none' : 'flex'}
+					spacing={-1}
 				>
-					{channel.name}
-				</ClickTypography>
-				<Typography
-					variant="caption"
-					color={'textSecondary'}
-					sx={{ fontSize: 'small', }}
-				> 
-					{`${channel.onlineMembers || '0'} ${(channel.onlineMembers || 1) > 1 ? 'members' : 'member'} active`}
-				</Typography>
+					<ClickTypography
+						onClick={() => changeProps({ state: ChannelStates.details })}
+					>
+						{channel.name}
+					</ClickTypography>
+					<Typography
+						variant="caption"
+						color={'textSecondary'}
+						sx={{ fontSize: 'small', }}
+					> 
+						{`${channel.onlineMembers || '0'} ${(channel.onlineMembers || 1) > 1 ? 'members' : 'member'} active`}
+					</Typography>
+				</Stack>
 			</Stack>
-			<SearchBar style={{ marginLeft: 'auto' }} />
+
+			<SearchBar />
 		</Stack>
 	);
 }

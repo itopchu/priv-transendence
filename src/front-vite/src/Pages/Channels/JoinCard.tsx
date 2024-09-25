@@ -6,7 +6,7 @@ import {
   ButtonBar,
   CenteredCard,
   CustomFormLabel,
-  Overlay,
+  CardOverlay,
   TextFieldWrapper,
   CustomCardContent,
   CardLoadingBox,
@@ -77,97 +77,94 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 
   return (
     <>
-      <Overlay onClick={onCancel} />
+      <CardOverlay onClick={onCancel} />
       <CenteredCard sx={{ overflow: 'auto' }}>
-        {loading ? (
-          <CardLoadingBox>
-            <CircularProgress size={80} />
-          </CardLoadingBox>
-        ) : (
-          <CustomCardContent>
-						<Stack spacing={1.6} alignItems={'center'} >
-              <CustomAvatar
-                sx={{ height: 170, width: 170 }}
-                src={channel.image}
-              />
+				<CardLoadingBox>
+					<CircularProgress sx={{ size: 80, display: loading ? 'flex' : 'none' }}/>
+				</CardLoadingBox>
+				<CustomCardContent sx={{ display: loading ? 'none' : 'flex' }}>
+					<Stack spacing={1.6} alignItems={'center'} >
+						<CustomAvatar
+							sx={{ height: 170, width: 170 }}
+							src={channel.image}
+						/>
 
-              <Typography fontSize={'large'}>{channel.name}</Typography>
+						<Typography fontSize={'large'}>{channel.name}</Typography>
 
-              <DescriptionBox sx={{ overflow: 'hidden' }}>
-                <Typography
-									sx={{
-										display: '-webkit-box',
-										overflow: 'hidden',
-										textOverflow: 'ellipsis',
-										WebkitLineClamp: 4,
-										WebkitBoxOrient: 'vertical',
-										wordBreak: 'break-word',
-										whiteSpace: 'pre-wrap'
-									}}>
-                  {channel.description}
-                </Typography>
-              </DescriptionBox>
+						<DescriptionBox sx={{ overflow: 'hidden' }}>
+							<Typography
+								sx={{
+									display: '-webkit-box',
+									overflow: 'hidden',
+									textOverflow: 'ellipsis',
+									WebkitLineClamp: 4,
+									WebkitBoxOrient: 'vertical',
+									wordBreak: 'break-word',
+									whiteSpace: 'pre-wrap'
+								}}>
+								{channel.description}
+							</Typography>
+						</DescriptionBox>
 
-              {channel.type === 'protected' && !joinDisabled && (
-                <TextFieldWrapper>
-                  <FormControl fullWidth variant="outlined">
-                    <CustomFormLabel>Enter Password</CustomFormLabel>
-                    <TextField
-                      variant="outlined"
-                      type="password"
-                      inputRef={passwordInputRef}
-                      InputProps={{
-                        style: {
-                          padding: '4px 4px',
-                          fontSize: '1.2rem',
-                        },
-                      }}
-                      sx={{
-                        '& .MuiInputBase-input': {
-                          padding: '2px 4px',
-                        },
-                      }}
-                    />
-                  </FormControl>
-                </TextFieldWrapper>
-              )}
-						</Stack>
+						{channel.type === 'protected' && !joinDisabled && (
+							<TextFieldWrapper>
+								<FormControl fullWidth variant="outlined">
+									<CustomFormLabel>Enter Password</CustomFormLabel>
+									<TextField
+										variant="outlined"
+										type="password"
+										inputRef={passwordInputRef}
+										InputProps={{
+											style: {
+												padding: '4px 4px',
+												fontSize: '1.2rem',
+											},
+										}}
+										sx={{
+											'& .MuiInputBase-input': {
+												padding: '2px 4px',
+											},
+										}}
+									/>
+								</FormControl>
+							</TextFieldWrapper>
+						)}
+					</Stack>
 
-						<div style={{ flexGrow: 1 }} />
+					<div style={{ flexGrow: 1 }} />
 
-            {alreadyJoined && (
-               <Typography variant="body2">
-                 You are already in this channel
-               </Typography>
-            )}
-            {isBanned && (
-               <Typography variant="body2">
-                 You are banned from this channel
-               </Typography>
-            )}
+					{alreadyJoined && (
+						 <Typography variant="body2">
+							 You are already in this channel
+						 </Typography>
+					)}
+					{isBanned && (
+						 <Typography variant="body2">
+							 You are banned from this channel
+						 </Typography>
+					)}
 
-            <ButtonBar>
-              <Button onClick={onCancel} sx={{ minWidth: 100, height: 40 }}>
-                Cancel
-              </Button>
+					<ButtonBar>
+						<Button onClick={onCancel} sx={{ minWidth: 100, height: 40 }}>
+							Cancel
+						</Button>
 
-              <Button
-                variant="contained"
-                onClick={onJoin}
-                disabled={joinDisabled}
-                sx={{
-                  minWidth: 100,
-                  height: 40,
-                  backgroundColor: joinDisabled 
-                    ? 'rgba(128, 128, 128, 0.5)'
-                    : undefined,
-                }}
-              >
-                Join
-              </Button>
-            </ButtonBar>
-          </CustomCardContent>
-        )}
+						<Button
+							variant="contained"
+							onClick={onJoin}
+							disabled={joinDisabled}
+							sx={{
+								minWidth: 100,
+								height: 40,
+								backgroundColor: joinDisabled 
+									? 'rgba(128, 128, 128, 0.5)'
+									: undefined,
+							}}
+						>
+							Join
+						</Button>
+					</ButtonBar>
+				</CustomCardContent>
       </CenteredCard>
     </>
   );

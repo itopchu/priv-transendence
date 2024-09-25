@@ -40,7 +40,7 @@ export const CardLoadingBox = styled(Box)(() => ({
 	overflow: 'visible',
 }));
 
-export const Overlay = styled(Box)(({}) => ({
+export const CardOverlay = styled(Box)(({}) => ({
   position: 'fixed',
 	top: 0,
 	left: 0,

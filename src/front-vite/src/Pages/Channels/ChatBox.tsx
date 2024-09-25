@@ -27,26 +27,26 @@ import axios from 'axios';
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   position: 'relative',
-  height: '80vh',
+  height: '100%',
   backgroundColor: theme.palette.primary.light,
   display: 'flex',
   flexDirection: 'column-reverse',
   padding: theme.spacing(2),
-}));
-
-const ChatMessages = styled(Stack)(({ theme }) => ({
-  flex: -1,
-  padding: theme.spacing(2),
+	overflowY: 'auto',
+	overflowX: 'hidden',
 }));
 
 const TextBar = styled(Box)(({ theme }) => ({
   display: 'flex',
+	minWidth: '250px',
+	width: '93%',
   alignItems: 'center',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
   borderRadius: '2em',
   backgroundColor: theme.palette.primary.dark,
   boxShadow: theme.shadows[5],
+	overflow: 'hidden',
 }));
 
 interface ChatBoxType {
@@ -296,6 +296,27 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			<ChatBoxHeader/>
 			<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
 			<ChatContainer>
+				{loading ? (
+					<LoadingBox>
+						<CircularProgress size={100} />
+					</LoadingBox>
+				) : (
+					<Stack
+						sx={{ paddingInline: theme.spacing(2) }}
+						ref={messagesEndRef}
+					>
+						{generateMessages()}
+					</Stack>
+				)}
+			</ChatContainer>
+			<Stack
+				sx={{
+					flexGrow: 1,
+					backgroundColor: theme.palette.primary.light,
+					alignItems: 'center',
+					paddingBottom: '1em',
+				}}
+			>
 				<TextBar>
 					<InputBase
 						fullWidth
@@ -315,14 +336,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 						{membership.isMuted ? <MutedIcon /> : <SendIcon />}
 					</IconButton>
 				</TextBar>
-				{loading ? (
-					<LoadingBox>
-						<CircularProgress size={100} />
-					</LoadingBox>
-				) : (
-					<ChatMessages ref={messagesEndRef}>{generateMessages()}</ChatMessages>
-				)}
-			</ChatContainer>
+			</Stack>
 		</>
   );
 };

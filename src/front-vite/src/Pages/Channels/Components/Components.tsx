@@ -1,23 +1,37 @@
-import { Upload } from "@mui/icons-material";
+import { SvgIconComponent, Upload } from "@mui/icons-material";
 import {
 	Avatar,
 	Box,
 	Button,
+	Hidden,
+	IconButton,
 	InputAdornment,
 	InputBase,
+	Stack,
 	styled,
-	Typography
+	Typography,
+    useTheme
 } from "@mui/material";
 import {
+	Menu as ShowChannelLineIcon,
+	MenuOpen as HideChannelLineIcon,
 	Search as SearchIcon,
 } from '@mui/icons-material'
 import React, { forwardRef, ReactElement } from "react";
+import { useChannel } from "../../../Providers/ChannelContext/Channel";
 
 export const CustomAvatar = styled(Avatar)(({ theme }) => ({
   margin: '0 auto',
   border: '3px solid',
   borderColor: theme.palette.primary.dark,
 }));
+
+export interface IHeaderIconButtonType {
+	Icon: SvgIconComponent;
+	label?: string;
+	iconFontSize?: string;
+	onClick?: () => void;
+}
 
 export interface IAvatarButton {
 	src?: string;
@@ -57,6 +71,16 @@ export const CustomScrollBox = styled(Box)(({ theme }) => ({
 		borderRadius: '1em',
 	},
 }));
+
+export const Overlay = styled(Box)(() => ({
+	position: 'absolute',
+	top: 0,
+	left: 0,
+	width: '100%',
+	height: '100%',
+	backgroundColor: 'rgba(0, 0, 0, .5)',
+	zIndex: 999,
+}))
 
 export const DescriptionBox = styled(CustomScrollBox)(({ theme }) => ({
   display: 'flex',
@@ -131,6 +155,7 @@ export const LoadingBox = styled(Box)(() => ({
 export const ButtonAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx }) => {
 	return (
 		<Button
+			aria-label="Avatar Button"
 		  component="label"
 		  onClick={clickEvent}
 		  sx={{
@@ -172,22 +197,62 @@ export const UploadAvatar: React.FC<IAvatarButton> = ({ children, src, clickEven
 	</ButtonAvatar>
 );
 
-export const lonelyBox = () => (
-	<Box
-		sx={{
-			position: 'relative',
-			height: '80vh',
-			backgroundColor: (theme) => theme.palette.primary.light,
-			display: 'flex',
-			flexDirection: 'column',
-			padding: (theme) => theme.spacing(2),
-			justifyContent: 'center',
-			alignItems: 'center'
-		}}
-	>
-		<span style={{fontSize: '50px', fontWeight: 'bold', opacity: '0.5'}}>SUCH EMPTINESS</span>
-	</Box>
-)
+export const lonelyBox = () => {
+	const theme = useTheme();
+	const { channelLineProps, changeLineProps } = useChannel();
+
+	return (
+		<Stack
+			sx={{
+				bgcolor: theme.palette.primary.light,
+				position: 'relative',
+				height: '80vh',
+			}}
+		>
+			<Stack
+				padding={theme.spacing(2)}
+				spacing={theme.spacing(1)}
+				sx={{
+					height: '65px',
+					width: '80px',
+					borderBottom: `1px solid ${theme.palette.secondary.dark}`,
+					borderRight: `1px solid ${theme.palette.secondary.dark}`,
+					borderBottomRightRadius: '2em',
+					bgcolor: theme.palette.primary.main,
+					alignItems: 'center',
+					justifyContent: 'center',
+					paddingRight: 2.7,
+				}}
+			>
+				<HeaderIconButton
+					Icon={channelLineProps.hidden ? ShowChannelLineIcon : HideChannelLineIcon}
+					onClick={() => changeLineProps({ hidden: !channelLineProps.hidden })}
+				/>
+			</Stack>
+			<Box
+				sx={{
+					backgroundColor: (theme) => theme.palette.primary.light,
+					display: 'flex',
+					padding: (theme) => theme.spacing(2),
+					justifyContent: 'center',
+					alignItems: 'center',
+					flexGrow: 1,
+				}}
+			>
+				<span
+					style={{
+						textAlign: 'center',
+						fontSize: '50px',
+						fontWeight: 'bold',
+						opacity: '0.5'
+					}}
+				>
+					SUCH EMPTINESS
+				</span>
+			</Box>
+		</Stack>
+	);
+}
 
 export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, style, value, inputChange }, ref) => (
 	<Box
@@ -219,3 +284,13 @@ export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, 
 		/>
 	</Box>
 ))
+
+export const HeaderIconButton: React.FC<IHeaderIconButtonType> = ({ Icon, onClick, iconFontSize, label }) => (
+		<IconButton
+			aria-label={label}
+			sx={{ width: '40px', height: '40px' }}
+			onClick={onClick}
+		>
+			<Icon sx={{ fontSize: iconFontSize || '32px' }} />
+		</IconButton>
+)

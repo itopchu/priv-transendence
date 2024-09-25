@@ -1,13 +1,13 @@
-import { Avatar, CircularProgress, Divider, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import { Avatar, CircularProgress, Divider, IconButton, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { LoadingBox, SearchBar } from "./Components/Components";
 import { useChannel } from "../../Providers/ChannelContext/Channel";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Login as LoginIcon,
-	MoreVertSharp as MiscIcon,
+	InfoOutlined as MiscIcon,
 } from '@mui/icons-material';
 import { ChannelLineHeader } from "./Headers/ChannelLineHeader";
-import { Channel, ChannelFilters, ChannelStates } from "../../Providers/ChannelContext/Types";
+import { Channel, ChannelFilters, ChannelMember, ChannelStates } from "../../Providers/ChannelContext/Types";
 
 interface ChannelCardType {
   component: React.ReactNode;
@@ -25,7 +25,8 @@ interface ChannelLineType {
 
 export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 	const theme = useTheme();
-	const { channelLineProps, channelProps, changeProps } = useChannel();
+	const	isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
+	const { channelLineProps, channelProps, changeProps, changeLineProps } = useChannel();
 
 	const searchRef = useRef<HTMLInputElement>(null);
 	const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
@@ -39,6 +40,13 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 			: channelLineProps.channels
 
 		setFilteredChannels(channels.filter((channel) => !channel.name.search(re)));
+	}
+
+	function	channelCardClick(membership: ChannelMember | undefined, state: ChannelStates) {
+		if (isTinyScreen) {
+			changeLineProps({ hidden: true });
+		}
+		changeProps({ selected: membership, state });
 	}
 
   const ChannelCard: React.FC<ChannelCardType> = ({ component, newColor, name, isSelected, channelImage, clickEvent, iconClickEvent }) => {
@@ -112,17 +120,17 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 							key={channel.id}
 							name={channel.name}
 							component={isMyChannels ? <MiscIcon /> : <LoginIcon />}
-							newColor={isMyChannels ? "white" : "green"}
+							newColor={isMyChannels ? "lightskyblue" : "green"}
 							isSelected={isMyChannels ? membership?.id === channelProps?.selected?.id : channelProps.selectedJoin?.id === channel.id}
 							channelImage={channel?.image}
 							clickEvent={() =>
 								isMyChannels
-									? changeProps({ selected: membership, state: ChannelStates.chat, })
+									? channelCardClick(membership, ChannelStates.chat)
 									: changeProps({ selectedJoin: channel })
 							}
 							iconClickEvent={() =>
 								isMyChannels
-									? changeProps({ selected: membership, state: ChannelStates.details })
+									? channelCardClick(membership, ChannelStates.details)
 									: changeProps({ selectedJoin: channel })
 							}
 						/>

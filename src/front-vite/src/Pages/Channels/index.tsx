@@ -1,31 +1,23 @@
 import React, { useState } from 'react';
-import { Divider, IconButton, Container, useTheme, Stack, useMediaQuery, Box, } from '@mui/material';
+import { Divider, Container, useTheme, Stack, useMediaQuery } from '@mui/material';
 import CreateCard from './CreateCard';
-import {
-	KeyboardBackspace as BackIcon,
-} from '@mui/icons-material';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
 import ChatBox from './ChatBox';
 import { JoinCard } from './JoinCard';
-import { lonelyBox } from './Components/Components';
+import { lonelyBox, Overlay } from './Components/Components';
 import { ChannelDetails } from './Settings/ChannelDetails';
 import { ChannelLine } from './ChannelLine';
 import { ChannelStates } from '../../Providers/ChannelContext/Types';
 
 const ChannelsPage: React.FC = () => {
-  const isSmallScreen = false//useMediaQuery(theme.breakpoints.down('md'));
-
   const theme = useTheme();
+	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const { channelProps, changeProps } = useChannel();
+  const { channelProps, channelLineProps, changeLineProps } = useChannel();
   const [showCreateCard, setShowCreateCard] = useState(false);
 
-	const returnToChannels = () => {
-		changeProps({ selected: undefined, state: undefined });
-	}
-
 	const renderChannelState = () => {
-		if (!channelProps.selected) return (isSmallScreen ? undefined : lonelyBox());
+		if (!channelProps.selected) return (lonelyBox());
 
 		switch (channelProps.state) {
 			case ChannelStates.chat:
@@ -40,15 +32,8 @@ const ChannelsPage: React.FC = () => {
   let pageContainer = () => {
     return (
       <Container
-				sx={{ padding: theme.spacing(3), position: 'relative' }}
+				sx={{ padding: theme.spacing(3) }}
 			>
-				{isSmallScreen && channelProps?.selected && (
-          <Box sx={{ alignSelf: 'flex-start' }}>
-            <IconButton onClick={returnToChannels}>
-							<BackIcon sx={{ fontSize: '36px' }} />
-            </IconButton>
-          </Box>
-        )}
 				{showCreateCard && (<CreateCard setIsVisible={setShowCreateCard} />)}
 				{channelProps.selectedJoin && <JoinCard channel={channelProps.selectedJoin} />}
         <Stack
@@ -61,10 +46,12 @@ const ChannelsPage: React.FC = () => {
           <Stack
             width={'100%'}
             height={'80vh'}
-						overflow={'auto'}
-						sx={{ position: 'relative' }}
+						sx={{ position: 'relative', overflow: 'hidden' }}
           >
 						{renderChannelState()}
+						{!channelLineProps.hidden && isTinyScreen &&
+							<Overlay onClick={() => changeLineProps({ hidden: true })} />
+						}
           </Stack>
         </Stack>
       </Container>

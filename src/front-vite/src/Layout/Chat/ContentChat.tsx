@@ -84,6 +84,7 @@ const ContentChat = () => {
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box',
+				zIndex: 1,
       }}
     >
       <Stack direction={'column'} sx={{ flexGrow: 1, maxHeight: '100%' }}>

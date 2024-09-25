@@ -17,7 +17,6 @@ export const SettingsContainer = styled(CustomScrollBox)(({ theme }) => ({
   backgroundColor: theme.palette.primary.light,
   display: 'flex',
   flexDirection: 'column',
-  padding: theme.spacing(2),
 }));
 
 export const SettingsDivider = styled(Divider)(() => ({

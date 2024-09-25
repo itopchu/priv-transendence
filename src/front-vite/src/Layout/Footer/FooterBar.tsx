@@ -15,10 +15,15 @@ const team: Developer[] = [
     git: 'https://www.github.com/itopchu'
   },
   {
+    photo: 'https://cdn.discordapp.com/attachments/979485078499520593/1218094374022414476/Tiger.gif?ex=66f46089&is=66f30f09&hm=a8e25f106a9dc6c83bd47bc9f5671b9fb96c41ec9ac24a639f68ba8838bbcd1b&',
+    name: 'Brian Jacobs',
+    git: 'https://github.com/bjacobs42'
+  },
+  {
     photo: 'https://cdn.intra.42.fr/users/1d4a303b629c19ca02e1c874a31a808a/seyildir.jpg',
     name: 'Selim Yildirim',
     git: 'https://github.com/X3l1m'
-  }
+  },
 ]
 
 export const Bar: React.FC = () => {

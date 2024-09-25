@@ -11,6 +11,7 @@ import {
 	UpdateType
 } from "./Types";
 import { getChannelTypeFromFilter, UpdatePropArray } from "./utils";
+import { useMediaQuery, useTheme } from "@mui/material";
 
 type ChannelContextType = {
 	channelProps: ChannelPropsType,
@@ -37,7 +38,9 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		loading: true,
 	})
 
+	const	theme = useTheme();
 	const { userSocket } = useUser();
+	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
 	const changeLineProps = (newProps: Partial<ChannelLinePropsType>) => {
 		setChannelLineProps((prev)  => ({
@@ -47,6 +50,10 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 	}
 
   const changeProps = (newProps: Partial<ChannelPropsType>) => {
+		if (isTinyScreen && newProps.selected && !channelLineProps.hidden) {
+			changeLineProps({ hidden: true });
+		}
+		
 	  setChannelProps((prev) => ({
 		  ...prev,
 		  ...newProps,
@@ -170,6 +177,12 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 
 		changeLineProps({ channels: channelProps.memberships.map((membership) => membership.channel)});
 	}, [channelProps.memberships]);
+
+	useEffect(() => {
+		if (!isTinyScreen || !channelProps.selected) return;
+
+		changeLineProps({ hidden: true });
+	}, [isTinyScreen]);
 
 	return (
 		<ChannelContext.Provider
