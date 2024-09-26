@@ -71,9 +71,15 @@ const Play = () => {
         userSocket.off("isGamePlaying");
         userSocket.off("playerState");
         userSocket.off("gameOver");
-        userSocket.emit("pauseGame");
       };
     }, [userSocket]);
+
+    useEffect(() => {
+      return() => {
+        if (isPlaying)
+          userSocket?.emit("pauseGame");
+      }
+    }, [isPlaying]);
 
     useEffect(() => {
       if (countDown <= 0) return;
