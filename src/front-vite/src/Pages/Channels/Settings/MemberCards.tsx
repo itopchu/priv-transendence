@@ -4,7 +4,7 @@ import {
   ChannelMember,
   ChannelRole,
   ChannelRoleValues,
-} from '../../../Providers/ChannelContext/Channel';
+} from '../../../Providers/ChannelContext/Types';
 import React, { useEffect, useState } from 'react';
 import {
   Box,
@@ -292,7 +292,10 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 							onClose={onMenuClose}
 						>
 							{isAdmin && [
-								<MenuItem key={0} onClick={() => onModerate(user, 'transfer', channel.id, onMenuClose)}>
+								<MenuItem key={0} onClick={() => {
+									if (!confirm(`Are you sure you want to transfer ownership to ${membername}?`)) return;
+									onModerate(user, 'transfer', channel.id, onMenuClose)}}
+								>
 									Transfer Admin
 								</MenuItem>,
 								<Divider key={1} />,

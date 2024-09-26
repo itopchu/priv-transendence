@@ -2,7 +2,7 @@ import React from 'react';
 import { ChatStatus, Chat } from './InterfaceChat';
 import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography, Avatar } from '@mui/material';
 import { darken, alpha, useTheme } from '@mui/material/styles';
-import { Add as AddIcon, Settings as SettingsIcon, Logout as LogoutIcon } from '@mui/icons-material';
+import { Add as AddIcon } from '@mui/icons-material';
 import { useChat } from '../../Providers/ChatContext/Chat';
 import { getUsername } from '../../Pages/Channels/utils';
 

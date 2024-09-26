@@ -1,6 +1,5 @@
-import { ChatProps, ChatStatus, Chat } from './InterfaceChat';
-import { Box, Stack, IconButton, InputBase, Button, ListItemText, Avatar, Typography } from '@mui/material';
-// import { useTheme } from '@emotion/react';
+import { ChatStatus, Chat } from './InterfaceChat';
+import { Box, Stack, IconButton, InputBase, Button } from '@mui/material';
 import {
 	Send as SendIcon,
 	Cancel as CancelIcon,

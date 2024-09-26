@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
-  TextField,
   Divider,
   Typography,
   Stack,
   styled,
   IconButton,
   CircularProgress,
+  InputBase,
 } from '@mui/material';
 import {
   SendRounded as SendIcon,
@@ -15,71 +15,15 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
-import { ChannelMember } from '../../Providers/ChannelContext/Channel';
 import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox, ChatBubble } from './Components/Components';
 import { useNavigate } from 'react-router-dom';
-import { LoadingBox } from './Components/CardComponents';
+import { LoadingBox } from './Components/Components';
 import { BACKEND_URL, getUsername, handleError, retryOperation, trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
+import { ChatBoxHeader } from './Headers/ChatBoxHeader';
+import { ChannelMember } from '../../Providers/ChannelContext/Types';
+import { formatDate, getTimeDiff, isDiffDate } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
-
-type formatDateType = {
-	date: string;
-	particle: string;
-	time: string;
-};
-
-export function formatDate(timestamp: Date): formatDateType {
-  const now: Date = new Date();
-  const date: Date = new Date(timestamp);
-	let particle: string = '';
-
-  const formattedTime = date.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  let formattedDate = date.toLocaleDateString('en-UK', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  if (
-    now.getFullYear() === date.getFullYear() &&
-    now.getMonth() === date.getMonth()
-  ) {
-    const dayNow = now.getDate();
-    const dayDate = date.getDate();
-
-    if (dayNow === dayDate) {
-      formattedDate = 'Today';
-			particle = 'at';
-    } else if (dayNow - 1 === dayDate) {
-      formattedDate = 'Yesterday';
-			particle = 'at';
-    }
-  }
-  return { date: formattedDate, particle, time: formattedTime };
-};
-
-export function getTimeDiff(timestamp1: Date, timestamp2: Date) {
-  const date1 = new Date(timestamp1);
-  const date2 = new Date(timestamp2);
-
-	if (timestamp1 > timestamp2) {
-		return (date1.getTime() - date2.getTime());
-	}
-	return (date2.getTime() - date1.getTime());
-};
-
-function isDiffDate(date1: Date, date2: Date): boolean {
-  const normalizedDate1 = new Date(date1);
-  const normalizedDate2 = new Date(date2);
-  normalizedDate1.setHours(0, 0, 0, 0);
-  normalizedDate2.setHours(0, 0, 0, 0);
-
-  return (normalizedDate1.getTime() !== normalizedDate2.getTime());
-}
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   position: 'relative',
@@ -97,7 +41,6 @@ const ChatMessages = styled(Stack)(({ theme }) => ({
 
 const TextBar = styled(Box)(({ theme }) => ({
   display: 'flex',
-	position: 'sticky',
   alignItems: 'center',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
@@ -151,6 +94,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
           );
           return response.data.messages || [];
         });
+				console.log(blockedUsersRef);
         const filteredMessages = messageLog
 					.filter((message: Message) => (
 						!blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
@@ -348,44 +292,38 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
   };
 
   return (
-    <ChatContainer>
-      {loading ? (
-        <LoadingBox>
-          <CircularProgress size={100} />
-        </LoadingBox>
-      ) : (
-        <>
-          <TextBar>
-            <TextField
-              variant="standard"
-              fullWidth
-              multiline
-              maxRows={4}
-              disabled={membership.isMuted}
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  color: 'white',
-                  padding: '7px',
-                },
-              }}
-              inputRef={inputRef}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  onSend();
-                }
-              }}
-              placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
-            />
-            <IconButton disabled={membership.isMuted} onClick={onSend}>
-              {membership.isMuted ? <MutedIcon /> : <SendIcon />}
-            </IconButton>
-          </TextBar>
-          <ChatMessages ref={messagesEndRef}>{generateMessages()}</ChatMessages>
-        </>
-      )}
-    </ChatContainer>
+		<>
+			<ChatBoxHeader/>
+			<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
+			<ChatContainer>
+				<TextBar>
+					<InputBase
+						fullWidth
+						multiline
+						maxRows={4}
+						disabled={membership.isMuted || loading}
+						inputRef={inputRef}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter' && !e.shiftKey) {
+								e.preventDefault();
+								onSend();
+							}
+						}}
+						placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
+					/>
+					<IconButton disabled={membership.isMuted} onClick={onSend}>
+						{membership.isMuted ? <MutedIcon /> : <SendIcon />}
+					</IconButton>
+				</TextBar>
+				{loading ? (
+					<LoadingBox>
+						<CircularProgress size={100} />
+					</LoadingBox>
+				) : (
+					<ChatMessages ref={messagesEndRef}>{generateMessages()}</ChatMessages>
+				)}
+			</ChatContainer>
+		</>
   );
 };
 

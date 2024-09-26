@@ -9,16 +9,13 @@ import {
   IconButton,
   Typography,
 } from '@mui/material';
-import {
-  ChannelRole,
-  ChannelType,
-  ChannelTypeValues,
-  useChannel,
-} from '../../../Providers/ChannelContext/Channel';
+import { useChannel } from '../../../Providers/ChannelContext/Channel';
 import {
 	ModeEdit as EditIcon,
   EditOff as EditOffIcon,
   Check as ApplyEditIcon,
+	KeyboardArrowLeft as ReturnToChatIcon,
+	KeyboardArrowRight as ShowChannelLineIcon,
 } from '@mui/icons-material';
 import {
   AvatarUploadIcon,
@@ -30,10 +27,19 @@ import {
 } from '../Components/Components';
 import { BACKEND_URL, getUsername, handleError, onFileUpload } from '../utils';
 import { SettingsContainer, SettingsDivider, SettingsTextField } from '../Components/SettingsComponents';
-import { ChannelDataType, SettingsBoxType } from './Types';
 import { MemberCards } from './MemberCards';
 import { SettingsUserCardBox } from '../Components/SettingsComponents';
 import { BannedUserCards } from './BannedUserCards';
+import { ChannelMember, ChannelRole, ChannelType, ChannelTypeValues } from '../../../Providers/ChannelContext/Types';
+
+export type ChannelDataType = {
+  image: File | undefined;
+  type: ChannelType | undefined;
+};
+
+export interface SettingsBoxType {
+  membership: ChannelMember | undefined;
+};
 
 export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 	if (!membership) return (lonelyBox());
@@ -249,23 +255,29 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
                 : 'Enter channel name...'
             }
           />
-          {isAdmin && (
-            <>
-              {(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
-                <SettingsTextField
-                  inputRef={passwordRef}
-                  variant="standard"
-                  placeholder={
-                    passwordRef.current?.value.length
-                      ? undefined
-                      : 'Enter a password...'
-                  }
-                  type="password"
-                />
-              )}
-              {generateButtonGroup()}
-            </>
-          )}
+          {isAdmin
+						? (
+							<>
+								{(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
+									<SettingsTextField
+										inputRef={passwordRef}
+										variant="standard"
+										placeholder={
+											passwordRef.current?.value.length
+												? undefined
+												: 'Enter a password...'
+										}
+										type="password"
+									/>
+								)}
+								{generateButtonGroup()}
+							</>
+          ) : (
+						<Typography variant="body1" color={'textSecondary'}>
+							{`${channel.type} • ${members.length}\
+								${members.length > 1 ? 'members' : 'member'}`}
+						</Typography>
+					)}
         </Stack>
       </Stack>
       <DescriptionBox sx={{ width: '65%' }}>
