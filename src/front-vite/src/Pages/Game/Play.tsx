@@ -2,6 +2,7 @@ import "./Game.css";
 import { useUser } from "../../Providers/UserContext/User";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { CustomScrollBox } from "../Channels/Components/Components";
 
 enum PlayerStates {
   notInGame = 0,
@@ -19,6 +20,29 @@ const Play = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [mePaused, setMePaused] = useState(false);
   const [countDown, setCountDown] = useState(0);
+  const [showInviteList, setShowInviteList] = useState(false);
+  const [fakeUsers] = useState([
+    { id: 1, name: 'User1' },
+    { id: 2, name: 'User2' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+    { id: 3, name: 'User3' },
+  ]);
   const [gameState, setGameState] = useState({
     player1: { y: 150, direction: 0 },
     player2: { y: 150, direction: 0 },
@@ -71,9 +95,15 @@ const Play = () => {
         userSocket.off("isGamePlaying");
         userSocket.off("playerState");
         userSocket.off("gameOver");
-        userSocket.emit("pauseGame");
       };
     }, [userSocket]);
+
+    useEffect(() => {
+      return() => {
+        if (isPlaying)
+          userSocket?.emit("pauseGame");
+      }
+    }, [isPlaying]);
 
     useEffect(() => {
       if (countDown <= 0) return;
@@ -156,9 +186,8 @@ const Play = () => {
     };
     
     const leave = () => {
-      if (playerState === PlayerStates.player1_left || playerState === PlayerStates.player2_right) {
+      if (playerState === PlayerStates.inGame)
         setPlayerState(PlayerStates.notInGame);
-      }
       userSocket?.emit("leaveGame");
     };
 
@@ -178,9 +207,9 @@ const Play = () => {
       setPlayerState(PlayerStates.notInGame);
     }
 
-    const invate = () => {
-      // userSocket?.emit("invitePlayer");
-    }
+    const invite = () => {
+      setShowInviteList(!showInviteList);
+    };
 
     return (
       <div className="container">
@@ -193,14 +222,23 @@ const Play = () => {
                   <button className="retro-button" onClick={leave} style={{ position: "absolute", left: "50%", transform: "translate(-50%, -50%)" }}>Leave</button>
                 </div>
               );
-            case PlayerStates.notInGame:
-              return (
-                <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <button className="retro-button" onClick={joinQueue}>Join</button>
-                  <button className="retro-button" onClick={playWithBot}>Play with Bot</button>
-                  <button className="retro-button" onClick={invate}>Invite Player</button>
-                </div>
-              );
+              case PlayerStates.notInGame:
+                return (
+                  <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <button className="retro-button" onClick={joinQueue}>Join</button>
+                    <button className="retro-button" onClick={playWithBot}>Play with Bot</button>
+                    <button className="retro-button" onClick={invite}>Invite Player</button>
+                    <div className={`custom-scrollbox ${showInviteList ? 'open' : 'close'}`}>
+                      <CustomScrollBox style={{ maxHeight: '150px' }}>
+                        <ul style={{listStyleType: 'none', alignItems: "center"}}>
+                          {fakeUsers.map(user => (
+                            <li style={{display: "flex" ,justifyContent: "center", marginBottom: "10px"}} key={user.id}><button className="retro-button" style={{border: "none"}}>{user.name}</button></li>
+                          ))}
+                        </ul>
+                      </CustomScrollBox>
+                    </div>
+                  </div>
+                );
             case PlayerStates.inQueue:
               return (
                 <div className="loader-container" style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}>
