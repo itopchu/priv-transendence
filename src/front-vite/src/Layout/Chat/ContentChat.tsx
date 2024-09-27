@@ -1,16 +1,16 @@
-import { ChatStatus, Chat } from './InterfaceChat';
-import { Box, Stack, IconButton, InputBase, Button } from '@mui/material';
+import { ChatStatus, IChat } from './InterfaceChat';
+import { Box, Stack, IconButton, InputBase, Button, Typography, CircularProgress } from '@mui/material';
 import {
 	Send as SendIcon,
 	Cancel as CancelIcon,
 	KeyboardBackspace as BackIcon,
 } from '@mui/icons-material';
-import { ButtonAvatar, ClickTypography } from '../../Pages/Channels/Components/Components';
+import { ButtonAvatar, ClickTypography, LoadingBox } from '../../Pages/Channels/Components/Components';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
-import { getUsername, trimMessage } from '../../Pages/Channels/utils';
+import { getFullname, getUsername, trimMessage } from '../../Pages/Channels/utils';
 import { ContentChatMessages } from './ContentChatMessages';
 import { getStatusColor } from '../../Pages/Profile/ownerInfo';
 
@@ -18,10 +18,13 @@ const ContentChat = () => {
 	const { chatProps, changeChatProps } = useChat();
 	const { userSocket } = useUser();
 
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
 	const [user, setUser] = useState<UserPublic | undefined>(chatProps.selected?.user);
+
+	const isDisabled = chatProps.loading;
 
   useEffect(() => {
     const element = messagesEndRef.current;
@@ -50,7 +53,11 @@ const ContentChat = () => {
 		});
 	}, [userSocket]);
 
-	const onSend = () => {
+  const toggleChatStatus = (status: ChatStatus, selection: IChat | undefined) => {
+    changeChatProps({ chatStatus: status, selected: selection });
+  };
+
+	const handleSend = () => {
 		if (!inputRef.current) return;
 
     const cleanMessage = trimMessage(inputRef.current.value);
@@ -64,11 +71,6 @@ const ContentChat = () => {
 		inputRef.current.value = '';
 	}
 
-  const toggleChatStatus = (status: ChatStatus, selection: Chat | undefined) => {
-    changeChatProps({ chatStatus: status, selected: selection });
-  };
-  // const theme = useTheme();
-  const navigate = useNavigate();
   return (
     <Box
       sx={{
@@ -84,7 +86,7 @@ const ContentChat = () => {
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box',
-				zIndex: 1,
+		zIndex: 2,
       }}
     >
       <Stack direction={'column'} sx={{ flexGrow: 1, maxHeight: '100%' }}>
@@ -126,15 +128,29 @@ const ContentChat = () => {
 							borderColor: getStatusColor(user?.status),
 						}}
 					/>
-					<ClickTypography
-						onClick={() => (navigate(`/profile/${user?.id}`))}
-						sx={{
-							overflow: 'hidden',
-							textOverflow: 'ellipsis'
-						}}
-					>
-						{getUsername(user)}
-					</ClickTypography>
+					<Stack spacing={-1} >
+						<ClickTypography
+							onClick={() => (navigate(`/profile/${user?.id}`))}
+							sx={{
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}
+						>
+							{getUsername(user)}
+						</ClickTypography>
+						<Typography
+							variant='caption'
+							color={'textSecondary'}
+							onClick={() => (navigate(`/profile/${user?.id}`))}
+							sx={{
+								cursor: 'default',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}
+						>
+							{getFullname(user)}
+						</Typography>
+					</Stack>
 					<Box flexGrow={1} />
 					<IconButton
 						onClick={() => { toggleChatStatus(ChatStatus.Bubble, undefined) }}
@@ -149,7 +165,7 @@ const ContentChat = () => {
 						<CancelIcon />
 					</IconButton>
         </Stack>
-        <Stack direction={'column'} sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '50vh' }}>
+        <Stack direction={'column'} sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '50vh' }} >
           <Stack
 						ref={messagesEndRef}
 						flexGrow={1}
@@ -160,7 +176,7 @@ const ContentChat = () => {
             border={2}
             borderColor={(theme) => theme.palette.primary.light}
             sx={{
-							maxHeight: 'calc(70vh - 130px)',
+							height: 'calc(70vh - 130px)',
               overflowY: 'auto',
               '&': {
                 scrollbarWidth: 'thin',
@@ -171,7 +187,12 @@ const ContentChat = () => {
               },
             }}
           >
-						<ContentChatMessages messageLog={chatProps.messages} />
+						<LoadingBox sx={{ display: chatProps.loading ? 'flex' : 'none' }} >
+							<CircularProgress size={70} />
+						</LoadingBox>
+						{!chatProps.loading &&
+							<ContentChatMessages messageLog={chatProps.messages} navigate={navigate} />
+						}
           </Stack>
         </Stack>
         <Stack
@@ -192,6 +213,7 @@ const ContentChat = () => {
         >
           <InputBase
 						inputRef={inputRef}
+						disabled={isDisabled}
             sx={{
               flexGrow: 1,
               color: (theme) => theme.palette.secondary.main,
@@ -211,7 +233,7 @@ const ContentChat = () => {
 						onKeyDown={(event) => {
 							if (event.key === 'Enter' && !event.shiftKey) {
 								event.preventDefault();
-								onSend();
+								handleSend();
 							}
 						}}
             placeholder={inputRef.current?.value?.length ? undefined : 'Type a message...'}
@@ -219,7 +241,8 @@ const ContentChat = () => {
           <Button
             variant="contained"
             color="secondary"
-						onClick={onSend}
+						onClick={handleSend}
+						disabled={isDisabled}
             sx={{
               marginLeft: '0.5em',
               borderRadius: '0.8em',

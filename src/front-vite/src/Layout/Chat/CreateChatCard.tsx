@@ -46,7 +46,7 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 		setLoading(true);
 
 		function onProfileStatus(updatedUser: UserPublic) {
-			const data = { channelId: -1, content: updatedUser, updateType: UpdateType.updated };
+			const data = { id: updatedUser.id, content: updatedUser, updateType: UpdateType.updated };
 			setFriends((prev) => updatePropArray(prev, data));
 		}
 

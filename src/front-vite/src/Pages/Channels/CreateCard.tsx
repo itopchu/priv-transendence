@@ -19,9 +19,8 @@ import {
   Stack,
 } from '@mui/material';
 import { AvatarUploadIcon, ImageInput, UploadAvatar } from './Components/Components';
-import { useChannel } from '../../Providers/ChannelContext/Channel';
 import { BACKEND_URL, handleError, onFileUpload } from './utils';
-import { ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
+import { ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
 import { retryOperation } from '../../Providers/ChannelContext/utils';
 
 interface CreateCardType {
@@ -40,7 +39,6 @@ const initialChannelData: ChannelDataType = {
 
 const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   const { user } = useUser();
-	const { changeProps } = useChannel();
   const passwordRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 

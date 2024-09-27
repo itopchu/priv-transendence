@@ -22,6 +22,12 @@ export enum RoomInitials {
 	publicUpdate = 'channelPublicUpdate',
 }
 
+type emitDTO<Type> = {
+	id: number,
+	content?: Type,
+	updateType: UpdateType,
+}
+
 @WebSocketGateway(3001, { cors: { origin: "*" } })
 export class ChatGateway {
 	constructor(private readonly userService: UserService,
@@ -171,8 +177,7 @@ export class ChatGateway {
 
 		try {
 			const message = await this.channelService.logMessage(data.channelId, user, data.message);
-			this.server.to(`${RoomInitials.channelMessage}${data.channelId}`)
-				.emit(`${RoomInitials.channelMessage}${data.channelId}Message`, new MessagePublicDTO(message));
+			this.emitChannelMessageUpdate(data.channelId, new MessagePublicDTO(message), UpdateType.updated);
 		} catch (error) {
 			client.emit('messageError', error.message);
 		}
@@ -245,7 +250,7 @@ export class ChatGateway {
 		}
 
 		this.server.to(room).emit('onlineMembersCount', {
-			channelId,
+			id: channelId,
 			content: onlineMembersCount,
 			updateType: UpdateType.updated
 		});
@@ -260,26 +265,33 @@ export class ChatGateway {
 		}
 	}
 
+	emitChannelMessageUpdate(channelId: number, content: MessagePublicDTO, updateType: UpdateType) {
+		this.server.to(`${RoomInitials.channelMessage}${channelId}`)
+			.emit('newChannelMessageUpdate', { id: content.id, content, updateType });
+	}
+
 	emitMemberUpdate(channelId: number, updateType: UpdateType) {
-		this.server.to(`${RoomInitials.channelUpdate}${channelId}`).emit(`newChannelUpdate`, { channelId, updateType });
+		this.server.to(`${RoomInitials.channelUpdate}${channelId}`)
+			.emit(`newChannelUpdate`, { id: channelId, updateType });
 	}
 
 	emitPublicChannelUpdate(content: ChannelPublicDTO, updateType: UpdateType) {
-		this.server.to(RoomInitials.publicUpdate).emit('newPublicChannelUpdate', { content, updateType });
+		this.server.to(RoomInitials.publicUpdate)
+			.emit('newPublicChannelUpdate', { id: content.id, content, updateType });
 	}
 	
 	emitToClientUpdate(userId: number, channelId: number, updateType: UpdateType) {
 		const userSocket = this.connectedUsers.get(userId);
 		if (!userSocket) return;
 
-		userSocket.emit(`${RoomInitials.channelUpdate}${channelId}`, { channelId, updateType });
+		userSocket.emit(`${RoomInitials.channelUpdate}${channelId}`, { id: channelId, updateType });
 	}
 
 	emitToClientPublicUpdate(userId: number, content: ChannelPublicDTO, updateType: UpdateType) {
 		const userSocket = this.connectedUsers.get(userId);
 		if (!userSocket) return;
 
-		userSocket.emit(RoomInitials.publicUpdate, { content, updateType });
+		userSocket.emit(RoomInitials.publicUpdate, { id: content.id, content, updateType });
 	}
 
 	emitChannelDeleted(channelId: number) {
@@ -302,7 +314,7 @@ export class ChatGateway {
 
 		if (userSocket) {
 			this.handleChannelJoinLeave(channelId, userSocket, 'leave');
-			userSocket.emit('newChannelUpdate', { channelId, UpdateType: UpdateType.deleted });
+			userSocket.emit('newChannelUpdate', { id: channelId, UpdateType: UpdateType.deleted });
 		}
 		this.emitMemberUpdate(channelId, UpdateType.updated);
 	}

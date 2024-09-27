@@ -4,8 +4,25 @@ export function getChannelTypeFromFilter(filter: ChannelFilters) {
 	return (filter === ChannelFilters.protected ? ChannelType.protected : ChannelType.public);
 }
 
-export function updatePropArray<Type>(prevArray: Type[], newData: DataUpdateType): Type[] {
-	const index = prevArray.findIndex((prevArray: any) => prevArray.id === newData.content.id)
+
+export function updateMap<Type>(map: Map<number, Type>, data: DataUpdateType<Type>): Map<number, Type> {
+	const updatedMap = new Map(map);
+
+	switch (data.updateType) {
+		case UpdateType.updated:
+			if (data.content) {
+				updatedMap.set(data.id, data.content);
+			}
+			break;
+		default:
+			updatedMap.delete(data.id);
+			break;
+	}
+	return (updatedMap);
+}
+
+export function updatePropArray<Type>(prevArray: Type[], newData: DataUpdateType<any>): Type[] {
+	const index = prevArray.findIndex((prevArray: any) => prevArray.id === newData.content?.id)
 	if (index === -1) {
 		if (newData.updateType === UpdateType.updated) {
 			return ([...prevArray, newData.content as Type]);

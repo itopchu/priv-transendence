@@ -3,6 +3,7 @@ import React, { useContext, useEffect, useState, createContext } from "react";
 import { useUser } from "../../Providers/UserContext/User";
 import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
 import {
+    Channel,
 	ChannelFilters,
 	ChannelLinePropsType,
 	ChannelMember,
@@ -38,7 +39,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		loading: true,
 	})
 
-	const	theme = useTheme();
+	const theme = useTheme();
 	const { userSocket } = useUser();
 	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -78,10 +79,10 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			changeLineProps({ loading: false });
 		};
 
-		async function updateMemberships(data: DataUpdateType) {
+		async function updateMemberships(data: DataUpdateType<ChannelMember>) {
 			try {
 				const membership: ChannelMember | null = await retryOperation(async () => {
-					const response = await axios.get(`${BACKEND_URL}/channel/joined/${data.channelId}`, {
+					const response = await axios.get(`${BACKEND_URL}/channel/joined/${data.id}`, {
 						withCredentials: true
 					});
 					return (response.data.membership);
@@ -102,12 +103,12 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			}
 		}
 
-		const onChannelUpdate = (data: DataUpdateType) => {
+		const onChannelUpdate = (data: DataUpdateType<ChannelMember>) => {
 			if (data.updateType === UpdateType.updated) {
 				updateMemberships(data);
 			} else {
 				setChannelProps((prevProps) => {
-					const deletedMembership = prevProps.memberships.find((membership) => membership.channel.id === data.channelId);
+					const deletedMembership = prevProps.memberships.find((membership) => membership.channel.id === data.id);
 					if (!deletedMembership) {
 						return (prevProps);
 					}
@@ -121,9 +122,9 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			}
 		}
 
-		const onMemberCountUpdate = (data: DataUpdateType) => {
+		const onMemberCountUpdate = (data: DataUpdateType<number>) => {
 			setChannelProps((prevProps) => {
-				const targetIndex = prevProps.memberships.findIndex((membership) => membership.channel.id === data.channelId);
+				const targetIndex = prevProps.memberships.findIndex((membership) => membership.channel.id === data.id);
 				if (targetIndex === -1) {
 					return (prevProps);
 				}
@@ -138,10 +139,9 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			})
 		}
 
-		getJoinedChannels();
-
 		userSocket?.on('newChannelUpdate', onChannelUpdate);
 		userSocket?.on('onlineMembersCount', onMemberCountUpdate);
+		getJoinedChannels();
 		return () => {
 			userSocket?.emit('unsubscribeChannel', -1);
 			userSocket?.off('newChannelUpdate', onChannelUpdate);
@@ -149,9 +149,8 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 	}, [userSocket]);
 
 	useEffect(() => {
-		const onPublicChannelUpdate = (data: DataUpdateType) => {
-			if ('type' in data.content
-				&& data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)) {
+		const onPublicChannelUpdate = (data: DataUpdateType<Channel>) => {
+			if (data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)) {
 				return;
 			}
 

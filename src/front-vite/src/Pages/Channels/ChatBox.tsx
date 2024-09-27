@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Divider,
-  Typography,
   Stack,
   styled,
   IconButton,
@@ -15,15 +14,15 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
-import { ButtonAvatar, ClickTypography, CustomScrollBox, lonelyBox, ChatBubble } from './Components/Components';
-import { useNavigate } from 'react-router-dom';
+import { CustomScrollBox, lonelyBox } from './Components/Components';
 import { LoadingBox } from './Components/Components';
-import { BACKEND_URL, getUsername, handleError,  trimMessage } from './utils';
+import { BACKEND_URL, handleError,  trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import { ChatBoxHeader } from './Headers/ChatBoxHeader';
-import { ChannelMember } from '../../Providers/ChannelContext/Types';
-import { formatDate, getTimeDiff, isDiffDate, retryOperation, } from '../../Providers/ChannelContext/utils';
+import { ChannelMember, DataUpdateType } from '../../Providers/ChannelContext/Types';
+import { retryOperation, updateMap, } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
+import { ChannelMessages } from './ChannelMessages';
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   position: 'relative',
@@ -56,11 +55,10 @@ interface ChatBoxType {
 const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	if (!membership) return (lonelyBox());
 
-  const navigate = useNavigate();
   const theme = useTheme();
-  const { user, userSocket } = useUser();
+  const { userSocket } = useUser();
 
-  const [messageLog, setMessageLog] = useState<Message[]>([]);
+  const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
   const [loading, setLoading] = useState(true);
 
 	const blockedUsersRef = useRef<User[]>([]);
@@ -69,7 +67,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
 	const channel = membership.channel;
 
-  useEffect(() => {
+	useEffect(() => {
 		const getBlockedUsers = async (): Promise<User[]> => {
       try {
         const response = await axios.get(`${BACKEND_URL}/user/friendship/restricted`, { withCredentials: true });
@@ -87,40 +85,47 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
       try {
 				blockedUsersRef.current = await getBlockedUsers();
 
-        const messageLog = await retryOperation(async () => {
+        const messages: Message[] = await retryOperation(async () => {
           const response = await axios.get(
             `${BACKEND_URL}/channel/messages/${channel.id}`,
             { withCredentials: true }
           );
           return response.data.messages || [];
         });
-				console.log(blockedUsersRef);
-        const filteredMessages = messageLog
+
+        const filteredMessages = messages
 					.filter((message: Message) => (
 						!blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
 					))
 					.sort((a: Message, b: Message) => a.id - b.id);
 
-        setMessageLog(filteredMessages);
-				setLoading(false);
+				const messageMap = filteredMessages.reduce((map, message) => {
+					map.set(message.id, message);
+					return (map);
+				}, new Map<number, Message>);
+
+        setMessageLog(messageMap);
       } catch (error: any) {
         handleError('Unable to get message log:', error);
       }
     };
 
-    const onMessage = (message: Message) => {
-			const isBlockedUser = blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
+    const handleMessageUpdate = (data: DataUpdateType<Message>) => {
+			const message = data.content;
+			const isBlockedUser = blockedUsersRef.current.some((blockedUser) => blockedUser.id === message?.author.id)
 			if (isBlockedUser) return;
 
-      setMessageLog((prevMessages) => [...prevMessages, message]);
+      setMessageLog((prev) => updateMap(prev, data))
     };
 
     getMessageLog();
-    userSocket?.on(`channel#${channel.id}Message`, onMessage);
-    userSocket?.on(`messageError`, (errMessage: string) => handleError(errMessage, null));
+		setLoading(false);
+    userSocket?.on('newChannelMessageUpdate', handleMessageUpdate);
+    userSocket?.on('messageError', (errMessage: string) => handleError(errMessage, null));
     return () => {
 			setLoading(true);
-      userSocket?.off(`channel#${channel.id}Message`, onMessage);
+			setMessageLog(new Map());
+      userSocket?.off('newChannelMessageUpdate');
     };
   }, [channel.id, userSocket]);
 
@@ -135,7 +140,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
     }
   }, [messageLog]);
 
-  const onSend = () => {
+  const handleSend = () => {
     if (!inputRef.current) return;
 
     const cleanMessage = trimMessage(inputRef.current.value);
@@ -149,146 +154,13 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 		inputRef.current.value = '';
   };
 
-  const generateMessages = () => {
-    if (!messageLog.length) return undefined;
-    const timeSeparation = 2 * 60 * 1000; // 2 min in milisecondes
+  const renderMessages = () => {
+    if (!messageLog.size) return (null);
 
+		const messages = Array.from(messageLog.values());
     return (
-      <>
-        {messageLog.map((msg, index) => {
-          const isFirstMessage = index === 0;
-          const isLastMessage = index + 1 === messageLog.length;
-
-          const isDiffTime = isLastMessage
-						|| getTimeDiff(messageLog[index + 1].timestamp, msg.timestamp) > timeSeparation;
-          const isPrevDiffTime = isFirstMessage
-						|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeSeparation;
-					const isDiffDay = isFirstMessage || isDiffDate(msg.timestamp, messageLog[index - 1].timestamp);
-
-          const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
-          const isLastUserMessage = isLastMessage || messageLog[index + 1].author.id !== msg.author.id;
-
-          const isNewMsgBlock = isDifferentUser || isPrevDiffTime;
-
-          const username = getUsername(msg.author);
-          const timestamp = formatDate(msg.timestamp);
-
-          return (
-            <React.Fragment key={index}>
-							{isDiffDay && (
-								<Box flexGrow={1} paddingTop={3} >
-									<Divider sx={{ color: 'text.secondary' }} >
-										{timestamp.date}
-									</Divider>
-								</Box>
-							)}
-              <Divider
-                sx={{
-                  alignSelf: 'flex-start',
-                  backgroundColor: theme.palette.primary.light,
-                }}
-              />
-              <Stack
-                key={index}
-                direction={'row'}
-                spacing={1}
-                minWidth={'17em'}
-                paddingTop={isNewMsgBlock ? 3 : 0}
-                alignItems="flex-start"
-                sx={{
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, .05)',
-                  },
-                  '&:hover .hidden-timestamp': {
-                    visibility: 'visible',
-                  },
-                }}
-              >
-                {isNewMsgBlock ? (
-                  <ButtonAvatar
-                    clickEvent={() => {
-                      navigate(`/profile/${msg.author.id}`);
-                    }}
-                    avatarSx={{ width: 50, height: 50, border: '0px' }}
-                    sx={{ boxShadow: theme.shadows[5] }}
-                    src={msg.author?.image}
-                  />
-                ) : (
-									<Box
-										sx={{
-											display: 'flex',
-											alignItems: 'flex-end',
-											justifyContent: 'center',
-											height: '100%',
-											flexGrow: 1,
-											minWidth: 50,
-											maxWidth: 50,
-										}}
-									>
-										<Typography
-											className="hidden-timestamp"
-											variant="caption"
-											color={'textSecondary'}
-											sx={{
-												fontSize: '0.55em',
-												visibility: 'hidden',
-											}}
-										>
-											{timestamp.time}
-										</Typography>
-									</Box>
-                )}
-
-                <Stack spacing={0.4} flexGrow={1}>
-                  {isNewMsgBlock && (
-                    <Stack flexDirection="row">
-                      <ClickTypography
-                        paddingLeft={2}
-                        variant="h3"
-                        onClick={() => {
-                          navigate(`/profile/${msg.author.id}`);
-                        }}
-                        sx={{ fontWeight: 'bold', fontSize: 'medium' }}
-                      >
-                        {username}
-                      </ClickTypography>
-                      <Typography
-                        variant="caption"
-                        color={'textSecondary'}
-												whiteSpace={'nowrap'}
-                        sx={{
-													fontSize: '0.7em',
-													paddingLeft: '1em'
-												}}
-                      >
-                        {`${timestamp.date} ${timestamp.particle} ${timestamp.time}`}
-                      </Typography>
-                    </Stack>
-                  )}
-
-                  <Stack flexDirection={'row'}>
-                    <ChatBubble
-                      sx={{
-												backgroundColor: user.id === msg.author.id ? undefined : '#7280ce',
-                        borderTopLeftRadius: isNewMsgBlock ? undefined : '0.2em',
-                        borderBottomLeftRadius: isLastUserMessage || isDiffTime ? undefined : '0.2em',
-                      }}
-                    >
-                      <Typography
-                        variant="body1"
-                        sx={{ whiteSpace: 'pre-line' }}
-                      >
-                        {msg.content}
-                      </Typography>
-                    </ChatBubble>
-                  </Stack>
-                </Stack>
-              </Stack>
-            </React.Fragment>
-          );
-        })}
-      </>
-    );
+			<ChannelMessages messages={messages} />
+		);
   };
 
   return (
@@ -305,7 +177,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 						sx={{ paddingInline: theme.spacing(2) }}
 						ref={messagesEndRef}
 					>
-						{generateMessages()}
+						{renderMessages()}
 					</Stack>
 				)}
 			</ChatContainer>
@@ -328,12 +200,12 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 						onKeyDown={(e) => {
 							if (e.key === 'Enter' && !e.shiftKey) {
 								e.preventDefault();
-								onSend();
+								handleSend();
 							}
 						}}
 						placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
 					/>
-					<IconButton disabled={membership.isMuted} onClick={onSend}>
+					<IconButton disabled={membership.isMuted} onClick={handleSend}>
 						{membership.isMuted ? <MutedIcon /> : <SendIcon />}
 					</IconButton>
 				</TextBar>

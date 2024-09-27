@@ -28,8 +28,9 @@ import { FriendshipAttitude, getStatusColor } from '../../Profile/ownerInfo';
 import { User, UserPublic, useUser } from '../../../Providers/UserContext/User';
 import { BACKEND_URL, getUsername, handleError } from '../utils';
 import { useNavigate } from 'react-router-dom';
-import { onSendMessage, useFriendshipAttitude, userRelationMenuItems } from './UserCardsUtils';
+import { useFriendshipAttitude, userRelationMenuItems } from './UserCardsUtils';
 import { useChat } from '../../../Providers/ChatContext/Chat';
+import { handleChatInvite } from '../../../Providers/ChatContext/utils';
 
 type MuteOptionsType = { key: string; value: number | null };
 
@@ -104,7 +105,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 	const [menuId, setMenuId] = useState<number | null>(null);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const [muteAnchorEl, setMuteAnchorEl] = useState<HTMLElement | null>(null);
-	const	[publicMembers, setPublicMembers] = useState<ChannelMemberPublic[]>(members);
+	const [publicMembers, setPublicMembers] = useState<ChannelMemberPublic[]>(members);
 	const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
 
 	useFriendshipAttitude(menuId, setFriendshipAttitude);
@@ -219,7 +220,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 				);
 
 				return (
-					<BarCard>
+					<BarCard key={member.id}>
 						<ButtonAvatar
 							src={member.user?.image}
 							clickEvent={() => {
@@ -313,12 +314,12 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 
 						{isDiffUser && (
 							<Box sx={{ marginLeft: 'auto' }}>
-								<IconButton onClick={(event) => onMenuClick(event, member.id)}>
+								<IconButton onClick={(event) => onMenuClick(event, member.user.id)}>
 									<MemberMenuIcon />
 								</IconButton>
 								<Menu
 									anchorEl={anchorEl}
-									open={Boolean(anchorEl) && menuId === member.id}
+									open={Boolean(anchorEl) && menuId === member.user.id}
 									onClose={onMenuClose}
 								>
 									{isAdmin && [
@@ -330,7 +331,9 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 										</MenuItem>,
 										<Divider key={'dev1'} />,
 									]}
-									<MenuItem onClick={() => onSendMessage(member.user, chatProps, onMenuClose, changeChatProps)}>Send Message</MenuItem>
+									<MenuItem onClick={() => handleChatInvite(member.user, chatProps, changeChatProps, onMenuClose)}>
+										Send Message
+									</MenuItem>
 									{userRelationMenuItems(member.user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
 									{isModeratable && [
 										<Divider key={'div2'} />,
@@ -344,7 +347,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 								</Menu>
 								<Menu
 									anchorEl={muteAnchorEl}
-									open={Boolean(muteAnchorEl) && menuId === member.id}
+									open={Boolean(muteAnchorEl) && menuId === member.user.id}
 									onClose={onMuteMenuClose}
 									anchorOrigin={{
 										vertical: 'bottom',

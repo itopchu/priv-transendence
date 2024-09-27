@@ -1,28 +1,48 @@
-import React from 'react';
-import { ChatStatus, Chat } from './InterfaceChat';
-import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography, Avatar } from '@mui/material';
+import { useRef, useState } from 'react';
+import { ChatStatus, IChat } from './InterfaceChat';
+import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography, Avatar, Popover, Card, CardHeader, CardContent, CardActions, Button } from '@mui/material';
 import { darken, alpha, useTheme } from '@mui/material/styles';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useChat } from '../../Providers/ChatContext/Chat';
 import { getUsername } from '../../Pages/Channels/utils';
+import CreateChatCard from './CreateChatCard';
 
 const ContentDrawer = () => {
   const theme = useTheme();
+	const searchRef = useRef<HTMLInputElement>(null);
 	const { chatProps, changeChatProps } = useChat();
 
-  const toggleChatStatus = (status: ChatStatus, selection: Chat | undefined) => {
+	const [searchedChats, setFilteredChats] = useState<IChat[]>(chatProps.chats);
+	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  const toggleChatStatus = (status: ChatStatus, selection: IChat | undefined) => {
 		changeChatProps({ chatStatus: status, selected: selection });
   };
 
-  const handleSearchClick = () => {
-    if (chatProps.searchPrompt == '') {
-			changeChatProps({ searchPrompt: 'Search...' });
-    }
-  };
+	const handleCardClose = () => {
+		setAnchorEl(null);
+	}
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    changeChatProps({ searchPrompt: event.target.value });
-    console.log('Search Prompt onChange activated: ', chatProps.searchPrompt);
+	const handleCardOpen = (event: React.MouseEvent<HTMLElement>) => {
+		setAnchorEl(event.currentTarget);
+	}
+
+  const handleClose = () => {
+    if (chatProps.selected == undefined)
+			changeChatProps({ chatStatus: ChatStatus.Bubble });
+  }
+
+  const handleInputChange = () => {
+		if (!searchRef.current) return;
+
+		const regex = new RegExp(searchRef.current.value, "i");
+		
+		const chats = chatProps.chats.filter((chat) => {
+			const chatname = getUsername(chat.user);
+
+			return (chatname.match(regex));
+		});
+		setFilteredChats(chats);
   };
 
   const DrawerContent = (
@@ -53,16 +73,26 @@ const ContentDrawer = () => {
         direction="row"
         justifyContent="center"
       >
-        <IconButton sx={{ color: theme.palette.secondary.main }} edge="start" onClick={handleSearchClick} aria-label="search">
+        <IconButton
+					sx={{ color: theme.palette.secondary.main }}
+					edge="start"
+					aria-label="search"
+					onClick={handleCardOpen}
+				>
           <AddIcon />
         </IconButton>
         <Divider sx={{ marginY: '0.3em' }} orientation="vertical" flexItem />
-        <InputBase value={chatProps.searchPrompt} onChange={handleInputChange} sx={{ marginLeft: '8px', color: theme.palette.secondary.main }} placeholder="Search..." />
+        <InputBase
+					inputRef={searchRef}
+					onChange={handleInputChange}
+					sx={{ marginLeft: '8px', color: theme.palette.secondary.main }}
+					placeholder="Search..."
+				/>
       </Stack>
       <Box sx={{ height: '0', color: 'transparent', bgcolor: 'transparent' }}>
         <Divider orientation="horizontal" />
       </Box>
-      {chatProps.chats.map((chat, index) => (
+      {searchedChats.map((chat, index) => (
         <Stack key={index} direction={'row'} onClick={() => toggleChatStatus(ChatStatus.Chatbox, chat)}
           sx={{
             cursor: 'pointer',
@@ -82,20 +112,18 @@ const ContentDrawer = () => {
     </Stack>
   );
 
-  const handleClose = () => {
-    if (chatProps.selected == undefined)
-			changeChatProps({ chatStatus: ChatStatus.Bubble });
-  }
-
   return (
-    <Drawer
-      anchor="right"
-      open={chatProps.chatStatus == ChatStatus.Drawer}
-      onClose={handleClose}
-      sx={{ '& .MuiPaper-root': { backgroundColor: darken(theme.palette.background.default, 0.3) } }}
-    >
-      {DrawerContent}
-    </Drawer>
+		<>
+			<CreateChatCard anchorEl={anchorEl} handleClose={handleCardClose} />
+			<Drawer
+				anchor="right"
+				open={chatProps.chatStatus == ChatStatus.Drawer}
+				onClose={handleClose}
+				sx={{ '& .MuiPaper-root': { backgroundColor: darken(theme.palette.background.default, 0.3) } }}
+			>
+				{DrawerContent}
+			</Drawer>
+		</>
   );
 };
 

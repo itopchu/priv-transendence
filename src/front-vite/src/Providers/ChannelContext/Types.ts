@@ -96,12 +96,13 @@ export interface Channel {
 
 export const enum UpdateType {
 	updated = 'updated',
+	created = 'created',
 	deleted = 'deleted',
 }
 
-export type DataUpdateType  = {
-	channelId: number,
-	content: any,
+export type DataUpdateType<Type>  = {
+	id: number,
+	content?: Type,
 	updateType: UpdateType,
 }
 

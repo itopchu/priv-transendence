@@ -11,9 +11,10 @@ export type Message = {
   content: string;
   author: User;
   timestamp: Date;
+	edited: boolean;
 };
 
-export interface Chat {
+export interface IChat {
   id: number;
   user: UserPublic;
 	modified: Date;
@@ -21,9 +22,9 @@ export interface Chat {
 }
 
 export interface ChatProps {
-  chats: Chat[];
+  chats: IChat[];
   chatStatus: ChatStatus;
-  selected: Chat | undefined;
+  selected: IChat | undefined;
   messages: Message[];
-  searchPrompt: string | undefined;
+	loading: boolean;
 }

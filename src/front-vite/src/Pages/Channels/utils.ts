@@ -31,10 +31,16 @@ export function trimMessage(message: string | undefined): string {
 	return (trimmedMessage);
 }
 
+export function getFullname(user: User | undefined): string {
+	if (!user) return ('Unknown');
+
+	return (`${user?.nameFirst} ${user?.nameLast}`);
+}
+
 export function getUsername(user: User | undefined): string {
 	if (!user) return ('Unknown');
 
-  return (user.nameNick || `${user.nameFirst} ${user.nameLast}`);
+  return (user.nameNick || getFullname(user));
 };
 
 export function onFileUpload(

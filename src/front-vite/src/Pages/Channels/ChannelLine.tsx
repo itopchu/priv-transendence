@@ -25,7 +25,7 @@ interface ChannelLineType {
 
 export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 	const theme = useTheme();
-	const	isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
+	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
 	const { channelLineProps, channelProps, changeProps, changeLineProps } = useChannel();
 
 	const searchRef = useRef<HTMLInputElement>(null);
@@ -34,12 +34,12 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 	function	onLineInputChange(): void {
 		if (!searchRef.current) return;
 
-		const re = new RegExp(searchRef.current.value, "gi");
+		const regex = new RegExp(searchRef.current.value, "i");
 		const channels = channelLineProps.filter === ChannelFilters.myChannels
 			? channelProps.memberships.map((membership) => membership.channel)
 			: channelLineProps.channels
 
-		setFilteredChannels(channels.filter((channel) => !channel.name.search(re)));
+		setFilteredChannels(channels.filter((channel) => channel.name.match(regex)));
 	}
 
 	function	channelCardClick(membership: ChannelMember | undefined, state: ChannelStates) {

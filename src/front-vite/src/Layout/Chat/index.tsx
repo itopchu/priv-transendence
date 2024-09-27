@@ -5,13 +5,7 @@ import ContentDrawer from './ContentDrawer';
 import ContentChat from './ContentChat';
 import { useChat } from '../../Providers/ChatContext/Chat';
 
-interface Chat {
-  id: number;
-  name: string;
-  avatar: string;
-}
-
-export const Chat: React.FC = () => {
+const Chat: React.FC = () => {
 	const { chatProps } = useChat();
 
   const renderChatContent = () => {

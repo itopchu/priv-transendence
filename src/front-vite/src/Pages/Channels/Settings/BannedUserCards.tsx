@@ -7,9 +7,10 @@ import { MoreVert as UserMenuIcon } from '@mui/icons-material';
 import { useNavigate } from "react-router-dom";
 import { getUsername } from "../utils";
 import { onModerate } from "./MemberCards";
-import { onSendMessage, useFriendshipAttitude, userRelationMenuItems } from "./UserCardsUtils";
+import { useFriendshipAttitude, userRelationMenuItems } from "./UserCardsUtils";
 import { FriendshipAttitude } from "../../Profile/ownerInfo";
 import { useChat } from "../../../Providers/ChatContext/Chat";
+import { handleChatInvite } from "../../../Providers/ChatContext/utils";
 
 type BannedUserCardsType = {
 	users: User[],
@@ -101,7 +102,9 @@ export const BannedUserCards: React.FC<BannedUserCardsType> = ({ users, channelI
 								open={Boolean(anchorEl) && user.id === menuId}
 								onClose={onMenuClose}
 							>
-								<MenuItem onClick={() => onSendMessage(user, chatProps, onMenuClose, changeChatProps)}>Send Message</MenuItem>
+								<MenuItem onClick={() => handleChatInvite(user, chatProps, changeChatProps, onMenuClose)}>
+									Send Message
+								</MenuItem>
 								{userRelationMenuItems(user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
 								<Divider />
 								<MenuItem color='error' onClick={() => onModerate(user, 'ban', channelId, onMenuClose)}>

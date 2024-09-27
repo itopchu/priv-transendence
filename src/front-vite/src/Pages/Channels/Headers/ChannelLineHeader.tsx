@@ -12,11 +12,15 @@ export const ChannelLineHeader: React.FC<{AddIconClick: () => void}> = ({ AddIco
 	const theme = useTheme();
 	const { channelProps, channelLineProps: lineProps, changeLineProps } = useChannel();
 
+	let controller: AbortController | undefined = undefined;
+
 	const getPublicChannels = async (type: ChannelType) => {
+		changeLineProps({ loading: true });
 		try {
 			const channels: Channel[] = await retryOperation(async () => {
 				const response = await axios.get(`${BACKEND_URL}/channel/public/${type}`, {
 					withCredentials: true,
+					signal: controller?.signal,
 				});
 				return (response.data.channels || []);
 			})
@@ -32,6 +36,8 @@ export const ChannelLineHeader: React.FC<{AddIconClick: () => void}> = ({ AddIco
 	const onChangeChannelFilter = (filter: ChannelFilters) => {
 		if (filter === lineProps.filter) return;
 
+		controller?.abort();
+		controller = new AbortController();
 		switch (filter) {
 			case ChannelFilters.protected:
 				getPublicChannels(ChannelType.protected);

@@ -104,6 +104,9 @@ export class ChannelController {
 	@Get('public/:type')
 	@UseGuards(AuthGuard)
 	async getPublicChannels(@Param('type', new ParseEnumPipe(ChannelType)) channelType: ChannelType) {
+		if (channelType === ChannelType.private) {
+			throw new UnauthorizedException('Unauthorized: Cannot GET private channels');
+		}
 		try {
 			const channels = await this.channelService.getPublicChannels(channelType);
 

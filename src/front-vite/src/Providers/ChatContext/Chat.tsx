@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState, createContext } from "react";
-import { ChatProps, ChatStatus, Chat, Message } from "../../Layout/Chat/InterfaceChat";
+import { ChatProps, ChatStatus, IChat, Message } from "../../Layout/Chat/InterfaceChat";
 import axios from "axios";
 import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
 import { useUser } from "../UserContext/User";
@@ -23,7 +23,7 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
     chatStatus: ChatStatus.Bubble,
 		messages: [],
     selected: undefined,
-    searchPrompt: undefined,
+		loading: true,
   });
 
 	const changeChatProps = (newProps: Partial<ChatProps>) => {
@@ -44,11 +44,12 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
 	useEffect(() => {
 		if (!user.id) return;
+		changeChatProps({ loading: true });
 
 		const getChats = async () => {
 			try {
 				const response = await axios.get(`${BACKEND_URL}/chat`, { withCredentials: true });
-				const chats: Chat[] = response.data.chats;
+				const chats: IChat[] = response.data.chats;
 				if (chats) {
 					chats.sort((a, b) => new Date(a.modified).getTime() - new Date(b.modified).getTime());
 					setChatProps((prevProps) => ({ ...prevProps, chats: response.data.chats || [] }));
@@ -59,10 +60,12 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 		}
 
 		getChats();
+		changeChatProps({ loading: false });
 	}, [user.id]);
 
 	useEffect(() => {
 		if (!chatProps.selected) return;
+		changeChatProps({ loading: true });
 
 		const getMessages = async () => {
 			if (!chatProps.selected) return;
@@ -79,10 +82,11 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 		}
 
 		getMessages();
+		changeChatProps({ loading: false });
 	}, [chatProps.selected?.id]);
 
 	useEffect(() => {
-		const onNewChat = (newChat: Chat) => {
+		const onNewChat = (newChat: IChat) => {
 			changeChatProps({ chats: [newChat] });
 		}
 

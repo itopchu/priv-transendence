@@ -3,7 +3,6 @@ import { FriendshipAttitude, FriendshipAttitudeBehaviour } from "../../Profile/o
 import { handleError, BACKEND_URL, getUsername } from "../utils";
 import { User } from "../../../Providers/UserContext/User";
 import { MenuItem } from "@mui/material";
-import { ChatProps, ChatStatus } from "../../../Layout/Chat/InterfaceChat";
 import { useEffect } from "react";
 
 export async function getFriendshipAttitude(
@@ -17,11 +16,14 @@ export async function getFriendshipAttitude(
 				signal: controller.signal,
 			}
 		);
+		console.log(response);
 		if (response.data.friendshipAttitude) {
 			setFunc(response.data.friendshipAttitude);
 		}
 	} catch (error) {
-		console.error(`Relationship not found:${error}`)
+		if (!axios.isCancel(error)) {
+			console.error(`Relationship not found:${error}`)
+		}
 	}
 }
 
@@ -85,7 +87,7 @@ export const userRelationMenuItems = (
 						menuCloseFunc();
 					}}
 				>
-					{`Unfriend ${username}`}
+					Remove friend
 				</MenuItem>),
 				(<MenuItem
 					key={FriendshipAttitudeBehaviour.restrict}
@@ -169,36 +171,5 @@ export const userRelationMenuItems = (
 					{`Block ${username}`}
 				</MenuItem>),
 			]);
-	}
-}
-
-export async function onSendMessage(
-	user: User,
-	chatProps: ChatProps,
-	menuCloseFunc: () => void,
-	changeChatProps: (newProps: Partial<ChatProps>) => void,
-) {
-	const chat = chatProps.chats.find((chat) => chat.user.id === user.id);
-	if (chat) {
-		changeChatProps({
-			selected: chat,
-			chatStatus: ChatStatus.Chatbox,
-		});
-		return;
-	}
-
-	try {
-		const response = await axios.post(`${BACKEND_URL}/chat/${user?.id}`, null, { withCredentials: true});
-		const newChat = response.data.chat;
-		if (newChat) {
-			changeChatProps({
-				chats: [newChat],
-				selected: newChat,
-				chatStatus: ChatStatus.Chatbox,
-			});
-		}
-		menuCloseFunc();
-	} catch (error) {
-		handleError('Could not create chat:', error);
 	}
 }

@@ -9,6 +9,7 @@ import { MessageService } from './message/message.service';
 import { MemberService } from './channel/member.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { MessageController } from './message/message.controller';
 
 @Module({
 	imports: [
@@ -16,7 +17,7 @@ import { ChatService } from './chat.service';
 		UserModule,
 	],
 	providers: [ChannelService, MessageService, MemberService, ChatService, ChatGateway],
-	controllers: [ChannelController, ChatController],
+	controllers: [ChannelController, ChatController, MessageController],
 	exports: [ChannelService, MemberService, MemberService, ChatService],
 })
 export class ChatModule {}

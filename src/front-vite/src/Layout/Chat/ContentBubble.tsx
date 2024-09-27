@@ -7,9 +7,9 @@ export const ContentBubble = () => {
 	const { changeChatProps } = useChat();
 
   return (
-    <Box sx={{ position: 'fixed', bottom: 16, right: 16 }}>
+    <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 2 }}>
       <Fab
-				color={'secondary'}
+		color={'secondary'}
         aria-label="chat"
         onClick={() => changeChatProps({ chatStatus: ChatStatus.Drawer, selected: undefined})}
 			>

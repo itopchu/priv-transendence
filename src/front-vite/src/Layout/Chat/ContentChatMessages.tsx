@@ -2,12 +2,13 @@ import React from "react";
 import { Message } from "./InterfaceChat";
 import { Box, Divider, Stack, Typography, useTheme } from "@mui/material";
 import { ButtonAvatar, ChatBubble } from "../../Pages/Channels/Components/Components";
-import { useNavigate } from "react-router-dom";
+import { NavigateFunction } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
 import { formatDate, getTimeDiff } from "../../Providers/ChannelContext/utils";
 
 type ChatBoxType = {
 	messageLog: Message[];
+	navigate: NavigateFunction;
 }
 
 export const PendingMessages: React.FC<{ messages: Message[] }> = ({ messages }) => {
@@ -15,7 +16,7 @@ export const PendingMessages: React.FC<{ messages: Message[] }> = ({ messages })
 
 	return (
 		<>
-			{messages.map((msg, index) => {
+			{messages.map((msg, index) => (
 				<Stack
 					key={index}
 					flexGrow={1}
@@ -34,19 +35,19 @@ export const PendingMessages: React.FC<{ messages: Message[] }> = ({ messages })
 						</Typography>
 					</ChatBubble>
 				</Stack>
-			})}
+			))}
 		</>
 	);
 }
 
-export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
-	if (!messageLog.length) return (undefined);
+export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog, navigate }) => {
+	if (!messageLog.length) return;
 
 	const { user } = useUser();
-  const navigate = useNavigate();
 	const theme = useTheme();
 
-	const timeSeparation = 10 * 60 * 1000; // 10 min in milisecondes
+	const timeSeparation = 3 * 60 * 1000; // 2 min in milisecondes
+	const oneHour = 60 * 60 *  1000;
 
 	return (
 		<>
@@ -58,6 +59,8 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
 					|| getTimeDiff(messageLog[index + 1].timestamp, msg.timestamp) > timeSeparation;
 				const isPrevDiffTime = isFirstMessage
 					|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeSeparation;
+				const isDiffHour = isFirstMessage
+					|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > oneHour;
 
 				const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
 				const isLocalUser = msg.author.id === user.id;
@@ -70,7 +73,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
 
 				return (
 					<React.Fragment key={msg.id}>
-						{isPrevDiffTime && (
+						{isDiffHour && (
 							<Box flexGrow={1} paddingTop={3} >
 								<Divider sx={{ color: 'text.secondary' }} >
 									{`${timestamp.date} ${timestamp.particle} ${timestamp.time}`}
@@ -86,11 +89,11 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog }) => {
 						<Stack
 							direction={'row'}
 							spacing={1}
-							paddingTop={isNewMsgBlock ? 3 : 0}
+							paddingTop={isNewMsgBlock ? 1 : 0}
 							alignItems="flex-start"
 							sx={{
 								'&:hover': {
-									backgroundColor: 'rgba(0, 0, 0, .05)',
+									backgroundColor: 'rgba(255, 255, 255, .05)',
 								},
 								'&:hover .hidden-timestamp': {
 									visibility: 'visible',

@@ -135,13 +135,15 @@ export const ClickTypography = styled(Typography)(({}) => ({
 }));
 
 export const ChatBubble = styled(Box)(({ theme }) => ({
-  display: 'inline-block',
+  display: 'flex',
   backgroundColor: theme.palette.primary.main,
   borderRadius: '1.5em',
   alignSelf: 'flex-start',
   padding: '6px 1em',
   wordBreak: 'break-word',
-  overflow: 'auto',
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  width: 'fit-content',
 }));
 
 export const LoadingBox = styled(Box)(() => ({
@@ -257,6 +259,8 @@ export const lonelyBox = () => {
 export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, style, value, inputChange }, ref) => (
 	<Box
 		sx={{
+			display: 'flex',
+			flexDirection: 'row',
 			position: "relative",
 			...boxSx
 		}}
