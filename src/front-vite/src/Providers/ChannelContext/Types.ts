@@ -102,7 +102,7 @@ export const enum UpdateType {
 
 export type DataUpdateType<Type>  = {
 	id: number,
-	content?: Type,
+	content: Type,
 	updateType: UpdateType,
 }
 

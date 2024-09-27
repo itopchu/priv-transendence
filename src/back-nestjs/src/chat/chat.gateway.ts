@@ -22,7 +22,7 @@ export enum RoomInitials {
 	publicUpdate = 'channelPublicUpdate',
 }
 
-type emitDTO<Type> = {
+type emitUpdateDTO<Type> = {
 	id: number,
 	content?: Type,
 	updateType: UpdateType,
@@ -114,7 +114,7 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, []);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
@@ -170,12 +170,12 @@ export class ChatGateway {
 
 	@SubscribeMessage('message')
 	async onMessage(@MessageBody() data: { message: string, channelId: number }, @ConnectedSocket() client: UserSocket) {
-		const user = client.authUser;
-		if (!user) {
-			throw new UnauthorizedException('Unauthorized: User not found');
-		}
-
 		try {
+			const user = client.authUser;
+			if (!user) {
+				throw new UnauthorizedException('Unauthorized: User not found');
+			}
+
 			const message = await this.channelService.logMessage(data.channelId, user, data.message);
 			this.emitChannelMessageUpdate(data.channelId, new MessagePublicDTO(message), UpdateType.updated);
 		} catch (error) {
@@ -183,14 +183,14 @@ export class ChatGateway {
 		}
 	}
 
-  @SubscribeMessage('sendDirectMessage')
-  async directMessage(client: UserSocket, payload: { chatId: number, content: string }) {
-    const user = client.authUser;
-    if (!user) {
-      throw new UnauthorizedException('Unauthorized: User not found');
-    }
-
+  @SubscribeMessage('sendChatMessage')
+  async onChatMessage(client: UserSocket, payload: { chatId: number, content: string }) {
 	try {
+		const user = client.authUser;
+		if (!user) {
+		  throw new UnauthorizedException('Unauthorized: User not found');
+		}
+
 		const chat = await this.chatService.getChatById(payload.chatId, ['users']);
 		if (!chat) {
 			throw new NotFoundException('Chat not found');
@@ -213,19 +213,9 @@ export class ChatGateway {
 
 		const message = await this.chatService.logMessage(chat.id, user, payload.content);
 		const publicMessage = new MessagePublicDTO(message);
-		const messageData = {
-			chatId: chat.id,
-			message: publicMessage,
-		}
-		const recipientSocket = this.connectedUsers.get(recipient?.id);
-		if (recipientSocket) {
-			recipientSocket.emit('directMessage', messageData);
-		}
-		client.emit('directMessage', messageData);
-		//client.emit('messageSent', message.timestamp);
+		this.emitChatMessageUpdate(chat, publicMessage, UpdateType.updated);
 	} catch(error) {
-		console.log(error);
-		client.emit('directMessageError', error.message);
+		client.emit('chatMessageError', error.message);
 	}
   }
 	
@@ -267,7 +257,26 @@ export class ChatGateway {
 
 	emitChannelMessageUpdate(channelId: number, content: MessagePublicDTO, updateType: UpdateType) {
 		this.server.to(`${RoomInitials.channelMessage}${channelId}`)
-			.emit('newChannelMessageUpdate', { id: content.id, content, updateType });
+			.emit('newChannelMessageUpdate', { id: channelId, content, updateType });
+	}
+
+	async emitChatMessageUpdate(
+		chat: Chat,
+		content: MessagePublicDTO,
+		updateType: UpdateType,
+	) {
+		if (!chat.users) {
+			chat = await this.chatService.getChatById(chat.id, ['users']);
+		}
+		const user1Socket = this.connectedUsers.get(chat.users[0].id);
+		const user2Socket = this.connectedUsers.get(chat.users[1].id);
+		
+		if (user1Socket) {
+			user1Socket.emit('newChatMessageUpdate', { id: chat.id, content, updateType });
+		}
+		if (user2Socket) {
+			user2Socket.emit('newChatMessageUpdate', { id: chat.id, content, updateType });
+		}
 	}
 
 	emitMemberUpdate(channelId: number, updateType: UpdateType) {

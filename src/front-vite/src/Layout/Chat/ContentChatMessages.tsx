@@ -1,13 +1,24 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import { Message } from "./InterfaceChat";
 import { Box, Divider, Stack, Typography, useTheme } from "@mui/material";
-import { ButtonAvatar, ChatBubble } from "../../Pages/Channels/Components/Components";
+import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
 import { NavigateFunction } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
 import { formatDate, getTimeDiff } from "../../Providers/ChannelContext/utils";
+import {
+	MsgContextMenu,
+	ChatBubble,
+	handleDeleteMessage,
+	handleMsgEdit,
+	useEditCancel,
+	useEditMsg,
+	ChatBubbleInputBase,
+	StatusTypography
+} from "../../Pages/Channels/Components/ChatBoxComponents";
+import { HiddenTimestamp } from "../../Pages/Channels/Components/ChatBoxComponents";
 
 type ChatBoxType = {
-	messageLog: Message[];
+	messages: Message[];
 	navigate: NavigateFunction;
 }
 
@@ -40,31 +51,82 @@ export const PendingMessages: React.FC<{ messages: Message[] }> = ({ messages })
 	);
 }
 
-export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog, navigate }) => {
-	if (!messageLog.length) return;
 
-	const { user } = useUser();
+const timeSeparation = 3 * 60 * 1000; // 2 min in milisecondes
+const oneHour = 60 * 60 *  1000;
+export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate }) => {
+	if (!messages.length) return;
+
+	const { user: localUser } = useUser();
 	const theme = useTheme();
+	const editMsgRef = useRef<HTMLInputElement>();
 
-	const timeSeparation = 3 * 60 * 1000; // 2 min in milisecondes
-	const oneHour = 60 * 60 *  1000;
+	const [mousePosition, setMousePosition] = useState<{ x: number, y: number } | null >(null);
+	const [selectedMessage, setSelectedMessage] = useState<Message | undefined>(undefined);
+	const [menuId, setMenuId] = useState<number | null>(null);
+	const [editMode, setEditMode] = useState<boolean>(false);
+
+	const resetEdit = () => {
+		setEditMode(false);
+		setSelectedMessage(undefined);
+	}
+
+	useEditMsg(editMsgRef, selectedMessage);
+	useEditCancel(editMode, resetEdit);
+
+	const enableEditMode = (msg: Message) => {
+		setSelectedMessage(msg);
+		setEditMode(true);
+		handleClose();
+	}
+
+	const deleteMessage = (msgId: number) => {
+		handleDeleteMessage(msgId, handleClose)
+		setSelectedMessage(undefined);
+	}
+
+	const openContextMenu = (event: React.MouseEvent<HTMLElement>, msg: Message) => {
+		if (msg.author.id !== localUser.id || (editMode && selectedMessage?.id === msg.id)) return;
+
+		event.preventDefault();
+		setMousePosition({
+			x: event.clientX,
+			y: event.clientY,
+		});
+		setMenuId(msg.id);
+	}
+
+	const handleInputChange = (event: React.KeyboardEvent<HTMLElement>) =>  {
+		if (event.key === 'Enter' && !event.shiftKey) {
+			event.preventDefault();
+			if (selectedMessage && editMsgRef.current) {
+				handleMsgEdit(selectedMessage.id, editMsgRef.current.value, resetEdit);
+			}
+		}
+	}
+
+	const handleClose = () => {
+		setMousePosition(null);
+		setMenuId(null);
+	}
 
 	return (
 		<>
-			{messageLog.map((msg, index) => {
+			{messages.map((msg, index) => {
 				const isFirstMessage = index === 0;
-				const isLastMessage = index + 1 === messageLog.length;
+				const isLastMessage = index + 1 === messages.length;
 
 				const isDiffTime = isLastMessage
-					|| getTimeDiff(messageLog[index + 1].timestamp, msg.timestamp) > timeSeparation;
+					|| getTimeDiff(messages[index + 1].timestamp, msg.timestamp) > timeSeparation;
 				const isPrevDiffTime = isFirstMessage
-					|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > timeSeparation;
+					|| getTimeDiff(msg.timestamp, messages[index - 1].timestamp) > timeSeparation;
 				const isDiffHour = isFirstMessage
-					|| getTimeDiff(msg.timestamp, messageLog[index - 1].timestamp) > oneHour;
+					|| getTimeDiff(msg.timestamp, messages[index - 1].timestamp) > oneHour;
 
-				const isDifferentUser = isFirstMessage || messageLog[index - 1].author.id !== msg.author.id;
-				const isLocalUser = msg.author.id === user.id;
-				const isLastUserMessage = isLastMessage || messageLog[index + 1].author.id !== msg.author.id;
+				const isDifferentUser = isFirstMessage || messages[index - 1].author.id !== msg.author.id;
+				const isLocalUser = msg.author.id === localUser.id;
+				const isEditing = editMode && selectedMessage?.id === msg.id;
+				const isLastUserMessage = isLastMessage || messages[index + 1].author.id !== msg.author.id;
 
 				const isNewMsgBlock = isDifferentUser || isPrevDiffTime;
 				const isMsgBlockEnd = isLastUserMessage || isDiffTime;
@@ -73,6 +135,13 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog, navigat
 
 				return (
 					<React.Fragment key={msg.id}>
+						<MsgContextMenu
+							open={Boolean(mousePosition) && menuId === msg.id}
+							anchorPosition={mousePosition ? { left: mousePosition.x, top: mousePosition.y } : undefined}
+							onClose={handleClose}
+							onEditClick={() => enableEditMode(msg)}
+							onDeleteClick={() => deleteMessage(msg.id)}
+						/>
 						{isDiffHour && (
 							<Box flexGrow={1} paddingTop={3} >
 								<Divider sx={{ color: 'text.secondary' }} >
@@ -91,7 +160,10 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog, navigat
 							spacing={1}
 							paddingTop={isNewMsgBlock ? 1 : 0}
 							alignItems="flex-start"
+							onContextMenu={(event) => openContextMenu(event, msg)}
 							sx={{
+								backgroundColor: isEditing || menuId === msg.id
+									? 'rgba(255, 255, 255, .05)' : undefined,
 								'&:hover': {
 									backgroundColor: 'rgba(255, 255, 255, .05)',
 								},
@@ -126,27 +198,39 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messageLog, navigat
 										borderBottomRightRadius: !isLocalUser || isMsgBlockEnd ? undefined : '0.2em',
 									}}
 								>
-									<Typography
-										variant="body1"
-										sx={{ whiteSpace: 'pre-line' }}
-									>
-										{msg.content}
-									</Typography>
+									<Stack spacing={-.5} >
+										<Typography
+											display={isEditing ? 'none' : 'block'}
+											variant="body1"
+											sx={{ whiteSpace: 'pre-line' }}
+										>
+											{msg.content}
+										</Typography>
+										<StatusTypography
+											hidden={!msg.edited || isEditing}
+											sx={{ alignSelf: isLocalUser ? 'flex-start' : 'flex-end' }}
+										>
+											(edited)
+										</StatusTypography>
+									</Stack>
+
+									{isEditing && (
+										<ChatBubbleInputBase
+											multiline
+											inputRef={editMsgRef}
+											onKeyDown={handleInputChange}
+										/>
+									)}
 								</ChatBubble>
-								<Typography
-									className="hidden-timestamp"
-									variant="caption"
-									color={'textSecondary'}
-									alignSelf={'flex-end'}
+
+								<HiddenTimestamp
+									timestamp={timestamp.time}
 									sx={{
-										fontSize: '0.55em',
+										alignSelf: 'flex-end',
 										paddingInline: '5px',
 										minWidth: '50px',
-										visibility: 'hidden',
 									}}
-								>
-									{timestamp.time}
-								</Typography>
+								/>
 							</Stack>
 						</Stack>
 					</React.Fragment>

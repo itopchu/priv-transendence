@@ -13,7 +13,7 @@ export class ChatService {
 		private readonly messageService: MessageService,
 	) {}
 
-	async getChatById(chatId: number, relations: string[]) {
+	async getChatById(chatId: number, relations?: string[]) {
 		try {
 			const chat = await this.chatRepository.findOne({
 				where: { id: chatId },

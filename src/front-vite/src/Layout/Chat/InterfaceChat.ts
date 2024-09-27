@@ -25,6 +25,5 @@ export interface ChatProps {
   chats: IChat[];
   chatStatus: ChatStatus;
   selected: IChat | undefined;
-  messages: Message[];
 	loading: boolean;
 }

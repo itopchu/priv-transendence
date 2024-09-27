@@ -1,59 +1,32 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Message } from "../../Layout/Chat/InterfaceChat";
 import { formatDate, getTimeDiff, isDiffDate } from "../../Providers/ChannelContext/utils";
-import { BACKEND_URL, getUsername, handleError } from "./utils";
-import { Box, Divider, InputBase, Menu, MenuItem, Stack, styled, Typography, useTheme } from "@mui/material";
-import { ButtonAvatar, ChatBubble, ClickTypography } from "./Components/Components";
+import { getUsername, } from "./utils";
+import { Box, Divider, Stack, Typography, useTheme } from "@mui/material";
+import { ButtonAvatar, ClickTypography } from "./Components/Components";
 import { useUser } from "../../Providers/UserContext/User";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import {
+	ChatBubble,
+	ChatBubbleInputBase,
+	StatusTypography,
+	HiddenTimestamp,
+	MsgContextMenu,
+	handleDeleteMessage,
+	handleMsgEdit,
+	useEditCancel,
+	useEditMsg
+} from "./Components/ChatBoxComponents";
 
 interface ChannelMessagesType {
 	messages: Message[];
 }
 
-const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
-	fontSize: '.9rem',
-	[theme.breakpoints.down('sm')]: {
-		margin:  -8,
-	},
-}))
-
-async function handleDeleteMessage(msgId: number | undefined, handleClose: () => void) {
-	if (!msgId) return;
-
-	try {
-		await axios.delete(`${BACKEND_URL}/message/${msgId}`, { withCredentials: true });
-	} catch (error) {
-		handleError('Could not delete message:', error);
-	}
-	handleClose();
-}
-
-async function handleMsgEdit(msgId: number, newContent: string,  reset: () => void) {
-	const	payload = {
-		content: newContent,
-	}
-
-	try {
-		await axios.patch(
-			`${BACKEND_URL}/message/${msgId}`,
-			{ payload },
-			{ withCredentials: true }
-		);
-		reset();
-	} catch (error) {
-		handleError('Could not edit message:', error);
-	}
-}
-
 const timeSeparation = 2 * 60 * 1000; // 2 min in milisecondes
-export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
+export const ChatBoxMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 	const theme = useTheme();
 	const navigate = useNavigate();
-
 	const editMsgRef = useRef<HTMLInputElement>();
-
 	const  { user: localUser } = useUser();
 
 	const [mousePosition, setMousePosition] = useState<{ x: number, y: number } | null >(null);
@@ -66,32 +39,18 @@ export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 		setSelectedMessage(undefined);
 	}
 
-	useEffect(() => {
-		if (!editMsgRef.current || !selectedMessage) return;
-
-		editMsgRef.current.value = selectedMessage.content;
-	}, [selectedMessage]);
-
-	useEffect(() => {
-		if (!editMode) return;
-
-		const handleKeyDown = (event: KeyboardEvent) =>  {
-			if (event.key === 'Escape') {
-				resetEdit();
-			}
-		}
-
-		window.addEventListener('keydown', handleKeyDown);
-
-		return () => {
-			window.removeEventListener('keydown', handleKeyDown);
-		}
-	}, [editMode]);
+	useEditMsg(editMsgRef, selectedMessage);
+	useEditCancel(editMode, resetEdit);
 
 	const enableEditMode = (msg: Message) => {
 		setSelectedMessage(msg);
 		setEditMode(true);
 		handleClose();
+	}
+
+	const deleteMessage = (msgId: number) => {
+		handleDeleteMessage(msgId, handleClose)
+		setSelectedMessage(undefined);
 	}
 
 	const openContextMenu = (event: React.MouseEvent<HTMLElement>, msg: Message) => {
@@ -106,11 +65,7 @@ export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 	}
 
 	const handleInputChange = (event: React.KeyboardEvent<HTMLElement>) =>  {
-
-		if (event.key === 'Escape') {
-			setEditMode(false);
-			setSelectedMessage(undefined);
-		} else if (event.key === 'Enter' && !event.shiftKey) {
+		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
 			if (selectedMessage && editMsgRef.current) {
 				handleMsgEdit(selectedMessage.id, editMsgRef.current.value, resetEdit);
@@ -121,36 +76,6 @@ export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 	const handleClose = () => {
 		setMousePosition(null);
 		setMenuId(null);
-	}
-
-	const contextMenu = (msg: Message) => {
-		return (
-			<Menu
-				open={Boolean(mousePosition) && menuId === msg.id}
-				onClose={handleClose}
-				anchorReference="anchorPosition"
-				anchorPosition={mousePosition ? { left: mousePosition.x, top: mousePosition.y } : undefined}
-				sx={{
-					'& .MuiPaper-root': {
-						padding: '0px 8px',
-					},
-				}}
-			>
-				<MessageMenuItem onClick={() => enableEditMode(msg)}>
-					Edit Message
-				</MessageMenuItem >
-				<Divider />
-				<MessageMenuItem
-					onClick={() => {
-						handleDeleteMessage(msg.id, handleClose)
-						setSelectedMessage(undefined);
-					}}
-					sx={{ color: 'red' }}
-				>
-					Delete Message
-				</MessageMenuItem>
-			</Menu>
-		);
 	}
 
 	return (
@@ -176,7 +101,13 @@ export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 
 				return (
 					<React.Fragment key={msg.id}>
-						{contextMenu(msg)}
+						<MsgContextMenu
+							open={Boolean(mousePosition) && menuId === msg.id}
+							anchorPosition={mousePosition ? { left: mousePosition.x, top: mousePosition.y } : undefined}
+							onClose={handleClose}
+							onEditClick={() => enableEditMode(msg)}
+							onDeleteClick={() => deleteMessage(msg.id)}
+						/>
 						{isDiffDay && (
 							<Box flexGrow={1} paddingTop={3} >
 								<Divider sx={{ color: 'text.secondary', cursor: 'default', }} >
@@ -199,7 +130,8 @@ export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 							alignItems="flex-start"
 							onContextMenu={(event) => openContextMenu(event, msg)}
 							sx={{
-								backgroundColor: isEditing ? 'rgba(0, 0, 0, .05)' : undefined,
+								backgroundColor: isEditing || menuId === msg.id
+									? 'rgba(0, 0, 0, .05)' : undefined,
 								'&:hover': {
 									backgroundColor: 'rgba(0, 0, 0, .05)',
 								},
@@ -229,17 +161,7 @@ export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 										maxWidth: 50,
 									}}
 								>
-									<Typography
-										className="hidden-timestamp"
-										variant="caption"
-										color={'textSecondary'}
-										sx={{
-											fontSize: '0.55em',
-											visibility: 'hidden',
-										}}
-									>
-										{timestamp.time}
-									</Typography>
+									<HiddenTimestamp timestamp={timestamp.time} />
 								</Box>
 							)}
 
@@ -292,34 +214,16 @@ export const ChannelMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 										</Typography>
 
 										{isEditing && (
-											<InputBase
+											<ChatBubbleInputBase
 												multiline
 												inputRef={editMsgRef}
 												onKeyDown={handleInputChange}
-												sx={{
-													width: '100%',
-													display: 'block',
-													flexGrow: 1,
-													whiteSpace: 'pre-line',
-													overflow: 'hidden',
-													'& textarea': {
-														resize: 'none',
-														overflow: 'hidden',
-													},
-												}}
 											/>
 										)}
 									</ChatBubble>
-									<Typography
-										display={msg.edited && !isEditing ? 'block' : 'none'}
-										color={'textSecondary'}
-										variant="caption"
-										alignSelf={'flex-end'}
-										fontSize={'10px'}
-										sx={{ cursor: 'default', userSelect: 'none' }}
-									>
+									<StatusTypography hidden={!msg.edited || isEditing} >
 										(edited)
-									</Typography>
+									</StatusTypography>
 								</Stack>
 							</Stack>
 						</Stack>

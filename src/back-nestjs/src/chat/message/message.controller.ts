@@ -8,8 +8,6 @@ import {
 	Patch,
 	Req,
 	UseGuards,
-	UsePipes,
-	ValidationPipe
 } from "@nestjs/common";
 import { MessageService } from "./message.service";
 import { AuthGuard } from "../../auth/auth.guard";
@@ -45,7 +43,7 @@ export class MessageController {
 		if (msg.channel) {
 			this.chatGateway.emitChannelMessageUpdate(msg.channel.id, publicMsg, UpdateType.updated);
 		} else {
-			//emit to chat users
+			this.chatGateway.emitChatMessageUpdate(msg.chat, publicMsg, UpdateType.updated);
 		}
 	}
 
@@ -64,7 +62,11 @@ export class MessageController {
 				UpdateType.deleted
 			);
 		} else {
-			//emit to chat users
+			this.chatGateway.emitChatMessageUpdate(
+				msg.chat, 
+				{ id: msgId } as MessagePublicDTO,
+				UpdateType.deleted
+			);
 		}
 	}
 }

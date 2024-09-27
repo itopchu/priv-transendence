@@ -67,7 +67,7 @@ export class ChannelService {
 		}
 	}
 
-	async getChannelById(channelId: number, requestedRelations: string[] | null): Promise<Channel> {
+	async getChannelById(channelId: number, requestedRelations?: string[]): Promise<Channel> {
 		const channel = await this.channelRespitory.findOne({
 			where: { id: channelId },
 			relations: requestedRelations,

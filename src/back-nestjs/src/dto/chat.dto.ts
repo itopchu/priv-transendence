@@ -122,7 +122,7 @@ export class MessagePublicDTO {
 	content: string;
 
 	@IsBoolean()
-	edited: Boolean
+	edited: boolean
 }
 
 export class ChannelPublicDTO {

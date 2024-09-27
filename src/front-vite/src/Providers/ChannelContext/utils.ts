@@ -5,17 +5,21 @@ export function getChannelTypeFromFilter(filter: ChannelFilters) {
 }
 
 
-export function updateMap<Type>(map: Map<number, Type>, data: DataUpdateType<Type>): Map<number, Type> {
+export function updateMap<Type extends { id: number }>(
+	map: Map<number, Type>,
+	data: DataUpdateType<Type>
+): Map<number, Type> {
 	const updatedMap = new Map(map);
 
 	switch (data.updateType) {
 		case UpdateType.updated:
 			if (data.content) {
-				updatedMap.set(data.id, data.content);
+				updatedMap.set(data.content.id, data.content);
 			}
 			break;
 		default:
-			updatedMap.delete(data.id);
+			console.log(updatedMap.values(), data);
+			updatedMap.delete(data.content.id);
 			break;
 	}
 	return (updatedMap);

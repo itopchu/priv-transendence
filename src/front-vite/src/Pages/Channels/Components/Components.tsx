@@ -134,18 +134,6 @@ export const ClickTypography = styled(Typography)(({}) => ({
 	}
 }));
 
-export const ChatBubble = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  backgroundColor: theme.palette.primary.main,
-  borderRadius: '1.5em',
-  alignSelf: 'flex-start',
-  padding: '6px 1em',
-  wordBreak: 'break-word',
-  overflowY: 'auto',
-  overflowX: 'hidden',
-  width: 'fit-content',
-}));
-
 export const LoadingBox = styled(Box)(() => ({
 	display: 'flex',
 	flexGrow: 1,

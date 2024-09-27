@@ -7,6 +7,7 @@ import {
   IconButton,
   CircularProgress,
   InputBase,
+  Typography,
 } from '@mui/material';
 import {
   SendRounded as SendIcon,
@@ -22,7 +23,8 @@ import { ChatBoxHeader } from './Headers/ChatBoxHeader';
 import { ChannelMember, DataUpdateType } from '../../Providers/ChannelContext/Types';
 import { retryOperation, updateMap, } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
-import { ChannelMessages } from './ChannelMessages';
+import { ChatBoxMessages } from './ChatBoxMessages';
+import { StatusTypography } from './Components/ChatBoxComponents';
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   position: 'relative',
@@ -58,6 +60,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
   const theme = useTheme();
   const { userSocket } = useUser();
 
+	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -110,7 +113,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
       }
     };
 
-    const handleMessageUpdate = (data: DataUpdateType<Message>) => {
+    function handleMessageUpdate(data: DataUpdateType<Message>) {
 			const message = data.content;
 			const isBlockedUser = blockedUsersRef.current.some((blockedUser) => blockedUser.id === message?.author.id)
 			if (isBlockedUser) return;
@@ -118,14 +121,27 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
       setMessageLog((prev) => updateMap(prev, data))
     };
 
+		function handleMessageError(message: string) {
+			setErrorMessage(message);
+			setTimeout(() => {
+				setErrorMessage((currentErrorMessage) => {
+					if (message === currentErrorMessage) {
+						return (undefined);
+					}
+					return (currentErrorMessage);
+				});
+			}, 60000); // 1 min delay
+		}
+
     getMessageLog();
 		setLoading(false);
     userSocket?.on('newChannelMessageUpdate', handleMessageUpdate);
-    userSocket?.on('messageError', (errMessage: string) => handleError(errMessage, null));
+    userSocket?.on('channelMessageError', handleMessageError);
     return () => {
 			setLoading(true);
 			setMessageLog(new Map());
       userSocket?.off('newChannelMessageUpdate');
+			userSocket?.off('channelMessageError', handleMessageError);
     };
   }, [channel.id, userSocket]);
 
@@ -159,7 +175,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
 		const messages = Array.from(messageLog.values());
     return (
-			<ChannelMessages messages={messages} />
+			<ChatBoxMessages messages={messages} />
 		);
   };
 
@@ -190,6 +206,15 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 					paddingInline: '20px',
 				}}
 			>
+				<StatusTypography
+					hidden={!Boolean(errorMessage)}
+					sx={{
+						alignSelf: 'center',
+						color: theme.palette.error.main,
+					}}
+				>
+					{errorMessage}
+				</StatusTypography>
 				<TextBar>
 					<InputBase
 						fullWidth

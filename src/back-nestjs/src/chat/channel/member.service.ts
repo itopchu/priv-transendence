@@ -12,7 +12,7 @@ export class MemberService {
 		private memberRespitory: Repository<ChannelMember>,
 	) {}
 
-	async getMembershipById(member: number | ChannelMember, requestedRelations: string[]): Promise<ChannelMember> {
+	async getMembershipById(member: number | ChannelMember, requestedRelations?: string[]): Promise<ChannelMember> {
 		const membership = await this.memberRespitory.findOne({
 			where: { id: typeof member === 'number' ?  member : member.id },
 			relations: requestedRelations,
@@ -21,7 +21,7 @@ export class MemberService {
 		return (membership);
 	}
 
-	async getMembershipByChannel(channelId: number, userId: number, requestedRelations: string[]): Promise<ChannelMember> {
+	async getMembershipByChannel(channelId: number, userId: number, requestedRelations?: string[]): Promise<ChannelMember> {
 		const membership = await this.memberRespitory.findOne({
 			where: {
 				user: { id: userId },
