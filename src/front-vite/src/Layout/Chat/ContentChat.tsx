@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
-import { BACKEND_URL, getFullname, getUsername, handleError, trimMessage } from '../../Pages/Channels/utils';
+import { BACKEND_URL, formatErrorMessage, getFullname, getUsername, handleError, trimMessage } from '../../Pages/Channels/utils';
 import { ContentChatMessages } from './ContentChatMessages';
 import { getStatusColor } from '../../Pages/Profile/ownerInfo';
 import axios from 'axios';
@@ -47,11 +47,16 @@ const ContentChat = () => {
 		if (!chatProps.selected) return;
 		changeChatProps({ loading: true });
 
+		const controller = new AbortController();
 		const getMessages = async () => {
 			if (!chatProps.selected) return;
 
 			try {
-				const response = await axios.get(`${BACKEND_URL}/chat/messages/${chatProps.selected.id}`, { withCredentials: true });
+				const response = await axios.get(
+					`${BACKEND_URL}/chat/messages/${chatProps.selected.id}`, {
+						withCredentials: true,
+						signal: controller.signal,
+					});
 				if (response.data.messages) {
 					const messages: Message[] = response.data.messages.sort((a: Message, b: Message) => a.id - b.id)
 					const msgMap = messages.reduce((acc, msg) => {
@@ -60,14 +65,18 @@ const ContentChat = () => {
 					}, new Map<number, Message>)
 					setMessageLog(msgMap);
 				}
+				changeChatProps({ loading: false });
 			} catch (error) {
-				handleError('Could not get messages:', error);
+				if (!axios.isCancel(error)) {
+					setErrorMessage(formatErrorMessage('Failed to get messages:', error));
+				}
 			}
 		}
 
 		getMessages();
-		changeChatProps({ loading: false });
 		return () => {
+			controller.abort;
+			changeChatProps({ loading: true });
 			setMessageLog(new Map());
 		}
 	}, [chatProps.selected?.id]);

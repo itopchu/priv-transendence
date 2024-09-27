@@ -17,7 +17,7 @@ import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
 import { CustomScrollBox, lonelyBox } from './Components/Components';
 import { LoadingBox } from './Components/Components';
-import { BACKEND_URL, handleError,  trimMessage } from './utils';
+import { BACKEND_URL, formatErrorMessage, handleError,  trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import { ChatBoxHeader } from './Headers/ChatBoxHeader';
 import { ChannelMember, DataUpdateType } from '../../Providers/ChannelContext/Types';
@@ -71,17 +71,27 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	const channel = membership.channel;
 
 	useEffect(() => {
+		const controller = new AbortController;
+
 		const getBlockedUsers = async (): Promise<User[]> => {
       try {
-        const response = await axios.get(`${BACKEND_URL}/user/friendship/restricted`, { withCredentials: true });
+        const response = await axios.get(
+					`${BACKEND_URL}/user/friendship/restricted`, { 
+						withCredentials: true,
+						signal: controller.signal,
+					}
+				);
 				if (response.data.blockedUsers) {
 					return (response.data.blockedUsers);
 				}
       } catch (error) {
-        console.error(`Failed to retrieve blocked users:${error}`);
-				handleError('nice', error);
-      }
-			return ([]);
+				if (!axios.isCancel(error)) {
+					console.error(`Failed to retrieve blocked users: ${error}`);
+					handleError('Failed to retrieve blocked users', error);
+				}
+      } finally {
+				return ([]);
+			}
 		}
 
     const getMessageLog = async () => {
@@ -90,8 +100,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
         const messages: Message[] = await retryOperation(async () => {
           const response = await axios.get(
-            `${BACKEND_URL}/channel/messages/${channel.id}`,
-            { withCredentials: true }
+            `${BACKEND_URL}/channel/messages/${channel.id}`, {
+							withCredentials: true,
+							signal: controller.signal,
+						}
           );
           return response.data.messages || [];
         });
@@ -108,8 +120,11 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 				}, new Map<number, Message>);
 
         setMessageLog(messageMap);
-      } catch (error: any) {
-        handleError('Unable to get message log:', error);
+				setLoading(false);
+      } catch (error) {
+				if (!axios.isCancel(error)) {
+					setErrorMessage(formatErrorMessage('Failed to get message log: ', error))
+				}
       }
     };
 
@@ -133,11 +148,11 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			}, 60000); // 1 min delay
 		}
 
-    getMessageLog();
-		setLoading(false);
     userSocket?.on('newChannelMessageUpdate', handleMessageUpdate);
     userSocket?.on('channelMessageError', handleMessageError);
+    getMessageLog();
     return () => {
+			controller.abort;
 			setLoading(true);
 			setMessageLog(new Map());
       userSocket?.off('newChannelMessageUpdate');

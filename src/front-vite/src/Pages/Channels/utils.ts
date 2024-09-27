@@ -58,12 +58,16 @@ export function onFileUpload(
 	reader.readAsDataURL(file);
 };
 
-export function handleError(message: string, error: any) {
+export function formatErrorMessage(message: string, error: any) {
 	if (!error) {
-		alert(message);
+		return (message);
 	} else {
 		const errorMessage = error?.response?.data ? error.response.data.message : error
 
-		alert(`${message} ${errorMessage}`);
+		return (`${message} ${errorMessage}`);
 	}
+}
+
+export function handleError(message: string, error?: any) {
+	alert(formatErrorMessage(message, error));
 }
