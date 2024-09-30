@@ -89,15 +89,6 @@ export const userRelationMenuItems = (
 				>
 					Remove friend
 				</MenuItem>),
-				(<MenuItem
-					key={FriendshipAttitudeBehaviour.restrict}
-					onClick={() => {
-						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
-						menuCloseFunc();
-					}}
-				>
-					{`Block ${username}`}
-				</MenuItem>),
 			]);
 		case FriendshipAttitude.pending:
 			return ([
@@ -109,15 +100,6 @@ export const userRelationMenuItems = (
 					}}
 				>
 					Withdraw Friend Request
-				</MenuItem>),
-				(<MenuItem
-					key={FriendshipAttitudeBehaviour.restrict}
-					onClick={() => {
-						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
-						menuCloseFunc();
-					}}
-				>
-					{`Block ${username}`}
 				</MenuItem>),
 			]);
 		case FriendshipAttitude.awaiting:
@@ -139,15 +121,6 @@ export const userRelationMenuItems = (
 					}}
 				>
 					Decline Friend Request
-				</MenuItem>),
-				(<MenuItem
-					key={FriendshipAttitudeBehaviour.restrict}
-					onClick={() => {
-						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
-						menuCloseFunc();
-					}}
-				>
-					{`Block ${username}`}
 				</MenuItem>),
 			]);
 		default:

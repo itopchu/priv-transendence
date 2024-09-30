@@ -7,7 +7,6 @@ import {
   IconButton,
   CircularProgress,
   InputBase,
-  Typography,
 } from '@mui/material';
 import {
   SendRounded as SendIcon,
@@ -50,6 +49,19 @@ const TextBar = styled(Box)(({ theme }) => ({
 	overflow: 'hidden',
 }));
 
+function useScrollTo(ref: React.RefObject<HTMLDivElement>, dependencies: any[]) {
+	useEffect(() => {
+		const element = ref.current;
+
+		if (element) {
+      element.scrollTo({
+				top: element.scrollHeight,
+				behavior: 'smooth',
+			});
+		}
+	}, dependencies);
+}
+
 interface ChatBoxType {
   membership: ChannelMember;
 }
@@ -60,12 +72,14 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
   const theme = useTheme();
   const { userSocket } = useUser();
 
+	const [searchedMsgId, setSelectedMsgId] = useState<number | undefined>(undefined);
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
   const [loading, setLoading] = useState(true);
 
 	const blockedUsersRef = useRef<User[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const searchedMsgRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
 	const channel = membership.channel;
@@ -87,7 +101,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
       } catch (error) {
 				if (!axios.isCancel(error)) {
 					console.error(`Failed to retrieve blocked users: ${error}`);
-					handleError('Failed to retrieve blocked users', error);
+					handleError('Failed to retrieve blocked users:', error);
 				}
       } finally {
 				return ([]);
@@ -120,12 +134,12 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 				}, new Map<number, Message>);
 
         setMessageLog(messageMap);
-				setLoading(false);
       } catch (error) {
 				if (!axios.isCancel(error)) {
 					setErrorMessage(formatErrorMessage('Failed to get message log: ', error))
 				}
       }
+			setLoading(false);
     };
 
     function handleMessageUpdate(data: DataUpdateType<Message>) {
@@ -160,16 +174,8 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
     };
   }, [channel.id, userSocket]);
 
-  useEffect(() => {
-    const element = messagesEndRef.current;
-
-    if (element) {
-      element.scrollTo({
-				top: element.scrollHeight,
-				behavior: 'smooth',
-			});
-    }
-  }, [messageLog]);
+	useScrollTo(searchedMsgRef, [searchedMsgRef.current]);
+	useScrollTo(messagesEndRef, [messageLog]);
 
   const handleSend = () => {
     if (!inputRef.current) return;
@@ -196,7 +202,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
   return (
 		<>
-			<ChatBoxHeader/>
+			<ChatBoxHeader
+				setSelectedMsgId={setSelectedMsgId}
+				messageLog={messageLog}
+			/>
 			<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
 			<ChatContainer>
 				{loading ? (

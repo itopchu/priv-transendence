@@ -2,7 +2,7 @@ import { Box, Divider, InputBase, Menu, MenuItem, PopoverPosition, styled, Typog
 import { BACKEND_URL, handleError } from "../utils";
 import axios from "axios";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
-import React, { ReactElement, useEffect } from "react";
+import React, { useEffect } from "react";
 
 const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
 	fontSize: '.9rem',
@@ -49,6 +49,7 @@ export const StatusTypography: React.FC<StatusTypographyType> = ({ hidden, sx, c
 			color: (theme) => theme.palette.text.secondary,
 			cursor: 'default',
 			fontSize: '0.55em',
+			textAlign: 'center',
 			userSelect: 'none',
 			...sx
 		}}

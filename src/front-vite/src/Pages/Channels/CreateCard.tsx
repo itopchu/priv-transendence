@@ -18,7 +18,7 @@ import {
   CircularProgress,
   Stack,
 } from '@mui/material';
-import { AvatarUploadIcon, ImageInput, UploadAvatar } from './Components/Components';
+import { AvatarUploadIcon, ImageInput, PasswordTextField, UploadAvatar } from './Components/Components';
 import { BACKEND_URL, handleError, onFileUpload } from './utils';
 import { ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
 import { retryOperation } from '../../Providers/ChannelContext/utils';
@@ -168,15 +168,12 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 								<TextFieldWrapper>
 									<FormControl fullWidth variant="outlined">
 										<CustomFormLabel>Channel Password</CustomFormLabel>
-										<TextField
-											inputRef={passwordRef}
+										<PasswordTextField
+											ref={passwordRef}
 											variant="outlined"
-											type="password"
-											InputProps={{
-												style: {
-													padding: '4px 4px',
-													fontSize: '1rem',
-												},
+											style={{
+												padding: '4px 4px',
+												fontSize: '1rem',
 											}}
 											sx={{
 												height: '25px',

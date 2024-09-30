@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
-import { BACKEND_URL, formatErrorMessage, getFullname, getUsername, handleError, trimMessage } from '../../Pages/Channels/utils';
+import { BACKEND_URL, formatErrorMessage, getFullname, getUsername, trimMessage } from '../../Pages/Channels/utils';
 import { ContentChatMessages } from './ContentChatMessages';
 import { getStatusColor } from '../../Pages/Profile/ownerInfo';
 import axios from 'axios';
@@ -65,12 +65,12 @@ const ContentChat = () => {
 					}, new Map<number, Message>)
 					setMessageLog(msgMap);
 				}
-				changeChatProps({ loading: false });
 			} catch (error) {
 				if (!axios.isCancel(error)) {
 					setErrorMessage(formatErrorMessage('Failed to get messages:', error));
 				}
 			}
+			changeChatProps({ loading: false });
 		}
 
 		getMessages();
@@ -198,12 +198,12 @@ const ContentChat = () => {
 						clickEvent={() => (navigate(`/profile/${user?.id}`))}
 						src={user?.image}
 						avatarSx={{
-							border: '2px solid',
-							borderColor: getStatusColor(user?.status),
+							border: `2px solid ${getStatusColor(user?.status)}`,
 						}}
 					/>
 					<Stack spacing={-1} >
 						<ClickTypography
+							color={(theme) => theme.palette.text.primary}
 							onClick={() => (navigate(`/profile/${user?.id}`))}
 							sx={{
 								overflow: 'hidden',

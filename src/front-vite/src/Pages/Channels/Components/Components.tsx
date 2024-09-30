@@ -3,12 +3,14 @@ import {
 	Avatar,
 	Box,
 	Button,
-	Hidden,
 	IconButton,
 	InputAdornment,
 	InputBase,
 	Stack,
 	styled,
+	SxProps,
+	TextField,
+	TextFieldVariants,
 	Typography,
     useTheme
 } from "@mui/material";
@@ -16,32 +18,28 @@ import {
 	Menu as ShowChannelLineIcon,
 	MenuOpen as HideChannelLineIcon,
 	Search as SearchIcon,
+	Visibility as ShowPasswordIcon,
+	VisibilityOff as HidePasswordIcon,
 } from '@mui/icons-material'
-import React, { forwardRef, ReactElement } from "react";
+import React, { forwardRef, ReactElement, ReactNode, useState } from "react";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
 
-export const CustomAvatar = styled(Avatar)(({ theme }) => ({
-  margin: '0 auto',
-  border: '3px solid',
-  borderColor: theme.palette.primary.dark,
-}));
-
-export interface IHeaderIconButtonType {
+interface IHeaderIconButtonType {
 	Icon: SvgIconComponent;
 	label?: string;
 	iconFontSize?: string;
 	onClick?: () => void;
 }
 
-export interface IAvatarButton {
+interface IAvatarButton {
 	src?: string;
 	clickEvent?: () => void;
-	children?: ReactElement[];
+	children?: ReactNode;
 	avatarSx?: object;
 	sx?: object;
 }
 
-export interface ISearchBar {
+interface ISearchBar {
 	sx?: object;
 	boxSx?: object;
 	style?: object;
@@ -50,10 +48,16 @@ export interface ISearchBar {
 	inputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export interface IImageInput {
-	children?: ReactElement[];
+interface IImageInput {
+	children?: ReactNode;
 	onFileInput?: (file: File) => void;
 }
+
+export const CustomAvatar = styled(Avatar)(({ theme }) => ({
+  margin: '0 auto',
+  border: '3px solid',
+  borderColor: theme.palette.primary.dark,
+}));
 
 export const CustomScrollBox = styled(Box)(({ theme }) => ({
 	overflowY: 'auto',
@@ -286,3 +290,52 @@ export const HeaderIconButton: React.FC<IHeaderIconButtonType> = ({ Icon, onClic
 			<Icon sx={{ fontSize: iconFontSize || '32px' }} />
 		</IconButton>
 )
+
+interface IPasswordTextField {
+	placeholder?: string;
+	ref?: HTMLInputElement;
+	inputChange?: () => void;
+	value?: string;
+	fullWidth?: boolean,
+	variant?: TextFieldVariants;
+	style?: Object;
+	sx?: SxProps<any>;
+}
+
+export const PasswordTextField = forwardRef<HTMLInputElement, IPasswordTextField>(({
+	inputChange,
+	placeholder,
+	fullWidth,
+	variant,
+	value,
+	style,
+	sx,
+}, ref) => {
+	const [visible, setVisible] = useState(false);
+
+	return (
+		<TextField
+			placeholder={placeholder || "Enter password..."}
+			inputRef={ref}
+			onChange={inputChange}
+			variant={variant}
+			value={value}
+			type={visible ? "default" : "password"}
+			fullWidth={fullWidth}
+			InputProps={{
+				style: style,
+				endAdornment: (
+					<InputAdornment position='end' >
+						<IconButton
+							onClick={() => setVisible((prev) => !prev)}
+							size="small"
+						>
+							{visible ? <HidePasswordIcon /> : <ShowPasswordIcon />}
+						</IconButton>
+					</InputAdornment>
+				),
+			}}
+			sx={sx}
+		/>
+	);
+})

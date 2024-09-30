@@ -6,6 +6,7 @@ import {
   Add as AddIcon,
   Login as LoginIcon,
 	InfoOutlined as MiscIcon,
+	People as DefaultChannelIcon,
 } from '@mui/icons-material';
 import { Channel, ChannelFilters, ChannelFilterValues, ChannelMember, ChannelStates, ChannelType } from "../../Providers/ChannelContext/Types";
 import { StatusTypography } from "./Components/ChatBoxComponents";
@@ -190,7 +191,9 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 				},
 			}}
 		>
-			<Avatar src={channelImage} sx={{ width: '1.5em', height: '1.5em' }} />
+			<Avatar src={channelImage} sx={{ width: '1.5em', height: '1.5em' }} >
+				{!channelImage && <DefaultChannelIcon />}
+			</Avatar>
 			<Typography noWrap sx={{
 				maxWidth: '78%',
 				overflow: 'hidden',
@@ -213,7 +216,6 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 			</IconButton>
 		</Stack>
   );
-
   let generateChannels = () => {
 		if (!channelProps.memberships.length) return;
 

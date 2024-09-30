@@ -18,9 +18,13 @@ import {
   DescriptionBox,
   lonelyBox,
   CustomAvatar,
+  PasswordTextField,
 } from '../Components/Components';
+import {
+		People as DefaultChannelIcon,
+} from '@mui/icons-material'
 import { BACKEND_URL, getUsername, handleError, onFileUpload } from '../utils';
-import { SettingsDivider, SettingsTextField } from '../Components/SettingsComponents';
+import { SettingsDivider, SettingsTextFieldSx } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
 import { SettingsUserCardBox } from '../Components/SettingsComponents';
 import { BannedUserCards } from './BannedUserCards';
@@ -40,7 +44,7 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 	if (!membership) return (lonelyBox());
 
 	const	theme = useTheme()
-	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
+	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
 	const { changeProps } = useChannel();
 	const [editMode, setEditMode] = useState(false);
@@ -168,7 +172,7 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 
 	const ChannelStatus = () => (
 		<Typography
-			alignSelf={isTinyScreen ? 'center' : undefined}
+			alignSelf={isSmallScreen ? 'center' : undefined}
 			variant="body1"
 			color={'textSecondary'}
 		>
@@ -180,7 +184,7 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
   const ChannelDetails = () => (
     <>
       <Stack
-        direction={isTinyScreen ? 'column' : 'row'}
+        direction={isSmallScreen ? 'column' : 'row'}
         justifyContent={'center'}
         spacing={3}
         alignItems={'center'}
@@ -233,7 +237,7 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
   const EditChannelDetail = () => (
     <>
       <Stack
-        direction={isTinyScreen ? 'column' : 'row'}
+        direction={isSmallScreen ? 'column' : 'row'}
         justifyContent={'center'}
         spacing={3}
         alignItems={'center'}
@@ -242,13 +246,15 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
           src={avatarSrc}
           avatarSx={{ height: '7em', width: '7em' }}
         >
+					{!avatarSrc && <DefaultChannelIcon />}
           <AvatarUploadIcon className="hidden-icon" />
           <ImageInput onFileInput={(file: File) => onFileUpload(file, changeChannelData, setAvatarSrc)} />
         </UploadAvatar>
         <Stack spacing={1}>
-          <SettingsTextField
+          <TextField
             inputRef={nameRef}
             variant="standard"
+						sx={SettingsTextFieldSx(theme)}
             placeholder={
               nameRef.current?.value.length
                 ? undefined
@@ -259,15 +265,10 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 						? (
 							<>
 								{(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
-									<SettingsTextField
-										inputRef={passwordRef}
+									<PasswordTextField
+										ref={passwordRef}
+										sx={SettingsTextFieldSx(theme)}
 										variant="standard"
-										placeholder={
-											passwordRef.current?.value.length
-												? undefined
-												: 'Enter a password...'
-										}
-										type="password"
 									/>
 								)}
 								{generateButtonGroup()}
