@@ -1,28 +1,36 @@
-import { ChatProps, ChatStatus, Chat } from './InterfaceChat';
-import { Box, Stack, IconButton, InputBase, Button, ListItemText, Avatar, Typography } from '@mui/material';
-// import { useTheme } from '@emotion/react';
+import { ChatStatus, IChat, Message } from './InterfaceChat';
+import { Box, Stack, IconButton, InputBase, Button, Typography, CircularProgress } from '@mui/material';
 import {
 	Send as SendIcon,
 	Cancel as CancelIcon,
 	KeyboardBackspace as BackIcon,
 } from '@mui/icons-material';
-import { ButtonAvatar, ClickTypography } from '../../Pages/Channels/Components/Components';
+import { ButtonAvatar, ClickTypography, LoadingBox } from '../../Pages/Channels/Components/Components';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
-import { getUsername, trimMessage } from '../../Pages/Channels/utils';
+import { BACKEND_URL, formatErrorMessage, getFullname, getUsername, trimMessage } from '../../Pages/Channels/utils';
 import { ContentChatMessages } from './ContentChatMessages';
 import { getStatusColor } from '../../Pages/Profile/ownerInfo';
+import axios from 'axios';
+import { DataUpdateType } from '../../Providers/ChannelContext/Types';
+import { updateMap } from '../../Providers/ChannelContext/utils';
+import { StatusTypography } from '../../Pages/Channels/Components/ChatBoxComponents';
 
 const ContentChat = () => {
 	const { chatProps, changeChatProps } = useChat();
 	const { userSocket } = useUser();
 
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 	const [user, setUser] = useState<UserPublic | undefined>(chatProps.selected?.user);
+	const [messageLog, setMessageLog]  = useState<Map<number, Message>>(new Map());;
+
+	const isDisabled = chatProps.loading;
 
   useEffect(() => {
     const element = messagesEndRef.current;
@@ -33,7 +41,45 @@ const ContentChat = () => {
 				behavior: 'smooth',
 			});
     }
-  }, [chatProps.messages]);
+  }, [messageLog]);
+
+	useEffect(() => {
+		if (!chatProps.selected) return;
+		changeChatProps({ loading: true });
+
+		const controller = new AbortController();
+		const getMessages = async () => {
+			if (!chatProps.selected) return;
+
+			try {
+				const response = await axios.get(
+					`${BACKEND_URL}/chat/messages/${chatProps.selected.id}`, {
+						withCredentials: true,
+						signal: controller.signal,
+					});
+				if (response.data.messages) {
+					const messages: Message[] = response.data.messages.sort((a: Message, b: Message) => a.id - b.id)
+					const msgMap = messages.reduce((acc, msg) => {
+						acc.set(msg.id, msg);
+						return (acc);
+					}, new Map<number, Message>)
+					setMessageLog(msgMap);
+				}
+			} catch (error) {
+				if (!axios.isCancel(error)) {
+					setErrorMessage(formatErrorMessage('Failed to get messages:', error));
+				}
+			}
+			changeChatProps({ loading: false });
+		}
+
+		getMessages();
+		return () => {
+			controller.abort;
+			changeChatProps({ loading: true });
+			setMessageLog(new Map());
+		}
+	}, [chatProps.selected?.id]);
 
 	useEffect(() => {
 		function onProfileStatus(updatedUser: UserPublic) {
@@ -42,16 +88,43 @@ const ContentChat = () => {
 			}
 		}
 
+		function handleMessageUpdate(data: DataUpdateType<Message>) {
+			if (data.id === chatProps.selected?.id) {
+				setMessageLog((prevMap) => updateMap(prevMap, data));
+			}
+		}
+
+		function handleMessageError(message: string) {
+			setErrorMessage(message);
+			setTimeout(() => {
+				setErrorMessage((currentErrorMessage) => {
+					if (message === currentErrorMessage) {
+						return (undefined);
+					}
+					return (currentErrorMessage);
+				});
+			}, 60000); // 1 min delay
+		}
+
+
 		userSocket?.on('profileStatus', onProfileStatus);
+		userSocket?.on('newChatMessageUpdate', handleMessageUpdate);
+    userSocket?.on('chatMessageError', handleMessageError);
 		userSocket?.emit('profileStatus', user?.id);
 
 		return (() => {
 			userSocket?.emit('unsubscribeProfileStatus', user?.id);
-			userSocket?.off('profileStatus');
+			userSocket?.off('chatMessageError', handleMessageError);
+			userSocket?.off('newChatMessageUpdate', handleMessageUpdate);
+			userSocket?.off('profileStatus', onProfileStatus);
 		});
 	}, [userSocket]);
 
-	const onSend = () => {
+  const toggleChatStatus = (status: ChatStatus, selection: IChat | undefined) => {
+    changeChatProps({ chatStatus: status, selected: selection });
+  };
+
+	const handleSend = () => {
 		if (!inputRef.current) return;
 
     const cleanMessage = trimMessage(inputRef.current.value);
@@ -60,16 +133,18 @@ const ContentChat = () => {
         chatId: chatProps.selected?.id,
         content: cleanMessage,
       };
-      userSocket?.emit('sendDirectMessage', payload);
+      userSocket?.emit('sendChatMessage', payload);
     }
 		inputRef.current.value = '';
 	}
 
-  const toggleChatStatus = (status: ChatStatus, selection: Chat | undefined) => {
-    changeChatProps({ chatStatus: status, selected: selection });
-  };
-  // const theme = useTheme();
-  const navigate = useNavigate();
+	const renderMessages = () => {
+		if (!messageLog.size) return (null);
+		const messages = Array.from(messageLog.values());
+
+		return (<ContentChatMessages navigate={navigate} messages={messages} />);
+	}
+
   return (
     <Box
       sx={{
@@ -77,7 +152,7 @@ const ContentChat = () => {
         border: '1px solid #abc',
         bottom: 16,
         right: 16,
-        width: 300,
+        width: '50ch',
         bgcolor: (theme) => theme.palette.primary.dark,
         borderRadius: '1em',
         maxHeight: '70vh',
@@ -85,6 +160,7 @@ const ContentChat = () => {
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box',
+				zIndex: 2,
       }}
     >
       <Stack direction={'column'} sx={{ flexGrow: 1, maxHeight: '100%' }}>
@@ -122,19 +198,33 @@ const ContentChat = () => {
 						clickEvent={() => (navigate(`/profile/${user?.id}`))}
 						src={user?.image}
 						avatarSx={{
-							border: '2px solid',
-							borderColor: getStatusColor(user?.status),
+							border: `2px solid ${getStatusColor(user?.status)}`,
 						}}
 					/>
-					<ClickTypography
-						onClick={() => (navigate(`/profile/${user?.id}`))}
-						sx={{
-							overflow: 'hidden',
-							textOverflow: 'ellipsis'
-						}}
-					>
-						{getUsername(user)}
-					</ClickTypography>
+					<Stack spacing={-1} >
+						<ClickTypography
+							color={(theme) => theme.palette.text.primary}
+							onClick={() => (navigate(`/profile/${user?.id}`))}
+							sx={{
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}
+						>
+							{getUsername(user)}
+						</ClickTypography>
+						<Typography
+							variant='caption'
+							color={'textSecondary'}
+							onClick={() => (navigate(`/profile/${user?.id}`))}
+							sx={{
+								cursor: 'default',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}
+						>
+							{getFullname(user)}
+						</Typography>
+					</Stack>
 					<Box flexGrow={1} />
 					<IconButton
 						onClick={() => { toggleChatStatus(ChatStatus.Bubble, undefined) }}
@@ -149,7 +239,7 @@ const ContentChat = () => {
 						<CancelIcon />
 					</IconButton>
         </Stack>
-        <Stack direction={'column'} sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '50vh' }}>
+        <Stack direction={'column'} sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '50vh' }} >
           <Stack
 						ref={messagesEndRef}
 						flexGrow={1}
@@ -160,7 +250,7 @@ const ContentChat = () => {
             border={2}
             borderColor={(theme) => theme.palette.primary.light}
             sx={{
-							maxHeight: 'calc(70vh - 130px)',
+							height: 'calc(70vh - 130px)',
               overflowY: 'auto',
               '&': {
                 scrollbarWidth: 'thin',
@@ -171,8 +261,20 @@ const ContentChat = () => {
               },
             }}
           >
-						<ContentChatMessages messageLog={chatProps.messages} />
+						<LoadingBox sx={{ display: chatProps.loading ? 'flex' : 'none' }} >
+							<CircularProgress size={70} />
+						</LoadingBox>
+						{renderMessages()}
           </Stack>
+					<StatusTypography
+						hidden={!Boolean(errorMessage)}
+						sx={{
+							alignSelf: 'center',
+							color: 'red',
+						}}
+					>
+						{errorMessage}
+					</StatusTypography>
         </Stack>
         <Stack
           direction={'row'}
@@ -192,6 +294,7 @@ const ContentChat = () => {
         >
           <InputBase
 						inputRef={inputRef}
+						disabled={isDisabled}
             sx={{
               flexGrow: 1,
               color: (theme) => theme.palette.secondary.main,
@@ -211,7 +314,7 @@ const ContentChat = () => {
 						onKeyDown={(event) => {
 							if (event.key === 'Enter' && !event.shiftKey) {
 								event.preventDefault();
-								onSend();
+								handleSend();
 							}
 						}}
             placeholder={inputRef.current?.value?.length ? undefined : 'Type a message...'}
@@ -219,7 +322,8 @@ const ContentChat = () => {
           <Button
             variant="contained"
             color="secondary"
-						onClick={onSend}
+						onClick={handleSend}
+						disabled={isDisabled}
             sx={{
               marginLeft: '0.5em',
               borderRadius: '0.8em',

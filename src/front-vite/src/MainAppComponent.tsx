@@ -7,8 +7,8 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { themeOptions } from './Styles/themeOptions';
 import { useUser } from './Providers/UserContext/User';
 import './mainAppComponent.css';
-import { Chat } from './Layout/Chat';
 import { ChatContextProvider } from './Providers/ChatContext/Chat';
+import Chat from './Layout/Chat';
 
 const mainAppComponent: React.FC = () => {
   const theme = createTheme(themeOptions);
@@ -19,12 +19,12 @@ const mainAppComponent: React.FC = () => {
       <CssBaseline />
       {user.id !== 0 && <HeaderBar />}
 			<ChatContextProvider>
+				{user.id !== 0 && <Chat />}
 				<Container maxWidth="xl">
 					<Box paddingTop={user.id === 0 ? '0em' : '3em'} bgcolor={theme.palette.primary.main}>
 						<Main />
 					</Box>
 				</Container>
-				{user.id !== 0 && <Chat />}
 			</ChatContextProvider>
       <Divider orientation="horizontal" sx={{ backgroundColor: theme.palette.background.default, width: '0.01em', minWidth: '100%' }} />
       <Footer />

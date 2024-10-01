@@ -5,6 +5,16 @@ import { ChannelMember, Channel, ChannelRoles } from "../../entities/chat.entity
 import { User } from "../../entities/user.entity";
 import { Repository } from "typeorm";
 
+export const allMemberRelations: string[] = [
+	'user',
+	'channel',
+	'channel.members',
+	'channel.members.user',
+	'channel.mutedUsers',
+	'channel.mutedUsers.user',
+	'channel.bannedUsers',
+];
+
 @Injectable()
 export class MemberService {
 	constructor(
@@ -12,7 +22,7 @@ export class MemberService {
 		private memberRespitory: Repository<ChannelMember>,
 	) {}
 
-	async getMembershipById(member: number | ChannelMember, requestedRelations: string[]): Promise<ChannelMember> {
+	async getMembershipById(member: number | ChannelMember, requestedRelations?: string[]): Promise<ChannelMember> {
 		const membership = await this.memberRespitory.findOne({
 			where: { id: typeof member === 'number' ?  member : member.id },
 			relations: requestedRelations,
@@ -21,7 +31,7 @@ export class MemberService {
 		return (membership);
 	}
 
-	async getMembershipByChannel(channelId: number, userId: number, requestedRelations: string[]): Promise<ChannelMember> {
+	async getMembershipByChannel(channelId: number, userId: number, requestedRelations?: string[]): Promise<ChannelMember> {
 		const membership = await this.memberRespitory.findOne({
 			where: {
 				user: { id: userId },

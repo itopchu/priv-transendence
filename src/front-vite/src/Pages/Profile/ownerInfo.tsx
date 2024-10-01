@@ -23,9 +23,8 @@ import {
 import { darken, alpha } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
 import { useChat } from '../../Providers/ChatContext/Chat';
-import { ChatStatus } from '../../Layout/Chat/InterfaceChat';
-import { handleError } from '../Channels/utils';
 import axios from "axios";
+import { handleChatInvite } from "../../Providers/ChatContext/utils";
 
 interface VisitedInfoProps {
   visitedUser: UserPublic | undefined;
@@ -219,33 +218,9 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   function handleGameInvite() {
     console.log("game invite");
   }
-
-  async function handleChatInvite() {
-		if (!visitedUser?.id || !chatProps.chats) return;
-
-		const chat = chatProps.chats.find((chat) => chat.user.id === visitedUser.id);
-		if (chat) {
-			changeChatProps({
-				selected: chat,
-				chatStatus: ChatStatus.Chatbox,
-			});
-			return;
-		}
-
-		try {
-			const response = await axios.post(`${BACKEND_URL}/chat/${visitedUser?.id}`, null, { withCredentials: true});
-			console.log(response);
-			const newChat = response.data.chat;
-			if (newChat) {
-				changeChatProps({
-					chats: [newChat],
-					selected: newChat,
-					chatStatus: ChatStatus.Chatbox,
-				});
-			}
-		} catch (error) {
-			handleError('Could not create chat:', error);
-		}
+  
+  function handleChatClick() {
+	handleChatInvite(visitedUser, chatProps, changeChatProps);
   }
 
   let imagePart = () => {
@@ -309,7 +284,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
               {friendshipAttitude !== FriendshipAttitude.restricted && (
                 <Grid item>
                   <IconButton
-                    onClick={handleChatInvite}
+                    onClick={handleChatClick}
                     sx={{
                       "&:hover": {
                         color: theme.palette.secondary.main,

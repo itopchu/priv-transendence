@@ -16,11 +16,13 @@ import {
 	UnauthorizedException,
 	Delete,
 	UseInterceptors,
-	UploadedFile
+	UploadedFile,
+    ParseEnumPipe
 } from '@nestjs/common';
 import { Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+    ChannelClientDTO,
 	ChannelPublicDTO,
 	CreateChannelDto,
 	MemberClientDTO,
@@ -33,7 +35,7 @@ import { ChannelService } from './channel.service';
 import { AuthGuard } from '../../auth/auth.guard';
 import { multerOptions } from '../../user/user.controller';
 import { ChatGateway, UpdateType } from '../chat.gateway';
-import { MemberService } from './member.service';
+import { allMemberRelations, MemberService } from './member.service';
 
 @Controller('channel')
 export class ChannelController {
@@ -72,15 +74,7 @@ export class ChannelController {
 	async getMembershipByChannel(@Req() req: Request, @Param('id', ParseIntPipe) channelId: number) {
 		const user = req.authUser;
 
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, [
-			'user',
-			'channel',
-			'channel.members',
-			'channel.members.user',
-			'channel.mutedUsers',
-			'channel.mutedUsers.user',
-			'channel.bannedUsers',
-		]);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, allMemberRelations);
 		if (!membership) {
 			throw new NotFoundException("Membership not found");
 		}
@@ -99,10 +93,14 @@ export class ChannelController {
 		return ({ memberships: clientMemberships });
 	}
 
-	@Get('public')
-	async getPublicChannels() {
+	@Get('public/:type')
+	@UseGuards(AuthGuard)
+	async getPublicChannels(@Param('type', new ParseEnumPipe(ChannelType)) channelType: ChannelType) {
+		if (channelType === ChannelType.private) {
+			throw new UnauthorizedException('Unauthorized: Cannot GET private channels');
+		}
 		try {
-			const channels = await this.channelService.getPublicChannels();
+			const channels = await this.channelService.getPublicChannels(channelType);
 
 			const publicChannels = channels.map(channel => new ChannelPublicDTO(channel));
 			return ({ channels: publicChannels });
@@ -120,8 +118,10 @@ export class ChannelController {
 	) {
 		const user = req.authUser;
 
-		await this.channelService.joinChannel(user, channelId, password);
+		const newMembership = await this.channelService.joinChannel(user, channelId, password);
 		this.channelGateway.emitMemberJoined(channelId, user.id);
+		const newMembershipWithRel = await this.memberService.getMembershipById(newMembership.id, allMemberRelations);
+		return ({ membership: new MemberClientDTO(newMembershipWithRel) });
 	}
 
 	@Post('create')
@@ -145,6 +145,8 @@ export class ChannelController {
 				this.channelGateway.emitPublicChannelUpdate(publicChannel, UpdateType.updated);
 			}
 			this.channelGateway.emitMemberJoined(newChannel.id, user.id);
+			const newMembership= await this.memberService.getMembershipByChannel(newChannel.id, user.id, allMemberRelations);
+			return ({ membership: new MemberClientDTO(newMembership) });
 		} catch(error) {
 			throw new InternalServerErrorException(`Channel creation failed: ${error.message}`);
 		}

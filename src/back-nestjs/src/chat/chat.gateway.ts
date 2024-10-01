@@ -16,6 +16,18 @@ export enum UpdateType {
 	updated = 'updated',
 }
 
+export enum RoomInitials {
+	channelMessage = 'channel#',
+	channelUpdate = 'channelUpdate#',
+	publicUpdate = 'channelPublicUpdate',
+}
+
+type emitUpdateDTO<Type> = {
+	id: number,
+	content?: Type,
+	updateType: UpdateType,
+}
+
 @WebSocketGateway(3001, { cors: { origin: "*" } })
 export class ChatGateway {
 	constructor(private readonly userService: UserService,
@@ -67,6 +79,9 @@ export class ChatGateway {
 			const rooms = Array.from(client.rooms);
 			rooms.forEach(room => {
 				client.leave(room);
+				if (room.slice(0, RoomInitials.channelUpdate.length) === RoomInitials.channelUpdate) {
+					this.emitOnlineMembers(room);
+				}
 			});
 		}
 		console.log('Client disconnected from channels:', user?.nameFirst, client.id);
@@ -79,7 +94,17 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 		
-		client.join('channelPublicUpdate');
+		client.join(RoomInitials.publicUpdate);
+	}
+
+	@SubscribeMessage('unsubscribePublicChannel')
+	async onUnsubscribePublicUpdate(@ConnectedSocket() client: UserSocket) {
+		const user = client.authUser;
+		if (!user) {
+			throw new UnauthorizedException('Unauthorized: User not found');
+		}
+		
+		client.leave(RoomInitials.publicUpdate);
 	}
 
 	@SubscribeMessage('joinChannel')
@@ -89,13 +114,12 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, []);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
 		if (!membership) {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
 
-		client.join(`channel#${channelId}`);
-		client.join(`channelUpdate#${channelId}`);
+		this.handleChannelJoinLeave(channelId, client, 'join');
 		client.emit(`newChannelUpdate`, {
 			channelId,
 			content: new MemberClientDTO(membership),
@@ -116,8 +140,7 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: Membership not found');
 		}
 
-		client.join(`channel#${channelId}`);
-		client.join(`channelUpdate#${channelId}`);
+		this.handleChannelJoinLeave(channelId, client, 'join');
 		console.log(`${user.nameFirst} has subscribed to channel ${membership.channel.name}`);
 	}
 
@@ -130,42 +153,44 @@ export class ChatGateway {
 		
 		if (channelId === -1) {
 			const rooms = Array.from(client.rooms);
-			const roomInitial = 'channel';
+			console.log('leave all');
 
 			rooms.forEach(room => {
-				if (room.slice(0, roomInitial.length) === roomInitial) {
+				if (room.slice(0, RoomInitials.channelUpdate.length) === RoomInitials.channelUpdate) {
+					client.leave(room);
+					this.emitOnlineMembers(room);
+				} else if (room.slice(0, RoomInitials.channelMessage.length) === RoomInitials.channelMessage) {
 					client.leave(room);
 				}
 			});
 		} else {
-			client.leave(`channelUpdate#${channelId}`);
-			client.leave(`channel#${channelId}`);
+			this.handleChannelJoinLeave(channelId, client, 'leave');
 		}
 	}
 
 	@SubscribeMessage('message')
 	async onMessage(@MessageBody() data: { message: string, channelId: number }, @ConnectedSocket() client: UserSocket) {
-		const user = client.authUser;
-		if (!user) {
-			throw new UnauthorizedException('Unauthorized: User not found');
-		}
-
 		try {
+			const user = client.authUser;
+			if (!user) {
+				throw new UnauthorizedException('Unauthorized: User not found');
+			}
+
 			const message = await this.channelService.logMessage(data.channelId, user, data.message);
-			this.server.to(`channel#${data.channelId}`).emit(`channel#${data.channelId}Message`, new MessagePublicDTO(message));
+			this.emitChannelMessageUpdate(data.channelId, new MessagePublicDTO(message), UpdateType.updated);
 		} catch (error) {
 			client.emit('messageError', error.message);
 		}
 	}
 
-  @SubscribeMessage('sendDirectMessage')
-  async directMessage(client: UserSocket, payload: { chatId: number, content: string }) {
-    const user = client.authUser;
-    if (!user) {
-      throw new UnauthorizedException('Unauthorized: User not found');
-    }
-
+  @SubscribeMessage('sendChatMessage')
+  async onChatMessage(client: UserSocket, payload: { chatId: number, content: string }) {
 	try {
+		const user = client.authUser;
+		if (!user) {
+		  throw new UnauthorizedException('Unauthorized: User not found');
+		}
+
 		const chat = await this.chatService.getChatById(payload.chatId, ['users']);
 		if (!chat) {
 			throw new NotFoundException('Chat not found');
@@ -177,30 +202,49 @@ export class ChatGateway {
 		}
 
 		const relationship = await this.userService.getUserFriendship(user, recipient);
-		const isRestricted = !relationship ? false : relationship.user1.id === user.id
-			? relationship.user1Attitude === FriendshipAttitude.restricted
-			: relationship.user2Attitude === FriendshipAttitude.restricted
-		if (isRestricted) {
-			throw new UnauthorizedException('Unauthorized: User is blocked');
+		if (relationship) {
+			if (relationship.user1Attitude === FriendshipAttitude.restricted) {
+				throw new UnauthorizedException(`Unauthorized: ${relationship.user1.nameFirst} is blocked`);
+			}
+			if (relationship.user2Attitude === FriendshipAttitude.restricted) {
+				throw new UnauthorizedException(`Unauthorized: ${relationship.user2.nameFirst} is blocked`);
+			}
 		}
 
 		const message = await this.chatService.logMessage(chat.id, user, payload.content);
 		const publicMessage = new MessagePublicDTO(message);
-		const messageData = {
-			chatId: chat.id,
-			message: publicMessage,
-		}
-		const recipientSocket = this.connectedUsers.get(recipient?.id);
-		if (recipientSocket) {
-			recipientSocket.emit('directMessage', messageData);
-		}
-		client.emit('directMessage', messageData);
-		//client.emit('messageSent', message.timestamp);
+		this.emitChatMessageUpdate(chat, publicMessage, UpdateType.updated);
 	} catch(error) {
-		console.log(error);
-		client.emit('directMessageError', error.message);
+		client.emit('chatMessageError', error.message);
 	}
   }
+	
+	handleChannelJoinLeave(channelId: number, client: UserSocket, action: 'join' | 'leave') {
+		const room = `${RoomInitials.channelUpdate}${channelId}`; 
+
+		if (action === 'join') {
+			client.join(room);
+			client.join(`${RoomInitials.channelMessage}${channelId}`);
+		} else {
+			client.leave(room);
+			client.leave(`${RoomInitials.channelMessage}${channelId}`);
+		}
+		this.emitOnlineMembers(room, channelId);
+	}
+
+	emitOnlineMembers(room: string, channelId?: number) {
+		const onlineMembersCount = this.server.sockets.adapter.rooms.get(room)?.size || 0
+
+		if (!channelId) {
+			channelId = Number(room.slice(RoomInitials.channelUpdate.length));
+		}
+
+		this.server.to(room).emit('onlineMembersCount', {
+			id: channelId,
+			content: onlineMembersCount,
+			updateType: UpdateType.updated
+		});
+	}
 
 	emitNewChat(chat: Chat) {
 		const recipient = chat.users[1];
@@ -211,40 +255,65 @@ export class ChatGateway {
 		}
 	}
 
+	emitChannelMessageUpdate(channelId: number, content: MessagePublicDTO, updateType: UpdateType) {
+		this.server.to(`${RoomInitials.channelMessage}${channelId}`)
+			.emit(`newChannel${channelId}MessageUpdate`, { id: channelId, content, updateType });
+	}
+
+	async emitChatMessageUpdate(
+		chat: Chat,
+		content: MessagePublicDTO,
+		updateType: UpdateType,
+	) {
+		if (!chat.users) {
+			chat = await this.chatService.getChatById(chat.id, ['users']);
+		}
+		const user1Socket = this.connectedUsers.get(chat.users[0].id);
+		const user2Socket = this.connectedUsers.get(chat.users[1].id);
+		
+		if (user1Socket) {
+			user1Socket.emit('newChatMessageUpdate', { id: chat.id, content, updateType });
+		}
+		if (user2Socket) {
+			user2Socket.emit('newChatMessageUpdate', { id: chat.id, content, updateType });
+		}
+	}
+
 	emitMemberUpdate(channelId: number, updateType: UpdateType) {
-		this.server.to(`channelUpdate#${channelId}`).emit(`newChannelUpdate`, { channelId, updateType });
+		this.server.to(`${RoomInitials.channelUpdate}${channelId}`)
+			.emit(`newChannelUpdate`, { id: channelId, updateType });
 	}
 
 	emitPublicChannelUpdate(content: ChannelPublicDTO, updateType: UpdateType) {
-		this.server.to('channelPublicUpdate').emit('newPublicChannelUpdate', { content, updateType });
+		this.server.to(RoomInitials.publicUpdate)
+			.emit('newPublicChannelUpdate', { id: content.id, content, updateType });
 	}
 	
 	emitToClientUpdate(userId: number, channelId: number, updateType: UpdateType) {
 		const userSocket = this.connectedUsers.get(userId);
 		if (!userSocket) return;
 
-		userSocket.emit(`channelUpdate#${channelId}`, { channelId, updateType });
+		userSocket.emit(`${RoomInitials.channelUpdate}${channelId}`, { id: channelId, updateType });
 	}
 
 	emitToClientPublicUpdate(userId: number, content: ChannelPublicDTO, updateType: UpdateType) {
 		const userSocket = this.connectedUsers.get(userId);
 		if (!userSocket) return;
 
-		userSocket.emit('channelPublicUpdate', { content, updateType });
+		userSocket.emit(RoomInitials.publicUpdate, { id: content.id, content, updateType });
 	}
 
 	emitChannelDeleted(channelId: number) {
 		this.emitMemberUpdate(channelId, UpdateType.deleted);
-		this.server.socketsLeave(`channelUpdate#${channelId}`);
-		this.server.socketsLeave(`channel#${channelId}`);
+		this.server.socketsLeave(`${RoomInitials.channelUpdate}${channelId}`);
+		this.server.socketsLeave(`${RoomInitials.channelMessage}${channelId}`);
 	}
 
 	emitMemberJoined(channelId: number, userId: number) {
 		const userSocket = this.connectedUsers.get(userId);
 
 		if (userSocket) {
-			userSocket.join(`channelUpdate#${channelId}`);
-			userSocket.join(`channel#${channelId}`);
+			this.handleChannelJoinLeave(channelId, userSocket, 'join');
 		}
 		this.emitMemberUpdate(channelId, UpdateType.updated);
 	}
@@ -253,9 +322,8 @@ export class ChatGateway {
 		const userSocket = this.connectedUsers.get(userId);
 
 		if (userSocket) {
-			userSocket.leave(`channelUpdate#${channelId}`);
-			userSocket.leave(`channel#${channelId}`);
-			userSocket.emit('newChannelUpdate', { channelId, UpdateType: UpdateType.deleted });
+			this.handleChannelJoinLeave(channelId, userSocket, 'leave');
+			userSocket.emit('newChannelUpdate', { id: channelId, UpdateType: UpdateType.deleted });
 		}
 		this.emitMemberUpdate(channelId, UpdateType.updated);
 	}

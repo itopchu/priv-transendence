@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Chat, Message, Channel } from "../../entities/chat.entity";
 import { User } from "../../entities/user.entity";
@@ -19,6 +19,15 @@ export class MessageService {
 		.getMany();
 
 		return (log);
+	}
+
+	async getMessageById(msgId: number, requestedRelations?: string[]) {
+		const msg = await this.messageRespitory.findOne({
+			where: { id: msgId },
+			relations: requestedRelations,
+		})
+
+		return (msg);
 	}
 
 	async createMessage(chat: Chat | Channel, author: User, message: string) {
@@ -44,9 +53,24 @@ export class MessageService {
 		}
 	}
 
+	async validateMessage(user: User, msgId: number) {
+		const msg = await this.getMessageById(msgId, ['author', 'channel', 'chat']);
+		if (!msg) {
+			throw new NotFoundException('Message not found');
+		}
+		if (msg.author.id !== user.id) {
+			throw new UnauthorizedException('Unauthorized: User is not the author');
+		}
+		return (msg);
+	}
+
 	async removeMessages(messages: Message[]) {
 		if (!messages.length) return;
 
 		await this.messageRespitory.remove(messages);
+	}
+
+	async editMessage(msgId: number, newContent: string) {
+		await this.messageRespitory.update(msgId, { content: newContent, edited: true });
 	}
 }

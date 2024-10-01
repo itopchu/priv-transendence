@@ -1,15 +1,21 @@
-import { Box, Divider, styled, TextField } from "@mui/material";
+import { Box, Divider, styled, SxProps, Theme } from "@mui/material";
 import { CustomScrollBox } from "../Components/Components";
 
-export const SettingsTextField = styled(TextField)(() => ({
+export const SettingsTextFieldSx = (theme: Theme): SxProps<Theme> => ({
+	'& input': {
+		textAlign: 'center',
+		[theme.breakpoints.up('sm')]: {
+			textAlign: 'left',
+		},
+	},
   '& .MuiInputBase-input': {
     padding: '0px 4px',
     fontSize: '1.5rem',
     fontWeight: 'bold',
-    lineheight: 1.334,
-    letterspacing: '0em',
+    lineHeight: 1.334,
+    letterSpacing: '0em',
   },
-}));
+})
 
 export const SettingsContainer = styled(CustomScrollBox)(({ theme }) => ({
   position: 'relative',
@@ -17,7 +23,6 @@ export const SettingsContainer = styled(CustomScrollBox)(({ theme }) => ({
   backgroundColor: theme.palette.primary.light,
   display: 'flex',
   flexDirection: 'column',
-  padding: theme.spacing(2),
 }));
 
 export const SettingsDivider = styled(Divider)(() => ({

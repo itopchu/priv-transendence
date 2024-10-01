@@ -6,20 +6,11 @@ import {
   Button,
   TextField,
   ButtonGroup,
-  IconButton,
   Typography,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
-import {
-  ChannelRole,
-  ChannelType,
-  ChannelTypeValues,
-  useChannel,
-} from '../../../Providers/ChannelContext/Channel';
-import {
-	ModeEdit as EditIcon,
-  EditOff as EditOffIcon,
-  Check as ApplyEditIcon,
-} from '@mui/icons-material';
+import { useChannel } from '../../../Providers/ChannelContext/Channel';
 import {
   AvatarUploadIcon,
   ImageInput,
@@ -27,16 +18,34 @@ import {
   DescriptionBox,
   lonelyBox,
   CustomAvatar,
+  PasswordTextField,
 } from '../Components/Components';
+import {
+		PeopleRounded as DefaultChannelIcon,
+        Height,
+} from '@mui/icons-material'
 import { BACKEND_URL, getUsername, handleError, onFileUpload } from '../utils';
-import { SettingsContainer, SettingsDivider, SettingsTextField } from '../Components/SettingsComponents';
-import { ChannelDataType, SettingsBoxType } from './Types';
+import { SettingsDivider, SettingsTextFieldSx } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
 import { SettingsUserCardBox } from '../Components/SettingsComponents';
 import { BannedUserCards } from './BannedUserCards';
+import { ChannelMember, ChannelRole, ChannelType, ChannelTypeValues } from '../../../Providers/ChannelContext/Types';
+import { ChannelDetailsHeader } from '../Headers/ChannelDetailsHeader';
+
+export type ChannelDataType = {
+  image: File | undefined;
+  type: ChannelType | undefined;
+};
+
+export interface SettingsBoxType {
+  membership: ChannelMember | undefined;
+};
 
 export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 	if (!membership) return (lonelyBox());
+
+	const	theme = useTheme()
+	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
 	const { changeProps } = useChannel();
 	const [editMode, setEditMode] = useState(false);
@@ -162,37 +171,44 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
     }
   };
 
+	const ChannelStatus = () => (
+		<Typography
+			alignSelf={isSmallScreen ? 'center' : undefined}
+			variant="body1"
+			color={'textSecondary'}
+		>
+			{`${channel.type} • ${members.length}\
+				${members.length > 1 ? 'members' : 'member'}`}
+		</Typography>
+	);
+
   const ChannelDetails = () => (
     <>
       <Stack
-        direction={'row'}
+        direction={isSmallScreen ? 'column' : 'row'}
         justifyContent={'center'}
         spacing={3}
         alignItems={'center'}
       >
         <CustomAvatar
           src={channel.image}
-          sx={{
-            height: '7em',
-            width: '7em',
-          }}
-        />
+          sx={{ height: '7em', width: '7em' }}
+        >
+					{!channel.image && <DefaultChannelIcon sx={{ height: '4em', width: '4em' }} />}
+				</CustomAvatar>
 
         <Stack>
           <Typography variant="h5" fontWeight="bold">
             {channel.name}
           </Typography>
-
-          <Typography variant="body1" color={'textSecondary'}>
-            {`${channel.type} • ${members.length}\
-							${members.length > 1 ? 'members' : 'member'}`}
-          </Typography>
+          <ChannelStatus />
         </Stack>
       </Stack>
 
       <DescriptionBox sx={{ width: '65%',  minWidth: '20em' }}>
         <Typography
 					sx={{
+						overflowY: 'auto',
 						wordBreak: 'break-word',
 						whiteSpace: 'pre-wrap',
 					}}
@@ -224,48 +240,45 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
   const EditChannelDetail = () => (
     <>
       <Stack
-        direction={'row'}
+        direction={isSmallScreen ? 'column' : 'row'}
         justifyContent={'center'}
         spacing={3}
         alignItems={'center'}
       >
         <UploadAvatar
           src={avatarSrc}
-          avatarSx={{
-            height: '7em',
-            width: '7em',
-          }}
+					defaultIcon={<DefaultChannelIcon sx={{ height: '4em', width: '4em' }} />}
+          avatarSx={{ height: '7em', width: '7em' }}
         >
           <AvatarUploadIcon className="hidden-icon" />
           <ImageInput onFileInput={(file: File) => onFileUpload(file, changeChannelData, setAvatarSrc)} />
         </UploadAvatar>
         <Stack spacing={1}>
-          <SettingsTextField
+          <TextField
             inputRef={nameRef}
             variant="standard"
+						sx={SettingsTextFieldSx(theme)}
             placeholder={
               nameRef.current?.value.length
                 ? undefined
                 : 'Enter channel name...'
             }
           />
-          {isAdmin && (
-            <>
-              {(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
-                <SettingsTextField
-                  inputRef={passwordRef}
-                  variant="standard"
-                  placeholder={
-                    passwordRef.current?.value.length
-                      ? undefined
-                      : 'Enter a password...'
-                  }
-                  type="password"
-                />
-              )}
-              {generateButtonGroup()}
-            </>
-          )}
+          {isAdmin
+						? (
+							<>
+								{(channelData.type ? channelData.type : channel.type) === ChannelType.protected && (
+									<PasswordTextField
+										ref={passwordRef}
+										sx={SettingsTextFieldSx(theme)}
+										variant="standard"
+									/>
+								)}
+								{generateButtonGroup()}
+							</>
+          ) : (
+						<ChannelStatus />
+					)}
         </Stack>
       </Stack>
       <DescriptionBox sx={{ width: '65%' }}>
@@ -275,6 +288,12 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
           fullWidth
           multiline
           maxRows={4}
+					sx={{
+						flexGrow: 1,
+						'& textarea': {
+							textAlign: 'center',
+						},
+					}}
           placeholder={
             descriptionRef.current?.value === ''
               ? undefined
@@ -286,31 +305,43 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
   );
 
   return (
-    <SettingsContainer>
-      <Stack direction={'row'} padding={0}>
-        <Stack
-          padding={2}
-          spacing={3}
-          alignItems="center"
-          minWidth={'calc(100% - 48px)'}
-        >
-          {editMode ? EditChannelDetail() : ChannelDetails()}
+		<Stack
+			sx={{
+				height: '80vh',
+				bgcolor: theme.palette.primary.light,
+				overflowX: 'hidden',
+			}}
+		>
+			<ChannelDetailsHeader
+				isMod={isMod}
+				editMode={editMode}
+				onEditClick={() => toggleEditMode()}
+				onApplyClick={() => onApply()}
+			/>
+			<Stack direction={'row'}>
+				<Stack
+					flexGrow={1}
+					paddingY={5}
+					spacing={3}
+					alignItems="center"
+				>
+					{editMode ? EditChannelDetail() : ChannelDetails()}
 
-          <SettingsDivider>Members</SettingsDivider>
+					<SettingsDivider>Members</SettingsDivider>
 
-          <SettingsUserCardBox>
-            <Stack spacing={1}>
-              <MemberCards
-                channel={channel}
-                members={members}
-                editMode={editMode}
-                isAdmin={isAdmin}
-                isMod={isMod}
-              />
-            </Stack>
-          </SettingsUserCardBox>
+					<SettingsUserCardBox>
+						<Stack spacing={1}>
+							<MemberCards
+								channel={channel}
+								members={members}
+								editMode={editMode}
+								isAdmin={isAdmin}
+								isMod={isMod}
+							/>
+						</Stack>
+					</SettingsUserCardBox>
 
-          {isAdmin && editMode && bannedUsers.length !== 0 && (
+					{isAdmin && editMode && bannedUsers.length !== 0 && (
 						<>
 							<SettingsDivider>Banned Members</SettingsDivider>
 							<SettingsUserCardBox>
@@ -337,24 +368,8 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 							{`${editMode && isAdmin ? 'Delete' : 'Leave'} Channel`}
 						</Button>
 					</Box>
-        </Stack>
-
-				{isMod && (
-					<Box sx={{ alignSelf: 'flex-start' }}>
-						<IconButton onClick={toggleEditMode}>
-								{editMode
-									? <EditOffIcon sx={{ fontSize: '36px' }} />
-									: <EditIcon sx={{ fontSize: '36px' }} />
-								}
-						</IconButton>
-						{editMode && (
-							<IconButton onClick={onApply}>
-								<ApplyEditIcon sx={{ fontSize: '36px' }} />
-							</IconButton>
-						)}
-					</Box>
-				)}
-      </Stack>
-    </SettingsContainer>
-  );
+				</Stack>
+			</Stack>
+		</Stack>
+	);
 };

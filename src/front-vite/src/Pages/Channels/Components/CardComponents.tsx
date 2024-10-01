@@ -28,7 +28,7 @@ export const CenteredCard = styled(Card)(({ theme }) => ({
   zIndex: 13000,
 }));
 
-export const LoadingBox = styled(Box)(() => ({
+export const CardLoadingBox = styled(Box)(() => ({
 	position: 'absolute',
 	top: 0,
 	left: 0,
@@ -40,7 +40,7 @@ export const LoadingBox = styled(Box)(() => ({
 	overflow: 'visible',
 }));
 
-export const Overlay = styled(Box)(({}) => ({
+export const CardOverlay = styled(Box)(({}) => ({
   position: 'fixed',
 	top: 0,
 	left: 0,

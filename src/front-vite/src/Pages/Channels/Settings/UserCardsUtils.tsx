@@ -3,21 +3,45 @@ import { FriendshipAttitude, FriendshipAttitudeBehaviour } from "../../Profile/o
 import { handleError, BACKEND_URL, getUsername } from "../utils";
 import { User } from "../../../Providers/UserContext/User";
 import { MenuItem } from "@mui/material";
-import { ChatProps, ChatStatus } from "../../../Layout/Chat/InterfaceChat";
+import { useEffect } from "react";
 
 export async function getFriendshipAttitude(
 	id: number,
 	setFunc: React.Dispatch<React.SetStateAction<FriendshipAttitude>>,
+	controller: AbortController,
 ) {
 	try {
-		const response = await axios.get(`${BACKEND_URL}/user/friendship/${id}`, { withCredentials: true });
+		const response = await axios.get(`${BACKEND_URL}/user/friendship/${id}`, {
+				withCredentials: true,
+				signal: controller.signal,
+			}
+		);
+		console.log(response);
 		if (response.data.friendshipAttitude) {
 			setFunc(response.data.friendshipAttitude);
 		}
 	} catch (error) {
-		console.error(`Relationship not found:${error}`)
+		if (!axios.isCancel(error)) {
+			console.error(`Relationship not found:${error}`)
+		}
 	}
 }
+
+export const useFriendshipAttitude = (
+	id: number | null,
+	setFunc: React.Dispatch<React.SetStateAction<FriendshipAttitude>>,
+) => {
+	useEffect(() => {
+		if (!id) return;
+
+		const controller = new AbortController();
+		getFriendshipAttitude(id, setFunc, controller);
+
+		return () => {
+			controller.abort;
+		};
+	}, [id]);
+};
 
 export async function postStatus(
 	id: number,
@@ -63,16 +87,7 @@ export const userRelationMenuItems = (
 						menuCloseFunc();
 					}}
 				>
-					{`Unfriend ${username}`}
-				</MenuItem>),
-				(<MenuItem
-					key={FriendshipAttitudeBehaviour.restrict}
-					onClick={() => {
-						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
-						menuCloseFunc();
-					}}
-				>
-					{`Block ${username}`}
+					Remove friend
 				</MenuItem>),
 			]);
 		case FriendshipAttitude.pending:
@@ -85,15 +100,6 @@ export const userRelationMenuItems = (
 					}}
 				>
 					Withdraw Friend Request
-				</MenuItem>),
-				(<MenuItem
-					key={FriendshipAttitudeBehaviour.restrict}
-					onClick={() => {
-						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
-						menuCloseFunc();
-					}}
-				>
-					{`Block ${username}`}
 				</MenuItem>),
 			]);
 		case FriendshipAttitude.awaiting:
@@ -115,15 +121,6 @@ export const userRelationMenuItems = (
 					}}
 				>
 					Decline Friend Request
-				</MenuItem>),
-				(<MenuItem
-					key={FriendshipAttitudeBehaviour.restrict}
-					onClick={() => {
-						postStatus(user.id, setFunc, FriendshipAttitudeBehaviour.restrict);
-						menuCloseFunc();
-					}}
-				>
-					{`Block ${username}`}
 				</MenuItem>),
 			]);
 		default:
@@ -147,36 +144,5 @@ export const userRelationMenuItems = (
 					{`Block ${username}`}
 				</MenuItem>),
 			]);
-	}
-}
-
-export async function onSendMessage(
-	user: User,
-	chatProps: ChatProps,
-	menuCloseFunc: () => void,
-	changeChatProps: (newProps: Partial<ChatProps>) => void,
-) {
-	const chat = chatProps.chats.find((chat) => chat.user.id === user.id);
-	if (chat) {
-		changeChatProps({
-			selected: chat,
-			chatStatus: ChatStatus.Chatbox,
-		});
-		return;
-	}
-
-	try {
-		const response = await axios.post(`${BACKEND_URL}/chat/${user?.id}`, null, { withCredentials: true});
-		const newChat = response.data.chat;
-		if (newChat) {
-			changeChatProps({
-				chats: [newChat],
-				selected: newChat,
-				chatStatus: ChatStatus.Chatbox,
-			});
-		}
-		menuCloseFunc();
-	} catch (error) {
-		handleError('Could not create chat:', error);
 	}
 }

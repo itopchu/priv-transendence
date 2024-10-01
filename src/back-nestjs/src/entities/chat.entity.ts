@@ -138,4 +138,9 @@ export class Message {
 
 	@Column()
 	content: string;
+
+	@Column({
+		default: false,
+	})
+	edited: boolean;
 }

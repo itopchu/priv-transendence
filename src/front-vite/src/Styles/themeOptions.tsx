@@ -7,7 +7,7 @@ export const themeOptions: ThemeOptions = {
       main: '#3d4675', // Was '#3f51b5'
     },
     secondary: {
-      main: '#FAFCF8', // Was '#FFA500'
+      main: '#d1d1d1', // Was '#FFA500'
     },
   },
 };

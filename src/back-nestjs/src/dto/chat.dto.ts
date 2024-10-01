@@ -4,41 +4,40 @@ import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute 
 import { UserClient, UserPublicDTO } from './user.dto';
 import { Type } from 'class-transformer';
 
-
 export class CreateChannelDto {
   @IsString()
-  @IsNotEmpty()
+	@IsNotEmpty({ message: 'Channel Name must not be empty' })
   name: string;
 
   @IsString()
   @IsOptional()
-  @IsNotEmpty()
+	@IsNotEmpty({ message: 'Channel Password must not be empty' })
   password?: string;
 
   @IsString()
-  @IsNotEmpty()
+	@IsNotEmpty({ message: 'Channel Type must not be empty' })
   type: ChannelType;
 }
 
 export class UpdateChannelDto extends PartialType(PickType(Channel, ['type', 'name', 'password', 'description'] as const)) {
 	@IsEnum(ChannelType)
 	@IsOptional()
-	@IsNotEmpty()
+	@IsNotEmpty({  message: 'Channel Type must not be empty' })
 	type?: ChannelType;
 
 	@IsString()
 	@IsOptional()
-	@IsNotEmpty()
+	@IsNotEmpty({ message: 'Channel Name must not be empty' })
 	name?: string;
 
 	@IsString()
 	@IsOptional()
-	@IsNotEmpty()
+	@IsNotEmpty({ message: 'Channel Password must not be empty' })
 	password?: string;
 
 	@IsString()
 	@IsOptional()
-	@IsNotEmpty()
+	@IsNotEmpty({ message: 'Channel Description must not be empty' })
 	description?: string;
 }
 
@@ -47,6 +46,11 @@ export class UpdateMemberDto extends PartialType(PickType(ChannelMember, ['role'
 	@IsOptional()
 	@IsNotEmpty()
 	role?: ChannelRoles;
+}
+
+export class UpdateMessageDto extends PartialType(PickType(Message, ['content'] as const)) {
+	@IsNotEmpty({ message: 'Content must not be empty' })
+	content: string;
 }
 
 export class MutePublicDTO {
@@ -98,6 +102,7 @@ export class MessagePublicDTO {
 		this.timestamp = message.timestamp;
 		this.author = new UserPublicDTO(message.author, null);
 		this.content = message.content;
+		this.edited = message.edited;
 	}
 
 	@IsNumber()
@@ -115,6 +120,9 @@ export class MessagePublicDTO {
 	@IsString()
 	@IsNotEmpty()
 	content: string;
+
+	@IsBoolean()
+	edited: boolean
 }
 
 export class ChannelPublicDTO {
