@@ -21,7 +21,8 @@ import {
   PasswordTextField,
 } from '../Components/Components';
 import {
-		People as DefaultChannelIcon,
+		PeopleRounded as DefaultChannelIcon,
+        Height,
 } from '@mui/icons-material'
 import { BACKEND_URL, getUsername, handleError, onFileUpload } from '../utils';
 import { SettingsDivider, SettingsTextFieldSx } from '../Components/SettingsComponents';
@@ -192,7 +193,9 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
         <CustomAvatar
           src={channel.image}
           sx={{ height: '7em', width: '7em' }}
-        />
+        >
+					{!channel.image && <DefaultChannelIcon sx={{ height: '4em', width: '4em' }} />}
+				</CustomAvatar>
 
         <Stack>
           <Typography variant="h5" fontWeight="bold">
@@ -244,9 +247,9 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
       >
         <UploadAvatar
           src={avatarSrc}
+					defaultIcon={<DefaultChannelIcon sx={{ height: '4em', width: '4em' }} />}
           avatarSx={{ height: '7em', width: '7em' }}
         >
-					{!avatarSrc && <DefaultChannelIcon />}
           <AvatarUploadIcon className="hidden-icon" />
           <ImageInput onFileInput={(file: File) => onFileUpload(file, changeChannelData, setAvatarSrc)} />
         </UploadAvatar>

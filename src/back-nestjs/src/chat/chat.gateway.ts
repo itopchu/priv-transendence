@@ -257,7 +257,7 @@ export class ChatGateway {
 
 	emitChannelMessageUpdate(channelId: number, content: MessagePublicDTO, updateType: UpdateType) {
 		this.server.to(`${RoomInitials.channelMessage}${channelId}`)
-			.emit('newChannelMessageUpdate', { id: channelId, content, updateType });
+			.emit(`newChannel${channelId}MessageUpdate`, { id: channelId, content, updateType });
 	}
 
 	async emitChatMessageUpdate(

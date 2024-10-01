@@ -217,13 +217,11 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 		</Stack>
   );
   let generateChannels = () => {
-		if (!channelProps.memberships.length) return;
-
 		const isMyChannels = channelLineProps.filter === ChannelFilters.myChannels;
-		const channels = searchRef.current
-			? searchRef.current.value.length ? filteredChannels
-				: channelLineProps.channels
+		const channels = searchRef.current?.value.length
+			? filteredChannels
 			: channelLineProps.channels
+		if (!channels.length) return;
 
 		return (
 			<Stack gap={1}>

@@ -31,23 +31,6 @@ interface IHeaderIconButtonType {
 	onClick?: () => void;
 }
 
-interface IAvatarButton {
-	src?: string;
-	clickEvent?: () => void;
-	children?: ReactNode;
-	avatarSx?: object;
-	sx?: object;
-}
-
-interface ISearchBar {
-	sx?: object;
-	boxSx?: object;
-	style?: object;
-	value?: string;
-	ref?: any;
-	inputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-}
-
 interface IImageInput {
 	children?: ReactNode;
 	onFileInput?: (file: File) => void;
@@ -146,37 +129,49 @@ export const LoadingBox = styled(Box)(() => ({
 	overflow: 'visible',
 }));
 
-export const ButtonAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx }) => {
+interface IAvatarButton {
+	src?: string;
+	clickEvent?: () => void;
+	children?: ReactNode;
+	avatarSx?: object;
+	defaultIcon?: ReactElement;
+	sx?: object;
+}
+
+export const ButtonAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx, defaultIcon}) => {
 	return (
 		<Button
 			aria-label="Avatar Button"
 		  component="label"
 		  onClick={clickEvent}
 		  sx={{
-			aspectRatio: '1:1',
-			padding: 0,
-			borderRadius: '50%',
-			minWidth: 'fit-content',
-			minHeight: 'fit-content',
-			width: 'fit-content',
-			height: 'fit-content',
-			'.image-profile': {
-			  transition: 'filter 0.3s ease',
-			},
-			...sx
-		  }}
+				aspectRatio: '1:1',
+				padding: 0,
+				borderRadius: '50%',
+				minWidth: 'fit-content',
+				minHeight: 'fit-content',
+				width: 'fit-content',
+				height: 'fit-content',
+				'.image-profile': {
+					transition: 'filter 0.3s ease',
+				},
+				...sx
+			}}
 		>
-		  <CustomAvatar className="image-profile" src={src} sx={{ ...avatarSx }} />
+		  <CustomAvatar className="image-profile" src={src} sx={{ ...avatarSx }} >
+				{!src && defaultIcon}
+			</CustomAvatar>
 		  {children}
 		</Button>
 	);
 }
 
-export const UploadAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx }) => (
+export const UploadAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx, defaultIcon }) => (
 	<ButtonAvatar
 		src={src}
 		clickEvent={clickEvent}
 		avatarSx={avatarSx}
+		defaultIcon={defaultIcon}
 		sx={{
 			'&:hover .image-profile': {
 			  filter: 'brightness(50%) blur(2px)',
@@ -248,7 +243,18 @@ export const lonelyBox = () => {
 	);
 }
 
-export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, style, value, inputChange }, ref) => (
+interface ISearchBar {
+	sx?: object;
+	boxSx?: object;
+	style?: object;
+	value?: string;
+	ref?: any;
+	inputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+	onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+	onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
+}
+
+export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, style, value, inputChange, onBlur, onFocus }, ref) => (
 	<Box
 		sx={{
 			display: 'flex',
@@ -264,6 +270,8 @@ export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, 
 			placeholder="Search"
 			inputRef={ref}
 			value={value}
+			onBlur={onBlur}
+			onFocus={onFocus}
 			onChange={inputChange}
 			endAdornment={
 				<InputAdornment position='end' >
@@ -322,6 +330,7 @@ export const PasswordTextField = forwardRef<HTMLInputElement, IPasswordTextField
 			value={value}
 			type={visible ? "default" : "password"}
 			fullWidth={fullWidth}
+			autoComplete='off'
 			InputProps={{
 				style: style,
 				endAdornment: (

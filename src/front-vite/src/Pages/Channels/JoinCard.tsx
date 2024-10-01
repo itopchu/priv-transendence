@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
 import { BACKEND_URL, handleError } from './utils';
-import { Channel } from '../../Providers/ChannelContext/Types';
+import { Channel, ChannelMember, ChannelStates } from '../../Providers/ChannelContext/Types';
 import { retryOperation } from '../../Providers/ChannelContext/utils';
 
 interface JoinCardType {
@@ -31,7 +31,7 @@ interface JoinCardType {
 export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 	if (!channel) return (null);
 
-  const { channelProps, changeProps } = useChannel();
+  const { channelProps, changeProps, setChannelProps } = useChannel();
   const { user } = useUser();
 
   const [loading, setLoading] = useState(false);
@@ -57,7 +57,7 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
     };
 
     try {
-			await retryOperation(async () =>{
+			const membership: ChannelMember = await retryOperation(async () =>{
 				const response = await axios.post(
 					`${BACKEND_URL}/channel/join/${channel.id}`,
 					payload,
@@ -65,8 +65,13 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 						withCredentials: true,
 					}
 				);
-				return (response.data.channel);
+				return (response.data.membership);
 			})
+			setChannelProps((prev) => ({
+				...prev,
+				selected: prev.selected ? prev.selected : membership,
+				state: prev.selected ? prev.state : ChannelStates.chat,
+			}));
     } catch (error: any) {
 	  handleError('Could not join channel: ', error);
       setLoading(false);

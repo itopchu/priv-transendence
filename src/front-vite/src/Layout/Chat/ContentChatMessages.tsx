@@ -196,18 +196,17 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 										borderBottomLeftRadius: isLocalUser || isMsgBlockEnd ? undefined : '0.2em',
 										borderTopRightRadius: !isLocalUser || isNewMsgBlock ? undefined : '0.2em',
 										borderBottomRightRadius: !isLocalUser || isMsgBlockEnd ? undefined : '0.2em',
+										flexGrow: isEditing ? 1 : undefined,
 									}}
 								>
-									<Stack spacing={-.5} >
+									<Stack spacing={-.5} display={isEditing ? 'none' : 'flex'} >
 										<Typography
-											display={isEditing ? 'none' : 'block'}
 											variant="body1"
 											sx={{ whiteSpace: 'pre-line' }}
 										>
 											{msg.content}
 										</Typography>
 										<StatusTypography
-											hidden={!msg.edited || isEditing}
 											sx={{ alignSelf: isLocalUser ? 'flex-start' : 'flex-end' }}
 										>
 											(edited)

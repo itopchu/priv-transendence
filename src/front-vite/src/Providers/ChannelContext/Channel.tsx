@@ -93,10 +93,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 				setChannelProps((prevProps) => ({
 					...prevProps,
 					memberships: updatePropArray(prevProps.memberships, data),
-					selected: prevProps.selected
-						? prevProps.selected.id === membership.id
-							? membership : prevProps.selected
-						: membership,
+					selected: prevProps.selected?.id === data.content.id ? data.content : prevProps.selected,
 				}));
 			} catch (error: any) {
 				handleError('Unable to update joined channel:',  error);
@@ -149,8 +146,11 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 	}, [userSocket]);
 
 	useEffect(() => {
+		if (channelLineProps.filter === ChannelFilters.myChannels) return;
+
 		const onPublicChannelUpdate = (data: DataUpdateType<Channel>) => {
-			if (data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)) {
+			if (data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)
+					&& data.updateType !== UpdateType.deleted) {
 				return;
 			}
 
@@ -160,11 +160,8 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			}));
 		}
 
-		if (channelLineProps.filter !== ChannelFilters.myChannels) {
-			userSocket?.on('newPublicChannelUpdate',  onPublicChannelUpdate);
-			userSocket?.emit('subscribePublicChannel');
-		}
-
+		userSocket?.on('newPublicChannelUpdate',  onPublicChannelUpdate);
+		userSocket?.emit('subscribePublicChannel');
 		return () => {
 			userSocket?.emit('unsubscribePublicChannel');
 			userSocket?.off('newPublicChannelUpdate');

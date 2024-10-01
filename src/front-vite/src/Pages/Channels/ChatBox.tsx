@@ -49,8 +49,7 @@ const TextBar = styled(Box)(({ theme }) => ({
 	overflow: 'hidden',
 }));
 
-function useScrollTo(ref: React.RefObject<HTMLDivElement>, dependencies: any[]) {
-	useEffect(() => {
+function scrollToElement(ref: React.RefObject<HTMLDivElement>) {
 		const element = ref.current;
 
 		if (element) {
@@ -59,6 +58,15 @@ function useScrollTo(ref: React.RefObject<HTMLDivElement>, dependencies: any[]) 
 				behavior: 'smooth',
 			});
 		}
+}
+
+export function useScrollTo(
+	ref: React.RefObject<HTMLDivElement>,
+	scrollFunc: (ref: React.RefObject<HTMLDivElement>) => void,
+	dependencies: any[]
+) {
+	useEffect(() => {
+		scrollFunc(ref);
 	}, dependencies);
 }
 
@@ -69,20 +77,20 @@ interface ChatBoxType {
 const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	if (!membership) return (lonelyBox());
 
-  const theme = useTheme();
-  const { userSocket } = useUser();
+	const theme = useTheme();
+	const { userSocket } = useUser();
 
 	const [searchedMsgId, setSelectedMsgId] = useState<number | undefined>(undefined);
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
-  const [loading, setLoading] = useState(true);
+	const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
+	const [loading, setLoading] = useState(true);
 
-	const blockedUsersRef = useRef<User[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const searchedMsgRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+	const searchedMsgRef = useRef<HTMLDivElement>(null);
+	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const inputRef = useRef<HTMLInputElement>(null);
 
 	const channel = membership.channel;
+	let blockedUsers: User[] = [];
 
 	useEffect(() => {
 		const controller = new AbortController;
@@ -103,14 +111,14 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 					console.error(`Failed to retrieve blocked users: ${error}`);
 					handleError('Failed to retrieve blocked users:', error);
 				}
-      } finally {
-				return ([]);
-			}
+      }
+			return ([]);
 		}
 
     const getMessageLog = async () => {
       try {
-				blockedUsersRef.current = await getBlockedUsers();
+				blockedUsers = await getBlockedUsers();
+				console.log(blockedUsers);
 
         const messages: Message[] = await retryOperation(async () => {
           const response = await axios.get(
@@ -124,7 +132,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
         const filteredMessages = messages
 					.filter((message: Message) => (
-						!blockedUsersRef.current.some((blockedUser) => blockedUser.id === message.author.id)
+						!blockedUsers.some((blockedUser) => blockedUser.id === message.author.id)
 					))
 					.sort((a: Message, b: Message) => a.id - b.id);
 
@@ -144,7 +152,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
     function handleMessageUpdate(data: DataUpdateType<Message>) {
 			const message = data.content;
-			const isBlockedUser = blockedUsersRef.current.some((blockedUser) => blockedUser.id === message?.author.id)
+			const isBlockedUser = blockedUsers.some((blockedUser) => blockedUser.id === message?.author.id)
 			if (isBlockedUser) return;
 
       setMessageLog((prev) => updateMap(prev, data))
@@ -162,20 +170,29 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			}, 60000); // 1 min delay
 		}
 
-    userSocket?.on('newChannelMessageUpdate', handleMessageUpdate);
+    userSocket?.on(`newChannel${channel.id}MessageUpdate`, handleMessageUpdate);
     userSocket?.on('channelMessageError', handleMessageError);
     getMessageLog();
     return () => {
 			controller.abort;
 			setLoading(true);
 			setMessageLog(new Map());
-      userSocket?.off('newChannelMessageUpdate');
+      userSocket?.off(`newChannel${channel.id}MessageUpdate`);
 			userSocket?.off('channelMessageError', handleMessageError);
     };
   }, [channel.id, userSocket]);
 
-	useScrollTo(searchedMsgRef, [searchedMsgRef.current]);
-	useScrollTo(messagesEndRef, [messageLog]);
+	useScrollTo(messagesEndRef, scrollToElement, [messageLog]);
+	useScrollTo(searchedMsgRef, (ref: React.RefObject<HTMLDivElement>) => {
+		const element = ref.current;
+
+		if (element) {
+      element.scrollIntoView({
+				behavior: 'smooth',
+				block: 'center',
+			});
+		}
+	}, [searchedMsgRef.current]);
 
   const handleSend = () => {
     if (!inputRef.current) return;
@@ -196,7 +213,11 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
 		const messages = Array.from(messageLog.values());
     return (
-			<ChatBoxMessages messages={messages} />
+			<ChatBoxMessages
+				ref={searchedMsgRef}
+				searchedMsgId={searchedMsgId}
+				messages={messages}
+			/>
 		);
   };
 

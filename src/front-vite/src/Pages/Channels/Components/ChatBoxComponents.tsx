@@ -20,12 +20,10 @@ export const ChatBubble = styled(Box)(({ theme }) => ({
   wordBreak: 'break-word',
   overflowY: 'auto',
   overflowX: 'hidden',
-  width: 'fit-content',
 }));
 
 export const ChatBubbleInputBase = styled(InputBase)(() => ({
-	width: '100%',
-	display: 'block',
+	display: 'flex',
 	flexGrow: 1,
 	whiteSpace: 'pre-line',
 	overflow: 'hidden',

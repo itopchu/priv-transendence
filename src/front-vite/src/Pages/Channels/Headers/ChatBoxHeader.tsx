@@ -1,5 +1,9 @@
 import {
-    Popover,
+    Box,
+    Divider,
+    IconButton,
+    lighten,
+	Popper,
 	Stack,
 	Typography,
 	useMediaQuery,
@@ -9,11 +13,12 @@ import {
 	Menu as ShowChannelLineIcon,
 	MenuOpen as HideChannelLineIcon,
 	People as DefaultChannelIcon,
+	Cancel as CloseIcon,
 } from "@mui/icons-material"
 import { ButtonAvatar, ClickTypography, CustomAvatar, HeaderIconButton, SearchBar } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
 import { ChannelStates } from "../../../Providers/ChannelContext/Types";
-import React, { ReactNode, SetStateAction, useRef, useState } from "react";
+import React, { SetStateAction, useRef, useState } from "react";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
 import { ChatBubble } from "../Components/ChatBoxComponents";
 import { getUsername } from "../utils";
@@ -40,6 +45,11 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 	const [searchResults, setSearchResults] = useState<Message[]>([]);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
+	const closePopper = () => {
+			setSelectedMsgId(undefined);
+			setAnchorEl(null);
+	}
+
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		if (searchRef.current?.value) {
 			const regex = new RegExp(searchRef.current.value, "i");
@@ -49,95 +59,131 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 			setAnchorEl(event.currentTarget);
 		} else {
 			setSearchResults([]);
-			setAnchorEl(null);
+			closePopper();
 		}
 	}
 
-	const ResultPopover = () => {
+	const ResultPopper = () => {
 		if (!searchResults.length) return (null);
 
 		return (
-			<Popover anchorEl={anchorEl} open={Boolean(anchorEl)} >
+			<Popper
+				anchorEl={anchorEl}
+				open={Boolean(anchorEl)}
+				placement="bottom"
+				disablePortal={true}
+				sx={{
+					zIndex: 2,
+				}}
+			>
 				<Stack
 					spacing={theme.spacing(1)}
 					padding={theme.spacing(1)}
+					sx={{
+						backgroundColor: lighten(theme.palette.background.default, 0.07),
+						borderRadius: '8px',
+						boxShadow: theme.shadows[5],
+						width: '50ch',
+						height: 'fit-content',
+						minHeight: '200px',
+						maxHeight: '30vh',
+					}}
 				>
-					{searchResults.map((message) => {
-						const user = message.author;
-						const timestamp = formatDate(message.timestamp);
+					<IconButton
+						size="small"
+						onClick={closePopper}
+						sx={{
+							alignSelf: 'flex-end',
+							color: theme.palette.secondary.main,
+							'&:hover': {
+								color: theme.palette.error.main,
+							},
+						}}
+					>
+						<CloseIcon />
+					</IconButton>
+					<Stack overflow={'auto'} spacing={theme.spacing(1)}>
+						{searchResults.map((message) => {
+							const user = message.author;
+							const timestamp = formatDate(message.timestamp);
 
-						return (
-							<Stack
-								key={message.id}
-								direction={'row'}
-								spacing={1}
-								minWidth={'17em'}
-								alignItems="flex-start"
-								sx={{
-									cursor: 'pointer',
-									backgroundColor: 'rgba(0, 0, 0, .05)',
-									padding: theme.spacing(1),
-									borderRadius: '8px',
-									'&:hover .hidden-timestamp': {
-										visibility: 'visible',
-									},
-								}}
-							>
-								<CustomAvatar
-									src={user.image}
-									sx={{
-										boxShadow: theme.shadows[5],
-										width: 50,
-										height: 50,
-									}}
-								/>
-								<Stack>
-									<Stack spacing={0.4} flexGrow={1}>
-											<Stack flexDirection="row">
-												<Typography
-													paddingLeft={2}
-													variant="h3"
-													sx={{ fontWeight: 'bold', fontSize: 'medium' }}
+							return (
+								<Box
+									key={message.id}
+									onClick={() => setSelectedMsgId(message.id)}
+								>
+									<Stack
+										direction={'row'}
+										spacing={1}
+										minWidth={'17em'}
+										alignItems="flex-start"
+										sx={{
+											cursor: 'pointer',
+											backgroundColor: 'rgba(255, 255, 255, .03)',
+											padding: theme.spacing(1),
+											borderRadius: '8px',
+											'&:hover': {
+												backgroundColor: 'rgba(255, 255, 255, .1)',
+											},
+										}}
+									>
+										<CustomAvatar
+											src={user.image}
+											sx={{
+												boxShadow: theme.shadows[5],
+												width: 50,
+												height: 50,
+											}}
+										/>
+										<Stack>
+											<Stack spacing={0.4} flexGrow={1}>
+													<Stack flexDirection="row">
+														<Typography
+															paddingLeft={2}
+															variant="h3"
+															sx={{ fontWeight: 'bold', fontSize: 'medium' }}
+														>
+															{getUsername(user)}
+														</Typography>
+														<Typography
+															variant="caption"
+															color={'textSecondary'}
+															whiteSpace={'nowrap'}
+															sx={{
+																fontSize: '0.7em',
+																paddingLeft: '1em',
+															}}
+														>
+															{`${timestamp.date} ${timestamp.particle} ${timestamp.time}`}
+														</Typography>
+													</Stack>
+												</Stack>
+
+												<Stack
+													flexDirection={'row'}
+													gap={theme.spacing(.5)}
 												>
-													{getUsername(user)}
-												</Typography>
-												<Typography
-													variant="caption"
-													color={'textSecondary'}
-													whiteSpace={'nowrap'}
-													sx={{
-														fontSize: '0.7em',
-														paddingLeft: '1em',
-													}}
-												>
-													{`${timestamp.date} ${timestamp.particle} ${timestamp.time}`}
-												</Typography>
+													<ChatBubble
+														sx={{
+															backgroundColor: localUser.id === user.id ? undefined : '#7280ce',
+														}}
+													>
+														<Typography
+															variant="body1"
+															sx={{ whiteSpace: 'pre-line' }}
+														>
+															{message.content}
+														</Typography>
+													</ChatBubble>
+												</Stack>
 											</Stack>
 										</Stack>
-
-										<Stack
-											flexDirection={'row'}
-											gap={theme.spacing(.5)}
-										>
-											<ChatBubble
-												sx={{
-													backgroundColor: localUser.id === user.id ? undefined : '#7280ce',
-												}}
-											>
-												<Typography
-													variant="body1"
-													sx={{ whiteSpace: 'pre-line' }}
-												>
-													{message.content}
-												</Typography>
-											</ChatBubble>
-										</Stack>
-									</Stack>
-								</Stack>
-							);
-						})}
+									</Box>
+								);
+							})}
+						</Stack>
 					</Stack>
-			</Popover>
+			</Popper>
 		);
 	}
 
@@ -192,8 +238,12 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 				</Stack>
 			</Stack>
 
-			<SearchBar inputChange={handleChange} ref={searchRef} />
-			<ResultPopover />
+			<SearchBar
+				onFocus={handleChange}
+				inputChange={handleChange}
+				ref={searchRef}
+			/>
+			<ResultPopper />
 		</Stack>
 	);
 }

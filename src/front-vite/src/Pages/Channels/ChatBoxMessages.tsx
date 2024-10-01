@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { forwardRef, RefObject, useRef, useState } from "react";
 import { Message } from "../../Layout/Chat/InterfaceChat";
 import { formatDate, getTimeDiff, isDiffDate } from "../../Providers/ChannelContext/utils";
 import { getUsername, } from "./utils";
@@ -20,13 +20,14 @@ import {
 
 interface ChannelMessagesType {
 	messages: Message[];
+	searchedMsgId?: number;
 }
 
 const timeSeparation = 2 * 60 * 1000; // 2 min in milisecondes
-export const ChatBoxMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
-	const theme = useTheme();
-	const navigate = useNavigate();
+export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>(({ messages, searchedMsgId }, searchedMsgRef) => {
+	const theme = useTheme(); const navigate = useNavigate();
 	const editMsgRef = useRef<HTMLInputElement>();
+
 	const  { user: localUser } = useUser();
 
 	const [mousePosition, setMousePosition] = useState<{ x: number, y: number } | null >(null);
@@ -129,8 +130,9 @@ export const ChatBoxMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 							paddingTop={isNewMsgBlock ? 3 : 0}
 							alignItems="flex-start"
 							onContextMenu={(event) => openContextMenu(event, msg)}
+							ref={searchedMsgId === msg.id ? searchedMsgRef : undefined}
 							sx={{
-								backgroundColor: isEditing || menuId === msg.id
+								backgroundColor: isEditing || menuId === msg.id || searchedMsgId === msg.id
 									? 'rgba(0, 0, 0, .05)' : undefined,
 								'&:hover': {
 									backgroundColor: 'rgba(0, 0, 0, .05)',
@@ -232,4 +234,4 @@ export const ChatBoxMessages: React.FC<ChannelMessagesType> = ({ messages }) =>{
 			})}
 		</>
 	);
-}
+})

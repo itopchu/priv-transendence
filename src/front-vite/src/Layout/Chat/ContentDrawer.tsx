@@ -74,6 +74,7 @@ const ContentDrawer = () => {
         justifyContent="center"
       >
         <IconButton
+					size='small'
 					sx={{ color: theme.palette.secondary.main }}
 					edge="start"
 					aria-label="search"

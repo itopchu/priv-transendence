@@ -5,7 +5,7 @@ import { ChatService } from "./chat.service";
 import { ChatClientDTO, MessagePublicDTO } from "../dto/chat.dto";
 import { UserService } from "../user/user.service";
 import { ChatGateway } from "./chat.gateway";
-import { FriendshipAttitude } from "../entities/user.entity";
+import { FriendshipAttitude, User } from "../entities/user.entity";
 
 @Controller('chat')
 export class ChatController {
@@ -67,11 +67,19 @@ export class ChatController {
 		}
 
 		const relationship = await this.userService.getUserFriendship(user, recipient);
-		const isRestricted = !relationship ? false : relationship.user1.id === user.id
-			? relationship.user1Attitude === FriendshipAttitude.restricted
-			: relationship.user2Attitude === FriendshipAttitude.restricted
-		if (isRestricted) {
-			throw new UnauthorizedException('Unauthorized: User is blocked');
+		if (relationship) {
+			let restrictedUser: User = undefined;
+			if (relationship.user1Attitude === FriendshipAttitude.restricted) {
+				restrictedUser = relationship.user2;
+			}
+			if (relationship.user2Attitude === FriendshipAttitude.restricted) {
+				restrictedUser = relationship.user1;
+			}
+			if (restrictedUser) { 
+				if (restrictedUser.id === user.id)
+					throw new UnauthorizedException('Unauthorized: This user has blocked you');
+				throw new UnauthorizedException('Unauthorized: You have blocked this user');
+			}
 		}
 
 		const newChat = await this.chatService.createChat(user, recipient);

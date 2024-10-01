@@ -5,6 +5,16 @@ import { ChannelMember, Channel, ChannelRoles } from "../../entities/chat.entity
 import { User } from "../../entities/user.entity";
 import { Repository } from "typeorm";
 
+export const allMemberRelations: string[] = [
+	'user',
+	'channel',
+	'channel.members',
+	'channel.members.user',
+	'channel.mutedUsers',
+	'channel.mutedUsers.user',
+	'channel.bannedUsers',
+];
+
 @Injectable()
 export class MemberService {
 	constructor(

@@ -152,7 +152,7 @@ const ContentChat = () => {
         border: '1px solid #abc',
         bottom: 16,
         right: 16,
-        width: 300,
+        width: '50ch',
         bgcolor: (theme) => theme.palette.primary.dark,
         borderRadius: '1em',
         maxHeight: '70vh',
