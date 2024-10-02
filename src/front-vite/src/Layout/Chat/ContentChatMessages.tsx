@@ -207,7 +207,10 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 											{msg.content}
 										</Typography>
 										<StatusTypography
-											sx={{ alignSelf: isLocalUser ? 'flex-start' : 'flex-end' }}
+											sx={{ 
+												alignSelf: isLocalUser ? 'flex-start' : 'flex-end',
+												display: msg.edited ? 'block' : 'none'
+											}}
 										>
 											(edited)
 										</StatusTypography>
