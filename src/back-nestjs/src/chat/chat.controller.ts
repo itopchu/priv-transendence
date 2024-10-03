@@ -6,6 +6,7 @@ import { ChatClientDTO, MessagePublicDTO } from "../dto/chat.dto";
 import { UserService } from "../user/user.service";
 import { ChatGateway } from "./chat.gateway";
 import { FriendshipAttitude, User } from "../entities/user.entity";
+import { messageLocation, MessageService } from "./message/message.service";
 
 @Controller('chat')
 export class ChatController {
@@ -13,14 +14,19 @@ export class ChatController {
 		private readonly chatService: ChatService,
 		private readonly chatGateway: ChatGateway,
 		private readonly userService: UserService,
+		private readonly messageService: MessageService,
 	) {}
 
-	@Get('messages/:id')
+	@Get('messages/:id/:cursor?')
 	@UseGuards(AuthGuard)
-	async getMessageLog(@Req() req: Request, @Param('id', ParseIntPipe) chatId: number) {
+	async getMessageLog(
+		@Req() req: Request,
+		@Param('id', ParseIntPipe) chatId: number,
+		@Param('cursor', ParseIntPipe) cursor?: number,
+	) {
 		const user = req.authUser;
 
-		const chat = await this.chatService.getChatById(chatId, ['users', 'log', 'log.author']);
+		const chat = await this.chatService.getChatById(chatId, ['users']);
 		if (!chat) {
 			throw new NotFoundException('Chat not found');
 		}
@@ -30,7 +36,8 @@ export class ChatController {
 			throw new UnauthorizedException('Unauthorized: User is not in chat');
 		}
 
-		const publicLog = chat.log.map(message => new MessagePublicDTO(message));
+		const log = await this.messageService.getMessages(messageLocation.chat, chatId, cursor);
+		const publicLog = log.map(message => new MessagePublicDTO(message));
 		return ({ messages: publicLog });
 	}
 

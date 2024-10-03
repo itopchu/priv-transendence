@@ -36,23 +36,30 @@ import { AuthGuard } from '../../auth/auth.guard';
 import { multerOptions } from '../../user/user.controller';
 import { ChatGateway, UpdateType } from '../chat.gateway';
 import { allMemberRelations, MemberService } from './member.service';
+import { messageLocation, MessageService } from '../message/message.service';
 
 @Controller('channel')
 export class ChannelController {
 	constructor(
 		private readonly channelService: ChannelService,
 		private readonly memberService: MemberService,
-		private readonly channelGateway: ChatGateway
+		private readonly channelGateway: ChatGateway,
+		private readonly messageService: MessageService,
 	) {}
 
-	@Get('messages/:id')
+	@Get('messages/:id/:cursor?')
 	@UseGuards(AuthGuard)
-	async getMessageLog(@Req() req: Request, @Param('id', ParseIntPipe) id: number) {
+	async getMessageLog(
+		@Req() req: Request,
+		@Param('id', ParseIntPipe) channelId: number,
+		@Param('cursor') cursor?: string,
+	) {
 		const user = req.authUser;
 		let channel: Channel;
+		let parsedCursor: number | undefined;
 
 		try {
-			channel = await this.channelService.getChannelById(id, ['log', 'log.author', 'members.user']);
+			channel = await this.channelService.getChannelById(channelId, ['members.user']);
 		} catch(error) {
 			throw new InternalServerErrorException(`Could not retrieve messages: ${error.message}`);
 		}
@@ -65,7 +72,17 @@ export class ChannelController {
 			throw new UnauthorizedException('Unauthorized: User not part of channel');
 		}
 
-		const publicLog = channel.log.map(message => new MessagePublicDTO(message));
+		if (cursor) {
+			parsedCursor = parseInt(cursor);
+			if (isNaN(parsedCursor)) {
+				throw new BadRequestException(`${cursor} is not a valid number`);
+			}
+		} else {
+			parsedCursor = undefined;
+		}
+
+		const log = await this.messageService.getMessages(messageLocation.channel, channelId, parsedCursor);
+		const publicLog = log.map(message => new MessagePublicDTO(message));
 		return ({ messages: publicLog });
 	}
 

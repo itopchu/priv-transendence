@@ -49,27 +49,13 @@ const TextBar = styled(Box)(({ theme }) => ({
 	overflow: 'hidden',
 }));
 
-function scrollToElement(ref: React.RefObject<HTMLDivElement>) {
-		const element = ref.current;
-
-		if (element) {
-      element.scrollTo({
-				top: element.scrollHeight,
-				behavior: 'smooth',
-			});
-		}
+function filterMessages(messages: Message[], blockedUsers: User[]) {
+	const filteredMessages = messages
+		.filter((message: Message) => (
+			!blockedUsers.some((blockedUser) => blockedUser.id === message.author.id)
+		))
+	return (filteredMessages);
 }
-
-export function useScrollTo(
-	ref: React.RefObject<HTMLDivElement>,
-	scrollFunc: (ref: React.RefObject<HTMLDivElement>) => void,
-	dependencies: any[]
-) {
-	useEffect(() => {
-		scrollFunc(ref);
-	}, dependencies);
-}
-
 interface ChatBoxType {
   membership: ChannelMember;
 }
@@ -86,15 +72,54 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	const [loading, setLoading] = useState(true);
 
 	const searchedMsgRef = useRef<HTMLDivElement>(null);
-	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const messageContainerRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 
+	let controller = new AbortController();
 	const channel = membership.channel;
 	let blockedUsers: User[] = [];
 
-	useEffect(() => {
-		const controller = new AbortController;
+	const loadMessages = async (cursor?: number) => {
+		if (!messageContainerRef.current) return;
+		const oldScrollHeight = messageContainerRef.current.scrollHeight;
+		setLoading(true);
+		try {
 
+			const messages: Message[] = await retryOperation(async () => {
+				const response = await axios.get(
+					`${BACKEND_URL}/channel/messages/${channel.id}/${cursor ? cursor : ''}`, {
+						withCredentials: true,
+						signal: controller.signal,
+					}
+				);
+				return response.data.messages || [];
+			});
+
+			setMessageLog((log) => {
+				const oldMessages = Array.from(log.values());
+				const newMessages = filterMessages(messages, blockedUsers);
+
+				const newLog = ([...oldMessages, ...newMessages]).sort((a: Message, b: Message) => a.id - b.id);
+				const newMap = new Map<number, Message>(newLog.map((message) => [message.id, message]));
+				return (newMap);
+			});
+		} catch (error) {
+			if (!axios.isCancel(error)) {
+				setErrorMessage(formatErrorMessage('Failed to get message log: ', error))
+			}
+		} finally {
+			setLoading(false);
+			const currentScrollHeight = messageContainerRef.current.scrollHeight;
+			const scrollTop = messageContainerRef.current.scrollTop;
+			console.log(`new: ${currentScrollHeight}`, `old: ${oldScrollHeight}`, `scrolltop: ${scrollTop}`);
+			if (scrollTop < -20) {
+				console.log(`newTop: ${oldScrollHeight - currentScrollHeight}`);
+				messageContainerRef.current.scrollTop = -1;
+			}
+		}
+	};
+
+	useEffect(() => {
 		const getBlockedUsers = async (): Promise<User[]> => {
       try {
         const response = await axios.get(
@@ -115,40 +140,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			return ([]);
 		}
 
-    const getMessageLog = async () => {
-      try {
-				blockedUsers = await getBlockedUsers();
-				console.log(blockedUsers);
-
-        const messages: Message[] = await retryOperation(async () => {
-          const response = await axios.get(
-            `${BACKEND_URL}/channel/messages/${channel.id}`, {
-							withCredentials: true,
-							signal: controller.signal,
-						}
-          );
-          return response.data.messages || [];
-        });
-
-        const filteredMessages = messages
-					.filter((message: Message) => (
-						!blockedUsers.some((blockedUser) => blockedUser.id === message.author.id)
-					))
-					.sort((a: Message, b: Message) => a.id - b.id);
-
-				const messageMap = filteredMessages.reduce((map, message) => {
-					map.set(message.id, message);
-					return (map);
-				}, new Map<number, Message>);
-
-        setMessageLog(messageMap);
-      } catch (error) {
-				if (!axios.isCancel(error)) {
-					setErrorMessage(formatErrorMessage('Failed to get message log: ', error))
-				}
-      }
-			setLoading(false);
-    };
+		const getMessages = async () => {
+			blockedUsers = await getBlockedUsers();
+			loadMessages();
+		}
 
     function handleMessageUpdate(data: DataUpdateType<Message>) {
 			const message = data.content;
@@ -170,11 +165,12 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			}, 60000); // 1 min delay
 		}
 
+		getMessages();
     userSocket?.on(`newChannel${channel.id}MessageUpdate`, handleMessageUpdate);
     userSocket?.on('channelMessageError', handleMessageError);
-    getMessageLog();
     return () => {
 			controller.abort;
+			controller = new AbortController();
 			setLoading(true);
 			setMessageLog(new Map());
       userSocket?.off(`newChannel${channel.id}MessageUpdate`);
@@ -182,17 +178,38 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
     };
   }, [channel.id, userSocket]);
 
-	useScrollTo(messagesEndRef, scrollToElement, [messageLog]);
-	useScrollTo(searchedMsgRef, (ref: React.RefObject<HTMLDivElement>) => {
-		const element = ref.current;
+	//useEffect(() => {
+	//	const element = messageContainerRef.current;
+	//
+	//	if (element && element.scrollTop === 0) {
+	//		console.log(element.scrollTop);
+	//		element.scrollTo({
+	//			top: element.scrollHeight,
+	//			behavior: 'smooth',
+	//		});
+	//	}
+	//}, [messageLog]);
 
-		if (element) {
-      element.scrollIntoView({
-				behavior: 'smooth',
-				block: 'center',
-			});
+//useEffect(() => {
+//	const element = searchedMsgRef.current;
+//
+//	if (element) {
+//    element.scrollIntoView({
+//			behavior: 'smooth',
+//			block: 'center',
+//		});
+//	}
+//}, [searchedMsgRef.current]);
+
+	const handleScroll = () => {
+		if (!messageContainerRef.current) return;
+		const { scrollTop, scrollHeight, clientHeight } = messageContainerRef.current;
+
+		if (-scrollTop + clientHeight >= scrollHeight && !loading) {
+			const [id, message] = messageLog.entries().next().value as [number, Message];
+			loadMessages(id)
 		}
-	}, [searchedMsgRef.current]);
+	}
 
   const handleSend = () => {
     if (!inputRef.current) return;
@@ -228,18 +245,21 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 				messageLog={messageLog}
 			/>
 			<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
-			<ChatContainer>
-				{loading ? (
+			<ChatContainer
+				ref={messageContainerRef}
+				onScroll={handleScroll}
+			>
+				<Stack
+					sx={{
+						paddingInline: theme.spacing(2)
+					}}
+				>
+					{renderMessages()}
+				</Stack>
+				{loading && (
 					<LoadingBox>
 						<CircularProgress size={100} />
 					</LoadingBox>
-				) : (
-					<Stack
-						sx={{ paddingInline: theme.spacing(2) }}
-						ref={messagesEndRef}
-					>
-						{renderMessages()}
-					</Stack>
 				)}
 			</ChatContainer>
 			<Stack

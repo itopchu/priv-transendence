@@ -1,4 +1,5 @@
-import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, ConnectedSocket } from '@nestjs/websockets'; import { Server, Socket } from 'socket.io';
+import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, ConnectedSocket } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
 import { ChannelService } from './channel/channel.service';
 import { UserService } from '../user/user.service';
@@ -9,7 +10,7 @@ import { ChannelPublicDTO, ChatClientDTO, MemberClientDTO, MessagePublicDTO } fr
 import { MemberService } from './channel/member.service';
 import { Chat } from '../entities/chat.entity';
 import { ChatService } from './chat.service';
-import { FriendshipAttitude } from '../entities/user.entity';
+import { FriendshipAttitude, User } from '../entities/user.entity';
 
 export enum UpdateType {
 	deleted = 'deleted',
@@ -28,7 +29,7 @@ type emitUpdateDTO<Type> = {
 	updateType: UpdateType,
 }
 
-@WebSocketGateway(3001, { cors: { origin: "*" } })
+@WebSocketGateway(Number(process.env.PORT_WEBSOCKET), { cors: { origin: process.env.ORIGIN_URL_FRONT, credentials: true } })
 export class ChatGateway {
 	constructor(private readonly userService: UserService,
 				private readonly configService: ConfigService,
@@ -203,11 +204,17 @@ export class ChatGateway {
 
 		const relationship = await this.userService.getUserFriendship(user, recipient);
 		if (relationship) {
+			let restrictedUser: User = undefined;
 			if (relationship.user1Attitude === FriendshipAttitude.restricted) {
-				throw new UnauthorizedException(`Unauthorized: ${relationship.user1.nameFirst} is blocked`);
+				restrictedUser = relationship.user2;
 			}
 			if (relationship.user2Attitude === FriendshipAttitude.restricted) {
-				throw new UnauthorizedException(`Unauthorized: ${relationship.user2.nameFirst} is blocked`);
+				restrictedUser = relationship.user1;
+			}
+			if (restrictedUser) { 
+				if (restrictedUser.id === user.id)
+					throw new UnauthorizedException('Unauthorized: This user has blocked you');
+				throw new UnauthorizedException('Unauthorized: You have blocked this user');
 			}
 		}
 
