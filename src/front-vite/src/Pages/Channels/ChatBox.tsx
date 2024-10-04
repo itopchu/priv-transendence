@@ -70,9 +70,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 	const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
 	const [loading, setLoading] = useState(true);
+	const [fetching, setFetching] = useState(true);
 
 	const searchedMsgRef = useRef<HTMLDivElement>(null);
-	const messageContainerRef = useRef<HTMLDivElement>(null);
+	const msgContainerRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	let controller = new AbortController();
@@ -80,9 +81,9 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	let blockedUsers: User[] = [];
 
 	const loadMessages = async (cursor?: number) => {
-		if (!messageContainerRef.current) return;
-		const oldScrollHeight = messageContainerRef.current.scrollHeight;
-		setLoading(true);
+		if (!msgContainerRef.current) return;
+		setFetching(true);
+		const oldScrollPosition = msgContainerRef.current.scrollHeight - msgContainerRef.current.scrollTop;
 		try {
 
 			const messages: Message[] = await retryOperation(async () => {
@@ -108,14 +109,14 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 				setErrorMessage(formatErrorMessage('Failed to get message log: ', error))
 			}
 		} finally {
-			setLoading(false);
-			const currentScrollHeight = messageContainerRef.current.scrollHeight;
-			const scrollTop = messageContainerRef.current.scrollTop;
-			console.log(`new: ${currentScrollHeight}`, `old: ${oldScrollHeight}`, `scrolltop: ${scrollTop}`);
-			if (scrollTop < -20) {
-				console.log(`newTop: ${oldScrollHeight - currentScrollHeight}`);
-				messageContainerRef.current.scrollTop = -1;
-			}
+			const newScrollHeight = msgContainerRef.current.scrollHeight;
+			requestAnimationFrame(() => {
+				if (msgContainerRef.current) {
+					msgContainerRef.current.scrollTop = newScrollHeight - oldScrollPosition;
+					console.log(newScrollHeight - oldScrollPosition, msgContainerRef.current.scrollTop, newScrollHeight);
+				}
+			});
+			setFetching(false);
 		}
 	};
 
@@ -168,6 +169,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 		getMessages();
     userSocket?.on(`newChannel${channel.id}MessageUpdate`, handleMessageUpdate);
     userSocket?.on('channelMessageError', handleMessageError);
+		setLoading(false);
     return () => {
 			controller.abort;
 			controller = new AbortController();
@@ -179,7 +181,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
   }, [channel.id, userSocket]);
 
 	//useEffect(() => {
-	//	const element = messageContainerRef.current;
+	//	const element = msgContainerRef.current;
 	//
 	//	if (element && element.scrollTop === 0) {
 	//		console.log(element.scrollTop);
@@ -201,14 +203,17 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 //	}
 //}, [searchedMsgRef.current]);
 
+	let prevScrollTop: number = 0;
 	const handleScroll = () => {
-		if (!messageContainerRef.current) return;
-		const { scrollTop, scrollHeight, clientHeight } = messageContainerRef.current;
+		if (!msgContainerRef.current) return;
+		const { scrollTop, scrollHeight, clientHeight } = msgContainerRef.current;
 
-		if (-scrollTop + clientHeight >= scrollHeight && !loading) {
-			const [id, message] = messageLog.entries().next().value as [number, Message];
+		console.log(msgContainerRef.current.scrollTop);
+		if (prevScrollTop > scrollTop && -scrollTop + clientHeight + 50 >= scrollHeight && !fetching && !loading) {
+			const [id, _] = messageLog.entries().next().value as [number, Message];
 			loadMessages(id)
 		}
+		prevScrollTop = scrollTop
 	}
 
   const handleSend = () => {
@@ -246,7 +251,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			/>
 			<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
 			<ChatContainer
-				ref={messageContainerRef}
+				ref={msgContainerRef}
 				onScroll={handleScroll}
 			>
 				<Stack
@@ -256,7 +261,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 				>
 					{renderMessages()}
 				</Stack>
-				{loading && (
+				{(loading || fetching) && (
 					<LoadingBox>
 						<CircularProgress size={100} />
 					</LoadingBox>
@@ -295,7 +300,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 						}}
 						placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
 					/>
-					<IconButton disabled={membership.isMuted} onClick={handleSend}>
+					<IconButton disabled={membership.isMuted || loading} onClick={handleSend}>
 						{membership.isMuted ? <MutedIcon /> : <SendIcon />}
 					</IconButton>
 				</TextBar>
