@@ -211,6 +211,10 @@ const Play = () => {
       setShowInviteList(!showInviteList);
     };
 
+    const joinRoom = (roomId: string) => {
+      userSocket?.emit("joinRoom", roomId);
+    }
+
     return (
       <div className="container">
         {(() => {

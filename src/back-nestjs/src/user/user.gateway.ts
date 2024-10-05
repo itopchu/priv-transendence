@@ -305,6 +305,22 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gameOver(roomId, client.position === false);
   }
 
+  @SubscribeMessage('joinRoom')
+  handleJoinRoom(client: GameSocket, roomId: string): void {
+    if (this.rooms.has(roomId)) {
+      const players = this.rooms.get(roomId);
+      if (!players) return;
+      if (players.length >= 2) return;
+      if (players.some(player => player.userId === client.authUser.id)) return;
+      players.push({ userId: client.authUser.id, position: false, client });
+      client.join(roomId);
+      client.roomId = roomId;
+      client.position = false;
+      client.emit('startGame', 2);
+      this.gameService.setGameSate(roomId, false);
+    }
+  }
+
   async gameOver(roomId: string, winner: boolean): Promise<void> {
     const room = this.rooms.get(roomId);
     if (!room) return;

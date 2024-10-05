@@ -5,6 +5,7 @@ import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
 import { NavigateFunction } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
 import { formatDate, getTimeDiff } from "../../Providers/ChannelContext/utils";
+import Play from "../../Pages/Game/Play";
 import {
 	MsgContextMenu,
 	ChatBubble,
@@ -16,6 +17,7 @@ import {
 	StatusTypography
 } from "../../Pages/Channels/Components/ChatBoxComponents";
 import { HiddenTimestamp } from "../../Pages/Channels/Components/ChatBoxComponents";
+import { join } from "path";
 
 type ChatBoxType = {
 	messages: Message[];
@@ -133,6 +135,8 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 
 				const timestamp = formatDate(msg.timestamp);
 
+				const { userSocket } = useUser();
+
 				return (
 					<React.Fragment key={msg.id}>
 						<MsgContextMenu
@@ -200,12 +204,37 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 									}}
 								>
 									<Stack spacing={-.5} display={isEditing ? 'none' : 'flex'} >
+										{msg.content.startsWith('room') ? (
+										isLocalUser ? (
+										<Typography
+											variant="body1"
+											sx={{ whiteSpace: 'pre-line', fontStyle: 'italic' }}
+										>
+											Game invitation has been sent.
+										</Typography>
+										) : (
+										<Typography
+											variant="body1"
+											sx={{ whiteSpace: 'pre-line', cursor: 'pointer', fontStyle: 'italic' }}
+											onClick={() => {
+												userSocket?.emit("joinRoom", msg.content, (availible: boolean) => {
+													if (availible) {
+														navigate(`/game`);
+													}
+												})
+											}}
+										>
+											Click here to join the game.
+										</Typography>
+										)
+										) : (
 										<Typography
 											variant="body1"
 											sx={{ whiteSpace: 'pre-line' }}
 										>
 											{msg.content}
 										</Typography>
+										)}
 										<StatusTypography
 											sx={{ alignSelf: isLocalUser ? 'flex-start' : 'flex-end' }}
 										>
