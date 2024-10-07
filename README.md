@@ -46,13 +46,13 @@
 # Project Collabrators
 This project was developed in collaboration with:
 
-- Brian Jacobs -   <a href="https://github.com/bjacobs42" style="text-decoration:none;">
+- <a href="https://github.com/bjacobs42" style="text-decoration:none;">
     <button style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Brian Jacobs</button>
   </a>
-- Selim Yildirim -   <a href="https://github.com/X3l1m" style="text-decoration:none;">
+- <a href="https://github.com/X3l1m" style="text-decoration:none;">
     <button style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Selim Yildirim</button>
   </a>
-- Ibrahim Topchu -   <a href="https://github.com/itopchu" style="text-decoration:none;">
+- <a href="https://github.com/itopchu" style="text-decoration:none;">
     <button style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Ibrahim Topchu</button>
   </a>
 
