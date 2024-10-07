@@ -43,3 +43,11 @@
 - Server-side validation of all forms and user inputs.
 - Secure storage of credentials, API keys, and environment variables in a `.env` file, excluded from version control.
 
+# Project Collabrators
+This project was developed in collaboration with:
+
+- Brian Jacobs
+- Selim Yildirim
+- Ibrahim Topchu
+
+A huge thank you to each of you for your hard work, dedication, and invaluable contributions to ft_transcendence.

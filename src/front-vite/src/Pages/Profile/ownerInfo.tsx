@@ -25,6 +25,8 @@ import { useMediaQuery } from "@mui/material";
 import { useChat } from '../../Providers/ChatContext/Chat';
 import axios from "axios";
 import { handleChatInvite } from "../../Providers/ChatContext/utils";
+import { sendGameInvite } from "../../Layout/Chat/ContentChat";
+
 
 interface VisitedInfoProps {
   visitedUser: UserPublic | undefined;
@@ -216,7 +218,10 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   };
 
   function handleGameInvite() {
-    console.log("game invite");
+      if (visitedUser?.id) {
+        
+          // sendGameInvite(visitedUser.id, chatProps, changeChatProps, user.id);
+      }
   }
   
   function handleChatClick() {
