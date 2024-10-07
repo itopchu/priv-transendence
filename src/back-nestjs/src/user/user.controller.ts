@@ -8,6 +8,7 @@ import { UserGateway } from './user.gateway';
 import * as fs from 'fs';
 import * as path from 'path';
 import { FriendshipAttitude, FriendshipAttitudeBehaviour, User } from '../entities/user.entity'
+import { on } from 'events';
 
 export const multerOptions = {
   limits: {
@@ -185,5 +186,22 @@ export class UserController {
     }));
 
     return res.status(200).json({gamesDTO});
+  }
+
+  @Get('getUsers/online')
+  @UseGuards(AuthGuard)
+  async getOnlineUsers(@Req() req: Request, @Res() res: Response) {
+    const userId = req.authUser.id;
+
+    const onlineUsers = Array.from(this.userGateway.connectedUsers.entries())
+      .filter(([key, value]) => value > 0 && key !== userId)
+      .map(([key, value]) => key);
+  
+    const publicUsers: UserPublicDTO[] = await Promise.all(onlineUsers.map(async (id) => {
+      const user = await this.userService.getUserById(id);
+      return new UserPublicDTO(user, null);
+    }));
+  
+    return res.status(200).json({ publicUsers });
   }
 }

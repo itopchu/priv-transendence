@@ -1,0 +1,239 @@
+[33mcommit 580f628cb23cf5f446d9d2d92a9f10b4073933f5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/selim[m[33m, [m[1;32mselim[m[33m)[m
+Author: X3l1m <100030005+X3l1m@users.noreply.github.com>
+Date:   Mon Oct 7 16:17:31 2024 +0200
+
+    invite
+
+[33mcommit 2c262070d454693a99d3955b9c37e6d83505a49f[m
+Author: X3l1m <100030005+X3l1m@users.noreply.github.com>
+Date:   Sun Oct 6 01:20:53 2024 +0200
+
+    invite
+
+[33mcommit 12a594a429f6804d9f901e1d13543fff1a3f892b[m
+Merge: 47fb5ec d1ef5b8
+Author: X3l1m <100030005+X3l1m@users.noreply.github.com>
+Date:   Tue Oct 1 18:50:03 2024 +0200
+
+    Merge remote-tracking branch 'origin/channel_branch' into selim
+
+[33mcommit 47fb5ec6115ddd17ba66d0ce2bce020eb35a453d[m
+Author: X3l1m <100030005+X3l1m@users.noreply.github.com>
+Date:   Tue Oct 1 18:49:42 2024 +0200
+
+    ev
+
+[33mcommit d1ef5b873d8a1084d8dafd5d6a8dc34d433319f9[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Tue Oct 1 18:46:48 2024 +0200
+
+    Some code changes and UI improvements
+
+[33mcommit cfe3ba7d02818ca9583d1f64d0aed19c70b5029a[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Tue Oct 1 00:12:39 2024 +0200
+
+    progress on message search and Some more UI mprovements
+
+[33mcommit 6c69ed8048bb61aae18391a122d766ed45f56d55[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Fri Sep 27 23:52:24 2024 +0200
+
+    Finished error message handling
+
+[33mcommit 6d8d5a4710f9bbec257b53f668ec18935a7462a2[m
+Merge: 8f6fcc6 b1b2ca8
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Fri Sep 27 22:36:33 2024 +0200
+
+    Merge branch 'channel_branch' of github.com:itopchu/priv-transendence into channel_branch
+
+[33mcommit 8f6fcc65a89e97a849524b998a0a6b94c4f6d162[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Fri Sep 27 22:33:58 2024 +0200
+
+    Edit/remove message added to Chat, added error messages near inputbar(WIP), some more code optimizing and restructure
+
+[33mcommit 351d071446511c086e871943784e9b93a22f5979[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Fri Sep 27 05:48:25 2024 +0200
+
+    Finished ChatContentDrawer, added message editing and deleting in channel and some optimizing
+
+[33mcommit d6aaf529644a257113a196ad7897ff8a8f4f0490[m
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Fri Sep 27 00:16:18 2024 +0200
+
+    ev
+
+[33mcommit 969cd02b6b068c9b4aebc36e59bc01fa8619affb[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Thu Sep 26 22:21:43 2024 +0200
+
+    Added features for ContentDrawer search and plus icon, some channel
+    ui improvements, fixes and code restructure, fixed ContentChatMessages
+    error
+
+[33mcommit b1b2ca8de50a519e7875f318be3d6789d2c07c81[m
+Merge: f59f9ea 56822e3
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Thu Sep 26 17:51:12 2024 +0200
+
+    Merge branch 'channel_branch' of https://github.com/itopchu/priv-transendence into channel_branch
+
+[33mcommit f59f9ea836c0d0527cd358408be6a8237ffa6efa[m
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Thu Sep 26 17:51:09 2024 +0200
+
+    pause_unmout
+
+[33mcommit e176adfeeedddff5d3f431d27571a47156d84da3[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Wed Sep 25 21:50:51 2024 +0200
+
+    More channel ui improvements, member/bannedUser Cards optimization
+    and friendship attitude fix in member/banneduser cards
+
+[33mcommit 188ee0782c8c63f8e62b86c08df753cdf9fee54a[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Wed Sep 25 04:32:31 2024 +0200
+
+    Finshed Channel redesign, fixed zIndex of Chat, added my tiger dev footer
+
+[33mcommit 56822e3681c82374dd394aed3650a2e1042db20b[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Tue Sep 24 18:25:01 2024 +0200
+
+    More sorting and ui improvements for channel
+
+[33mcommit eb40f82b46943c74338941c09b7ac464ad240bee[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Mon Sep 23 03:38:54 2024 +0200
+
+    redesigned channel page a bit, added new features to channel page and optimized/restructured some front-end code
+
+[33mcommit 209db548a00f8316d444e1e7114ea70e2ddb2920[m
+Merge: d98c727 0dec547
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Sat Sep 21 03:29:18 2024 +0200
+
+    merging channel_branch with main, dont like the color? revert it in themeOptions
+
+[33mcommit 0dec54768f6df12c86231fe33f3035013f81bf3c[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Sat Sep 21 02:46:28 2024 +0200
+
+    renaming
+
+[33mcommit f0ab8777b41ec527092d7e8446b67c9af2bc62b1[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Sat Sep 21 02:34:57 2024 +0200
+
+    sorted some codes, fixed Chat not working, fixed channels not working, fixed muting, fixed BASICALLY EVERYTHING
+
+[33mcommit d98c72740cc150c0c99223a18c00af9cb9c8e182[m
+Author: Ibrahim <mr.ibrahim.topchu@outlook.com>
+Date:   Fri Sep 20 22:14:04 2024 +0200
+
+    PP is now always circle, game history is added to the profile
+
+[33mcommit a85370e1307a292313117bc30df183d0ad1c8414[m
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Fri Sep 20 21:16:17 2024 +0200
+
+    emit_move_fix
+
+[33mcommit fce302ef98b3efa14203912f7255570f36fd6963[m
+Merge: 7074ff9 f1db8f8
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Fri Sep 20 20:47:37 2024 +0200
+
+    Merge branch 'selim' of https://github.com/itopchu/priv-transendence into selim
+
+[33mcommit 7074ff9db4151358954b2921a46f558d3c8d6c5d[m
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Fri Sep 20 20:42:02 2024 +0200
+
+    game_algo
+
+[33mcommit f1db8f8d8f0d7551de878183bde4d8ec5f9936d6[m
+Author: Ibrahim <mr.ibrahim.topchu@outlook.com>
+Date:   Fri Sep 20 19:03:48 2024 +0200
+
+    userpublic update
+
+[33mcommit 9a4dabdcabeaa617e8f28ade15d240f0ca01dc2c[m
+Merge: f3d2bd7 7fc2bda
+Author: Ibrahim <mr.ibrahim.topchu@outlook.com>
+Date:   Fri Sep 20 18:44:28 2024 +0200
+
+    hello world 2
+
+[33mcommit f3d2bd78f3b63f33d1254e8d857b1f9cf8cc5b40[m
+Author: Ibrahim <mr.ibrahim.topchu@outlook.com>
+Date:   Fri Sep 20 18:41:35 2024 +0200
+
+    hello world
+
+[33mcommit 7fc2bdae2e5f18cc342a456d280215da8f94cc3c[m
+Author: Selim Yildirim <seyildir@f1r2s1.codam.nl>
+Date:   Fri Sep 20 18:36:13 2024 +0200
+
+    gamespeed var
+
+[33mcommit 1a9588646b2fe5fa972c4833882f922ee8d4903b[m
+Author: Selim Yildirim <seyildir@f1r2s1.codam.nl>
+Date:   Fri Sep 20 17:46:00 2024 +0200
+
+    flitergamestatus
+
+[33mcommit e39d8acc8939750c1619e0731fe66e605f18075f[m
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Thu Sep 19 22:54:32 2024 +0200
+
+    database
+
+[33mcommit 4f5aa28fd8f11daf6e1c746478665885ad273353[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Thu Sep 19 22:40:03 2024 +0200
+
+    Optimized membership updating, updated .env file, fixed a TON of bugs
+
+[33mcommit e4a05161f2f4c59d591b15f4286be0f6570ea926[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Thu Sep 19 03:23:52 2024 +0200
+
+    Removed blockUsers and modified functions to use restricted friendship instead, made channel details and private chat use profileStatus and made it possible to add/accept/remove/restrict users via channel details
+
+[33mcommit dd7294d5b6d05e695c024e40de6f6068b5425d51[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Wed Sep 18 01:20:33 2024 +0200
+
+    Improved channel code structer, added banned users to editModeDetails
+
+[33mcommit 0ebe3cd872f276552f3c3873f5ae751ed3c60a5e[m
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Tue Sep 17 11:14:50 2024 +0200
+
+    ev
+
+[33mcommit 9c844de1ecdc82c98d54592718ec9706d5e28dd6[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Tue Sep 17 04:02:05 2024 +0200
+
+    Removed chat bubble from sign-in page, improved private chat ui, made it possible to block users via channel details
+
+[33mcommit c763861339c8980a1a7f167553421ef1e898ef5a[m
+Author: Brian Jacobs <brian5jacobs@hotmail.com>
+Date:   Mon Sep 16 06:03:05 2024 +0200
+
+    Made private message prototyppe, should be working for now. More improvements on code structure
+
+[33mcommit 48741a1b2f3d4e23ac41e42bf99b61410089a6d4[m
+Author: X3l1m <edibselim1@gmail.com>
+Date:   Sun Sep 15 21:56:19 2024 +0200
+
+    fixe finish game
+
+[33mcommit dc8a0189937c6f6c5172876292ae4bda1a386842[m
+Author: Brian Jacobs <brian5jacobs@hotmail

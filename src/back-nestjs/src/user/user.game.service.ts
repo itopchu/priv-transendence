@@ -64,9 +64,7 @@ export class GameService implements OnModuleInit, OnModuleDestroy {
         score: { player1: 0, player2: 0 },
         gameEnd: false,
       });
-      setTimeout(() => {
         this.setGameInterval(roomId);
-      }, 500);
       }
   }
 

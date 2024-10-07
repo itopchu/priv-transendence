@@ -9,33 +9,23 @@ import {
   CircularProgress,
 } from "@mui/material";
 import {
-  Send as SendIcon,
-  Cancel as CancelIcon,
-  KeyboardBackspace as BackIcon,
-  VideogameAsset as GameIcon,
-} from "@mui/icons-material";
-import {
-  ButtonAvatar,
-  ClickTypography,
-  LoadingBox,
-} from "../../Pages/Channels/Components/Components";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
-import { UserPublic, useUser } from "../../Providers/UserContext/User";
-import { useChat } from "../../Providers/ChatContext/Chat";
-import {
-  BACKEND_URL,
-  formatErrorMessage,
-  getFullname,
-  getUsername,
-  trimMessage,
-} from "../../Pages/Channels/utils";
-import { ContentChatMessages } from "./ContentChatMessages";
-import { getStatusColor } from "../../Pages/Profile/ownerInfo";
-import axios from "axios";
-import { DataUpdateType } from "../../Providers/ChannelContext/Types";
-import { updateMap } from "../../Providers/ChannelContext/utils";
-import { StatusTypography } from "../../Pages/Channels/Components/ChatBoxComponents";
+	Send as SendIcon,
+	Cancel as CancelIcon,
+	KeyboardBackspace as BackIcon,
+	VideogameAsset as GameIcon,
+} from '@mui/icons-material';
+import { ButtonAvatar, ClickTypography, LoadingBox } from '../../Pages/Channels/Components/Components';
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { UserPublic, useUser } from '../../Providers/UserContext/User';
+import { useChat } from '../../Providers/ChatContext/Chat';
+import { BACKEND_URL, formatErrorMessage, getFullname, getUsername, trimMessage } from '../../Pages/Channels/utils';
+import { ContentChatMessages } from './ContentChatMessages';
+import { getStatusColor } from '../../Pages/Profile/ownerInfo';
+import axios from 'axios';
+import { DataUpdateType } from '../../Providers/ChannelContext/Types';
+import { updateMap } from '../../Providers/ChannelContext/utils';
+import { StatusTypography } from '../../Pages/Channels/Components/ChatBoxComponents';
 import { sendGameInvite } from "../../Providers/ChatContext/utils";
 
 const ContentChat = () => {
@@ -222,74 +212,75 @@ const ContentChat = () => {
             height: "48px",
           }}
         >
-          <IconButton
-            onClick={() => {
-              toggleChatStatus(ChatStatus.Drawer, undefined);
-            }}
-            sx={{
-              width: "40px",
-              height: "40px",
-              color: (theme) => theme.palette.secondary.main,
-            }}
-          >
-            <BackIcon sx={{ fontSize: "120%" }} />
-          </IconButton>
-          <ButtonAvatar
-            clickEvent={() => navigate(`/profile/${user?.id}`)}
-            src={user?.image}
-            avatarSx={{
-              border: `2px solid ${getStatusColor(user?.status)}`,
-            }}
-          />
-          <Stack spacing={-1}>
-            <ClickTypography
-              color={(theme) => theme.palette.text.primary}
-              onClick={() => navigate(`/profile/${user?.id}`)}
-              sx={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {getUsername(user)}
-            </ClickTypography>
-            <Typography
-              variant="caption"
-              color={"textSecondary"}
-              onClick={() => navigate(`/profile/${user?.id}`)}
-              sx={{
-                cursor: "default",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {getFullname(user)}
-            </Typography>
-          </Stack>
+					<IconButton
+						onClick={() => {
+							toggleChatStatus(ChatStatus.Drawer, undefined)
+						}}
+						sx={{
+							width: '40px',
+							height: '40px',
+							color: (theme) => theme.palette.secondary.main,
+						}}
+					>
+						<BackIcon sx={{ fontSize: '120%' }} />
+					</IconButton>
+					<ButtonAvatar
+						clickEvent={() => (navigate(`/profile/${user?.id}`))}
+						src={user?.image}
+						avatarSx={{
+							border: `2px solid ${getStatusColor(user?.status)}`,
+						}}
+					/>
+					<Stack spacing={-1} >
+						<ClickTypography
+							color={(theme) => theme.palette.text.primary}
+							onClick={() => (navigate(`/profile/${user?.id}`))}
+							sx={{
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}
+						>
+							{getUsername(user)}
+						</ClickTypography>
+						<Typography
+							variant='caption'
+							color={'textSecondary'}
+							onClick={() => (navigate(`/profile/${user?.id}`))}
+							sx={{
+								cursor: 'default',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}
+						>
+							{getFullname(user)}
+						</Typography>
+					</Stack>
           <Box flexGrow={1} />
-          <IconButton
-            onClick={handleGameInvite}
-            sx={{
-              width: "40px",
-              height: "40px",
-              color: (theme) => theme.palette.secondary.main,
-            }}
-          >
-            <GameIcon />
-          </IconButton>
-          <IconButton
-            onClick={() => {
-              toggleChatStatus(ChatStatus.Bubble, undefined);
-            }}
-            sx={{
-              marginLeft: "auto",
-              color: (theme) => theme.palette.secondary.main,
-              "&:hover": {
-                color: (theme) => theme.palette.error.main,
-              },
-            }}
-          >
-            <CancelIcon />
-          </IconButton>
+						<IconButton
+							onClick={handleGameInvite}
+							sx={{
+								width: "40px",
+								height: "40px",
+								color: (theme) => theme.palette.secondary.main,
+								"&:hover": {
+									color: "#BF77F6",
+								},
+							}}
+						>
+							<GameIcon/>
+						</IconButton>
+					<IconButton
+						onClick={() => { toggleChatStatus(ChatStatus.Bubble, undefined) }}
+						sx={{
+							marginLeft: 'auto',
+							color: (theme) => theme.palette.secondary.main,
+							'&:hover': {
+								color: (theme) => theme.palette.error.main,
+							},
+						}}
+					>
+						<CancelIcon />
+					</IconButton>
         </Stack>
         <Stack
           direction={"column"}
