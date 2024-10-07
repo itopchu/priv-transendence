@@ -138,6 +138,24 @@ const ContentChat = () => {
 		inputRef.current.value = '';
 	}
 
+	const sendGameInvite = () => {
+		const id = chatProps.selected?.user.id;
+		if (!id) return;
+		console.log('inviteGame', id);
+		userSocket?.emit('inviteGame', id, (roomId: string) => {
+			if (roomId.startsWith('GameRoom-')) {
+				const payload = {
+					chatId: chatProps.selected?.id,
+					content: roomId,
+				};
+				userSocket?.emit('sendChatMessage', payload);
+			}
+			else
+				setErrorMessage(roomId);
+
+		});
+	}
+
 	const renderMessages = () => {
 		if (!messageLog.size) return (null);
 		const messages = Array.from(messageLog.values());
@@ -225,6 +243,14 @@ const ContentChat = () => {
 							{getFullname(user)}
 						</Typography>
 					</Stack>
+																					<IconButton
+																						onClick={sendGameInvite}
+																						sx={{
+																							width: '40px',
+																							height: '40px',
+																							color: (theme) => theme.palette.secondary.main,
+																						}}
+																					>game</IconButton>
 					<Box flexGrow={1} />
 					<IconButton
 						onClick={() => { toggleChatStatus(ChatStatus.Bubble, undefined) }}

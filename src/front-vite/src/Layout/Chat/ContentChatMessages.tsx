@@ -18,6 +18,7 @@ import {
 } from "../../Pages/Channels/Components/ChatBoxComponents";
 import { HiddenTimestamp } from "../../Pages/Channels/Components/ChatBoxComponents";
 import { join } from "path";
+import { handleError } from "../../Pages/Channels/utils";
 
 type ChatBoxType = {
 	messages: Message[];
@@ -204,7 +205,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 									}}
 								>
 									<Stack spacing={-.5} display={isEditing ? 'none' : 'flex'} >
-										{msg.content.startsWith('room') ? (
+										{msg.content.startsWith('GameRoom-') ? (
 										isLocalUser ? (
 										<Typography
 											variant="body1"
@@ -217,10 +218,10 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 											variant="body1"
 											sx={{ whiteSpace: 'pre-line', cursor: 'pointer', fontStyle: 'italic' }}
 											onClick={() => {
-												userSocket?.emit("joinRoom", msg.content, (availible: boolean) => {
-													if (availible) {
-														navigate(`/game`);
-													}
+												navigate(`/game`);
+												userSocket?.emit("joinGame", msg.content, (roomId: string) => {
+													if (!roomId.startsWith('GameRoom-'))
+														handleError(roomId);
 												})
 											}}
 										>

@@ -56,6 +56,7 @@ const Play = () => {
       }
       userSocket.on("state", (state) => {
         setGameState(state);
+        setIsPlaying(true);
       });
       
       userSocket.on("startGame", (playerState: number) => {

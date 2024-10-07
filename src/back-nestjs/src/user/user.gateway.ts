@@ -158,12 +158,13 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private rooms: Map<string, Player[]> = new Map();
   private queue: { userId: number, client: GameSocket }[] = [];
   private timeId: Map<string, timePause> = new Map();
+  private invite: Map<string, Player[]> = new Map();
 
   afterInit() {
-    console.log('WebSocket server initialized');
     setInterval(() => {
       this.rooms.forEach((players, roomId) => {
-        this.server.to(roomId).emit('state', this.gameService.getFliteredGameState(roomId));
+        if (!this.timeId.get(roomId))
+          this.server.to(roomId).emit('state', this.gameService.getFliteredGameState(roomId));
       });
     }, 16);
   }
@@ -200,6 +201,8 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
       player.client.emit('startGame', index + 1);
     });
 
+    this.clearInvite(player1.userId);
+    this.clearInvite(player2.userId);
     this.gameService.setGameSate(roomId, false);
   }
 
@@ -280,6 +283,7 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.rooms.set(roomId, [
       { userId: client.authUser.id, position: true, client }
     ]);
+    this.clearInvite(client.authUser.id);
     this.gameService.setGameSate(roomId, true);
     client.join(roomId);
     client.roomId = roomId;
@@ -305,20 +309,70 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gameOver(roomId, client.position === false);
   }
 
-  @SubscribeMessage('joinRoom')
-  handleJoinRoom(client: GameSocket, roomId: string): void {
-    if (this.rooms.has(roomId)) {
-      const players = this.rooms.get(roomId);
-      if (!players) return;
-      if (players.length >= 2) return;
-      if (players.some(player => player.userId === client.authUser.id)) return;
-      players.push({ userId: client.authUser.id, position: false, client });
-      client.join(roomId);
-      client.roomId = roomId;
-      client.position = false;
-      client.emit('startGame', 2);
-      this.gameService.setGameSate(roomId, false);
+  clearInvite(userId: number): void {
+    this.invite.forEach((players, key) => {
+      if (players.some(player => player.userId === userId)) {
+        this.invite.delete(key);
+      }
     }
+    );
+  }
+
+  @SubscribeMessage('joinGame')
+  handleJoinRoom(client: GameSocket, roomId: string): string {
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      return 'You are already in a game';
+    }
+    const invite = this.invite.get(roomId);
+    if (!invite) {
+     return 'Invitation expired';
+    }
+    if (invite[1].userId !== client.authUser.id) {
+      console.log('User not invited', client.authUser.id, invite[1].userId);
+      return 'You are not invited';
+    }
+
+    this.rooms.set(roomId, invite);
+    const room = this.rooms.get(roomId); 
+    client.roomId = roomId;
+    client.position = false;
+    room[0].client.roomId = roomId;
+    room[0].client.position = true;
+    room[1].client = client;
+    room[0].client.join(roomId);
+    client.join(roomId);
+    this.invite.delete(roomId);
+    this.clearInvite(client.authUser.id);
+    this.clearInvite(room[0].userId);
+    this.gameService.setGameSate(roomId, false);
+    client.emit('startGame', 2);
+    room[0].client.emit('startGame', 1);
+    return roomId;
+  }
+
+  @SubscribeMessage('inviteGame')
+  handleInviteRoom(client: GameSocket, userId: number): string {
+    if (this.isUserInGameRoom(client.authUser.id)) {
+      return 'You are already in a game';
+    }
+    if (this.isUserInGameRoom(userId)) {
+      return 'User is already in a game';
+    }
+    const player = this.queue.find(player => player.userId === client.authUser.id);
+    if (player) {
+      return 'You are already in a queue';
+    }
+    const enemy = this.queue.find(player => player.userId === userId);
+    if (enemy) {
+      return 'User is already in a queue';
+    }
+    
+    const roomId = `GameRoom-${Date.now()}`;
+    this.invite.set(roomId , [
+      { userId: client.authUser.id, position: true, client },
+      { userId, position: false, client: undefined }
+    ]);
+    return roomId;
   }
 
   async gameOver(roomId: string, winner: boolean): Promise<void> {
