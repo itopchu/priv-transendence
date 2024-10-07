@@ -36,28 +36,7 @@ import axios from "axios";
 import { DataUpdateType } from "../../Providers/ChannelContext/Types";
 import { updateMap } from "../../Providers/ChannelContext/utils";
 import { StatusTypography } from "../../Pages/Channels/Components/ChatBoxComponents";
-import { Socket } from "socket.io-client";
-
-
-export function sendGameInvite(
-	userid: number | undefined,
-	chatid: number | undefined,
-	userSocket: Socket,
-	setErrorMessage: (message: string) => void
-  ) {
-	const id = userid;
-	if (!userid) return;
-	console.log("inviteGame", userid);
-	userSocket?.emit("inviteGame", userid, (roomId: string) => {
-	  if (roomId.startsWith("GameRoom-")) {
-		const payload = {
-		  chatId: chatid,
-		  content: roomId,
-		};
-		userSocket?.emit("sendChatMessage", payload);
-	  } else setErrorMessage(roomId);
-	});
-  }
+import { sendGameInvite } from "../../Providers/ChatContext/utils";
 
 const ContentChat = () => {
   const { chatProps, changeChatProps } = useChat();
@@ -175,13 +154,23 @@ const ContentChat = () => {
     changeChatProps({ chatStatus: status, selected: selection });
   };
 
+	const handleGameInvite = () => {
+		sendGameInvite(
+			chatProps.selected?.user.id,
+			userSocket,
+			chatProps,
+			changeChatProps,
+			setErrorMessage
+		);
+	}
+
   const handleSend = () => {
     if (!inputRef.current) return;
 
     const cleanMessage = trimMessage(inputRef.current.value);
     if (cleanMessage.length) {
       const payload = {
-        chatId: chatProps.selected?.id,
+        receiverId: chatProps.selected?.user.id,
         content: cleanMessage,
       };
       userSocket?.emit("sendChatMessage", payload);
@@ -278,11 +267,7 @@ const ContentChat = () => {
           </Stack>
           <Box flexGrow={1} />
           <IconButton
-            onClick={() => {
-              if (userSocket) {
-                sendGameInvite(chatProps.selected?.user.id, chatProps.selected?.id, userSocket, setErrorMessage);
-              }
-            }}
+            onClick={handleGameInvite}
             sx={{
               width: "40px",
               height: "40px",

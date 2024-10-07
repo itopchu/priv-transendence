@@ -24,8 +24,7 @@ import { darken, alpha } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
 import { useChat } from '../../Providers/ChatContext/Chat';
 import axios from "axios";
-import { handleChatInvite } from "../../Providers/ChatContext/utils";
-import { sendGameInvite } from "../../Layout/Chat/ContentChat";
+import { handleChatInvite, sendGameInvite } from "../../Providers/ChatContext/utils";
 
 
 interface VisitedInfoProps {
@@ -72,7 +71,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
   const [friendshipAttitude, setFriendshipAttitude] =
     useState<FriendshipAttitude>(FriendshipAttitude.available);
-  const { user } = useUser();
+  const { user, userSocket } = useUser();
 	const { chatProps, changeChatProps } = useChat();
 
   useEffect(() => {
@@ -218,14 +217,13 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   };
 
   function handleGameInvite() {
-      if (visitedUser?.id) {
-        
-          // sendGameInvite(visitedUser.id, chatProps, changeChatProps, user.id);
-      }
+		if (userSocket) {
+			sendGameInvite(visitedUser?.id, userSocket, chatProps, changeChatProps);
+		}
   }
   
   function handleChatClick() {
-	handleChatInvite(visitedUser, chatProps, changeChatProps);
+		handleChatInvite(visitedUser, chatProps, changeChatProps);
   }
 
   let imagePart = () => {

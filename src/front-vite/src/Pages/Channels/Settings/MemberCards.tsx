@@ -30,7 +30,7 @@ import { BACKEND_URL, getUsername, handleError } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { useFriendshipAttitude, userRelationMenuItems } from './UserCardsUtils';
 import { useChat } from '../../../Providers/ChatContext/Chat';
-import { handleChatInvite } from '../../../Providers/ChatContext/utils';
+import { handleChatInvite, sendGameInvite } from '../../../Providers/ChatContext/utils';
 
 type MuteOptionsType = { key: string; value: number | null };
 
@@ -166,6 +166,11 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 	const onMuteMenuClose = () => {
 		setMuteAnchorEl(null);
 	};
+
+	const handleGameInvite = (receiverId: number) => {
+		sendGameInvite(receiverId, userSocket, chatProps, changeChatProps)
+		onMenuClose();
+	}
 
   async function onMute(member: ChannelMemberPublic, duration: number | null, menuCloseFunc: () => void) {
     const payload = {
@@ -333,6 +338,9 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 									]}
 									<MenuItem onClick={() => handleChatInvite(member.user, chatProps, changeChatProps, onMenuClose)}>
 										Send Message
+									</MenuItem>
+									<MenuItem onClick={() => handleGameInvite(member.user.id)}>
+										Send Game Invite
 									</MenuItem>
 									{userRelationMenuItems(member.user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
 									{isModeratable && [

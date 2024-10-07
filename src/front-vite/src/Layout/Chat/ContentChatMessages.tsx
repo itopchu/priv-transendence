@@ -206,28 +206,28 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 								>
 									<Stack spacing={-.5} display={isEditing ? 'none' : 'flex'} >
 										{msg.content.startsWith('GameRoom-') ? (
-										isLocalUser ? (
-										<Typography
-											variant="body1"
-											sx={{ whiteSpace: 'pre-line', fontStyle: 'italic' }}
-										>
-											Game invitation has been sent.
-										</Typography>
-										) : (
-										<Typography
-											variant="body1"
-											sx={{ whiteSpace: 'pre-line', cursor: 'pointer', fontStyle: 'italic' }}
-											onClick={() => {
-												navigate(`/game`);
-												userSocket?.emit("joinGame", msg.content, (roomId: string) => {
-													if (!roomId.startsWith('GameRoom-'))
-														handleError(roomId);
-												})
-											}}
-										>
-											Click here to join the game.
-										</Typography>
-										)
+											isLocalUser ? (
+											<Typography
+												variant="body1"
+												sx={{ whiteSpace: 'pre-line', fontStyle: 'italic' }}
+											>
+												Game invitation has been sent.
+											</Typography>
+											) : (
+											<Typography
+												variant="body1"
+												sx={{ whiteSpace: 'pre-line', cursor: 'pointer', fontStyle: 'italic' }}
+												onClick={() => {
+													navigate(`/game`);
+													userSocket?.emit("joinGame", msg.content, (roomId: string) => {
+														if (!roomId.startsWith('GameRoom-'))
+															handleError(roomId);
+													})
+												}}
+											>
+												Click here to join the game.
+											</Typography>
+											)
 										) : (
 										<Typography
 											variant="body1"
@@ -237,6 +237,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 										</Typography>
 										)}
 										<StatusTypography
+											hidden={!msg.edited || isEditing}
 											sx={{ alignSelf: isLocalUser ? 'flex-start' : 'flex-end' }}
 										>
 											(edited)

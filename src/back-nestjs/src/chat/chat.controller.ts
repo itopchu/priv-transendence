@@ -66,21 +66,7 @@ export class ChatController {
 			}
 		}
 
-		const relationship = await this.userService.getUserFriendship(user, recipient);
-		if (relationship) {
-			let restrictedUser: User = undefined;
-			if (relationship.user1Attitude === FriendshipAttitude.restricted) {
-				restrictedUser = relationship.user2;
-			}
-			if (relationship.user2Attitude === FriendshipAttitude.restricted) {
-				restrictedUser = relationship.user1;
-			}
-			if (restrictedUser) { 
-				if (restrictedUser.id === user.id)
-					throw new UnauthorizedException('Unauthorized: This user has blocked you');
-				throw new UnauthorizedException('Unauthorized: You have blocked this user');
-			}
-		}
+		await this.chatService.validateRelationship(user.id, recipient.id);
 
 		const newChat = await this.chatService.createChat(user, recipient);
 		this.chatGateway.emitNewChat(newChat);

@@ -184,32 +184,19 @@ export class ChatGateway {
 	}
 
   @SubscribeMessage('sendChatMessage')
-  async onChatMessage(client: UserSocket, payload: { chatId: number, content: string }) {
+  async onChatMessage(client: UserSocket, payload: { receiverId: number, content: string }) {
 	try {
 		const user = client.authUser;
 		if (!user) {
 		  throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const chat = await this.chatService.getChatById(payload.chatId, ['users']);
+		const chat = await this.chatService.getChatByUsersId(user.id, payload.receiverId);
 		if (!chat) {
-			throw new NotFoundException('Chat not found');
+			throw new NotFoundException('Chat not found or user is not in chat');
 		}
 
-		const recipient = chat.users.find((chatUser) => chatUser.id !== user.id);
-		if (!recipient) {
-			throw new NotFoundException('Recipient not found');
-		}
-
-		const relationship = await this.userService.getUserFriendship(user, recipient);
-		if (relationship) {
-			if (relationship.user1Attitude === FriendshipAttitude.restricted) {
-				throw new UnauthorizedException(`Unauthorized: ${relationship.user1.nameFirst} is blocked`);
-			}
-			if (relationship.user2Attitude === FriendshipAttitude.restricted) {
-				throw new UnauthorizedException(`Unauthorized: ${relationship.user2.nameFirst} is blocked`);
-			}
-		}
+		await this.chatService.validateRelationship(user.id, payload.receiverId);
 
 		const message = await this.chatService.logMessage(chat.id, user, payload.content);
 		const publicMessage = new MessagePublicDTO(message);

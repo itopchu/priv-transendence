@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Chat, Message } from "../entities/chat.entity";
-import { User } from "../entities/user.entity";
+import { FriendshipAttitude, User } from "../entities/user.entity";
 import { Repository, In } from "typeorm";
 import { MessageService } from "./message/message.service";
+import { UserService } from "../user/user.service";
 
 @Injectable()
 export class ChatService {
@@ -11,6 +12,7 @@ export class ChatService {
 		@InjectRepository(Chat)
 		private chatRepository: Repository<Chat>,
 		private readonly messageService: MessageService,
+		private readonly userService: UserService,
 	) {}
 
 	async getChatById(chatId: number, relations?: string[]) {
@@ -24,6 +26,20 @@ export class ChatService {
 		} catch (error) {
 			console.error(error.message);
 			throw new InternalServerErrorException(`Could not get chat by id: ${error.message}`);
+		}
+	}
+
+	async getChatByUsersId(user1Id: number, user2Id: number) {
+		try {
+			const chat = await this.chatRepository.createQueryBuilder('chat')
+				.leftJoinAndSelect('chat.users', 'users')
+				.where('users.id IN (:...userIds)', { userIds: [user1Id, user2Id] })
+				.getOne();
+
+			return (chat);
+		} catch (error) {
+			console.error(error.message);
+			throw new InternalServerErrorException(`Could not get chat by users: ${error.message}`);
 		}
 	}
 
@@ -46,11 +62,11 @@ export class ChatService {
 		}
 	}
 
-	async createChat(user: User, recipient: User) {
+	async createChat(sender: User, receiver: User) {
 		const newChat = this.chatRepository.create({
 			modified: new Date(),
 			status: 0, //change later?
-			users: [user, recipient],
+			users: [sender, receiver],
 		});
 
 		try {
@@ -80,5 +96,27 @@ export class ChatService {
 		await this.chatRepository.update(chat.id, { modified: new Date() });
 
 		return (newMessage);
+	}
+
+	async validateRelationship(senderId: number, receiverId: number) {
+		const relationship = await this.userService.getUserFriendship(
+			{ id: senderId } as User,
+			{ id: receiverId } as User
+		);
+
+		if (relationship) {
+			let restrictedUser: User = undefined;
+			if (relationship.user1Attitude === FriendshipAttitude.restricted) {
+				restrictedUser = relationship.user2;
+			}
+			if (relationship.user2Attitude === FriendshipAttitude.restricted) {
+				restrictedUser = relationship.user1;
+			}
+			if (restrictedUser) { 
+				if (restrictedUser.id === senderId)
+					throw new UnauthorizedException('Unauthorized: This user has blocked you');
+				throw new UnauthorizedException('Unauthorized: You have blocked this user');
+			}
+		}
 	}
 }
