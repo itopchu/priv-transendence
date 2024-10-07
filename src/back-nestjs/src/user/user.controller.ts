@@ -189,10 +189,19 @@ export class UserController {
   }
 
   @Get('getUsers/online')
+  @UseGuards(AuthGuard)
   async getOnlineUsers(@Req() req: Request, @Res() res: Response) {
+    const userId = req.authUser.id;
+
     const onlineUsers = Array.from(this.userGateway.connectedUsers.entries())
-      .filter(([key, value]) => value > 0)
+      .filter(([key, value]) => value > 0 && key !== userId)
       .map(([key, value]) => key);
-    return res.status(200).json(onlineUsers);
+  
+    const publicUsers: UserPublicDTO[] = await Promise.all(onlineUsers.map(async (id) => {
+      const user = await this.userService.getUserById(id);
+      return new UserPublicDTO(user, null);
+    }));
+  
+    return res.status(200).json({ publicUsers });
   }
 }

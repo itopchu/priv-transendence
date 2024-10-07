@@ -1,5 +1,5 @@
 import "./Game.css";
-import { useUser } from "../../Providers/UserContext/User";
+import { UserPublic, useUser } from "../../Providers/UserContext/User";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { CustomScrollBox } from "../Channels/Components/Components";
@@ -20,29 +20,9 @@ const Play = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [mePaused, setMePaused] = useState(false);
   const [countDown, setCountDown] = useState(0);
+  const [firstTime, setFirstTime] = useState(false);
   const [showInviteList, setShowInviteList] = useState(false);
-  const [fakeUsers] = useState([
-    { id: 1, name: 'User1' },
-    { id: 2, name: 'User2' },
-    { id: 3, name: 'User3' },
-    { id: 4, name: 'User4' },
-    { id: 5, name: 'User5' },
-    { id: 6, name: 'User6' },
-    { id: 7, name: 'User7' },
-    { id: 8, name: 'User8' },
-    { id: 9, name: 'User9' },
-    { id: 10, name: 'User10' },
-    { id: 11, name: 'User11' },
-    { id: 12, name: 'User12' },
-    { id: 13, name: 'User13' },
-    { id: 14, name: 'User14' },
-    { id: 15, name: 'User15' },
-    { id: 16, name: 'User16' },
-    { id: 17, name: 'User17' },
-    { id: 18, name: 'User18' },
-    { id: 19, name: 'User19' },
-    { id: 20, name: 'User20' },
-  ]);
+  const [onlineUsers, setOnlineUsers] = useState<UserPublic[] | null>(null);
   const [gameState, setGameState] = useState({
     player1: { y: 150, direction: 0 },
     player2: { y: 150, direction: 0 },
@@ -202,23 +182,27 @@ const Play = () => {
         pauseGame();
       else
         resumeGame();
-    }
+    };
 
     const home = () => {
       setPlayerState(PlayerStates.notInGame);
-    }
-
+    };
 
     const getOnlineUsers = async () => {
       try {
         const res = await axios.get("http://localhost:4000/user/getUsers/online", {withCredentials: true});
-        console.log(res.data);
+        setOnlineUsers(res.data.publicUsers);
       } catch (err) {
         console.error(err);
       }
     };
-    const invite = () => {
-      getOnlineUsers();
+
+    const invite = async () => {
+      if (!showInviteList) {
+        await getOnlineUsers();
+      }
+      console.log(onlineUsers);
+      setFirstTime(true);
       setShowInviteList(!showInviteList);
     };
 
@@ -239,15 +223,18 @@ const Play = () => {
                     <button className="retro-button" onClick={joinQueue}>Join</button>
                     <button className="retro-button" onClick={playWithBot}>Play with Bot</button>
                     <button className="retro-button" onClick={invite}>Invite Player</button>
-                    <div className={`custom-scrollbox ${showInviteList ? 'open' : 'close'}`}>
-                      <CustomScrollBox style={{ maxHeight: '150px' }}>
-                        <ul style={{listStyleType: 'none', alignItems: "center"}}>
-                          {fakeUsers.map(user => (
-                            <li style={{display: "flex" ,justifyContent: "center", marginBottom: "10px"}} key={user.id}><button className="retro-button" style={{border: "none"}}>{user.name}</button></li>
+                    {firstTime && <div className={`custom-scrollbox ${showInviteList ? 'open' : 'close'}`}>
+                      <CustomScrollBox style={{ maxHeight: '150px', overflowX: 'hidden' }}>
+                        <ul style={{ listStyleType: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          {onlineUsers?.map(user => (
+                            <li style={{ marginBottom: "10px" }} key={user.id}>
+                              <button className="retro-button" style={{ border: "none" }}>{user.nameFirst}</button>
+                            </li>
                           ))}
                         </ul>
                       </CustomScrollBox>
                     </div>
+                    }
                   </div>
                 );
             case PlayerStates.inQueue:

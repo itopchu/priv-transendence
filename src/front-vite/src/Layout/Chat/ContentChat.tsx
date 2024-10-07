@@ -4,6 +4,7 @@ import {
 	Send as SendIcon,
 	Cancel as CancelIcon,
 	KeyboardBackspace as BackIcon,
+	VideogameAsset as GameIcon,
 } from '@mui/icons-material';
 import { ButtonAvatar, ClickTypography, LoadingBox } from '../../Pages/Channels/Components/Components';
 import { useNavigate } from 'react-router-dom';
@@ -144,6 +145,7 @@ const ContentChat = () => {
 		console.log('inviteGame', id);
 		userSocket?.emit('inviteGame', id, (roomId: string) => {
 			if (roomId.startsWith('GameRoom-')) {
+				navigate(`/game`);
 				const payload = {
 					chatId: chatProps.selected?.id,
 					content: roomId,
@@ -243,15 +245,20 @@ const ContentChat = () => {
 							{getFullname(user)}
 						</Typography>
 					</Stack>
-																					<IconButton
-																						onClick={sendGameInvite}
-																						sx={{
-																							width: '40px',
-																							height: '40px',
-																							color: (theme) => theme.palette.secondary.main,
-																						}}
-																					>game</IconButton>
 					<Box flexGrow={1} />
+						<IconButton
+							onClick={sendGameInvite}
+							sx={{
+								width: '40px',
+								height: '40px',
+								color: (theme) => theme.palette.secondary.main,
+								"&:hover": {
+									color: "#BF77F6",
+								},
+							}}
+						>
+							<GameIcon/>
+						</IconButton>
 					<IconButton
 						onClick={() => { toggleChatStatus(ChatStatus.Bubble, undefined) }}
 						sx={{
