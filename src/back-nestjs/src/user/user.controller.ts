@@ -186,4 +186,10 @@ export class UserController {
 
     return res.status(200).json({gamesDTO});
   }
+
+  @Get('onlineUsers')
+  async getOnlineUsers() {
+    // const onlineUsers = this.userGateway.;
+    return "patates";
+  }
 }

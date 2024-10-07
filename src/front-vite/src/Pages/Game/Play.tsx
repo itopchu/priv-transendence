@@ -208,13 +208,19 @@ const Play = () => {
       setPlayerState(PlayerStates.notInGame);
     }
 
+
+    const getOnlineUsers = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/user/onlineUsers", {withCredentials: true});
+        console.log(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
     const invite = () => {
+      getOnlineUsers();
       setShowInviteList(!showInviteList);
     };
-
-    const joinRoom = (roomId: string) => {
-      userSocket?.emit("joinRoom", roomId);
-    }
 
     return (
       <div className="container">
