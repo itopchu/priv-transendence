@@ -46,8 +46,15 @@
 # Project Collabrators
 This project was developed in collaboration with:
 
-- Brian Jacobs - https://github.com/bjacobs42
-- Selim Yildirim - https://github.com/X3l1m
-- Ibrahim Topchu - https://github.com/itopchu
-
+<p>
+  <a href="https://github.com/bjacobs42" style="text-decoration:none;">
+    <button>Brian Jacobs</button>
+  </a>
+  <a href="https://github.com/X3l1m" style="text-decoration:none;">
+    <button>Selim Yildirim</button>
+  </a>
+  <a href="https://github.com/itopchu" style="text-decoration:none;">
+    <button>Ibrahim Topchu</button>
+  </a>
+</p>
 A huge thank you to each of you for your hard work, dedication, and invaluable contributions to ft_transcendence.
