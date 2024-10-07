@@ -211,7 +211,7 @@ const Play = () => {
 
     const getOnlineUsers = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/user/onlineUsers", {withCredentials: true});
+        const res = await axios.get("http://localhost:4000/user/getUsers/online", {withCredentials: true});
         console.log(res.data);
       } catch (err) {
         console.error(err);
