@@ -5,8 +5,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
-    expose:
-      - ${PORT_POSTGRES}
     ports:
       - "${PORT_POSTGRES}:${PORT_POSTGRES}" # Optional: expose for debugging.
     networks:
