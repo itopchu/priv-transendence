@@ -5,7 +5,6 @@ import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
 import { NavigateFunction } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
 import { formatDate, getTimeDiff } from "../../Providers/ChannelContext/utils";
-import Play from "../../Pages/Game/Play";
 import {
 	MsgContextMenu,
 	ChatBubble,
@@ -17,7 +16,6 @@ import {
 	StatusTypography
 } from "../../Pages/Channels/Components/ChatBoxComponents";
 import { HiddenTimestamp } from "../../Pages/Channels/Components/ChatBoxComponents";
-import { join } from "path";
 import { handleError } from "../../Pages/Channels/utils";
 
 type ChatBoxType = {
