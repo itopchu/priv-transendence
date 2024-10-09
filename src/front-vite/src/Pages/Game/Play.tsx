@@ -3,6 +3,8 @@ import { UserPublic, useUser } from "../../Providers/UserContext/User";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { CustomScrollBox } from "../Channels/Components/Components";
+import { sendGameInvite } from "../../Providers/ChatContext/utils";
+import { useChat } from "../../Providers/ChatContext/Chat";
 
 enum PlayerStates {
   notInGame = 0,
@@ -16,6 +18,7 @@ enum PlayerStates {
 
 const Play = () => {
   const { userSocket } = useUser();
+  const { chatProps, changeChatProps } = useChat();
   const [playerState, setPlayerState] = useState<PlayerStates>(PlayerStates.notInGame);
   const [isPlaying, setIsPlaying] = useState(false);
   const [mePaused, setMePaused] = useState(false);
@@ -201,9 +204,13 @@ const Play = () => {
       if (!showInviteList) {
         await getOnlineUsers();
       }
-      console.log(onlineUsers);
       setFirstTime(true);
       setShowInviteList(!showInviteList);
+    };
+
+    const invitePlayer = (id: number) => {
+      if (userSocket)
+        sendGameInvite(id, userSocket, chatProps, changeChatProps);
     };
 
     return (
@@ -228,7 +235,7 @@ const Play = () => {
                         <ul style={{ listStyleType: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                           {onlineUsers?.map(user => (
                             <li style={{ marginBottom: "10px" }} key={user.id}>
-                              <button className="retro-button" style={{ border: "none" }}>{user.nameFirst}</button>
+                              <button className="retro-button" style={{ border: "none" }} onClick={() => invitePlayer(user.id)}>{user.nameFirst}</button>
                             </li>
                           ))}
                         </ul>
