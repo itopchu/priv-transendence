@@ -99,7 +99,9 @@ const ContentChat = () => {
 
   useEffect(() => {
     function onProfileStatus(updatedUser: UserPublic) {
-			setUser(updatedUser);
+      if (updatedUser.id === user?.id) {
+        setUser(updatedUser);
+      }
     }
 
     function handleMessageUpdate(data: DataUpdateType<Message>) {
@@ -115,7 +117,7 @@ const ContentChat = () => {
       setErrorMessage(message);
     }
 
-    userSocket?.on(`profileStatus${user?.id}`, onProfileStatus);
+    userSocket?.on("profileStatus", onProfileStatus);
     userSocket?.on("newChatMessageUpdate", handleMessageUpdate);
     userSocket?.on("chatMessageError", handleMessageError);
     userSocket?.emit("profileStatus", user?.id);
@@ -124,7 +126,7 @@ const ContentChat = () => {
       userSocket?.emit("unsubscribeProfileStatus", user?.id);
       userSocket?.off("chatMessageError", handleMessageError);
       userSocket?.off("newChatMessageUpdate", handleMessageUpdate);
-      userSocket?.off(`profileStatus${user?.id}`, onProfileStatus);
+      userSocket?.off("profileStatus", onProfileStatus);
     };
   }, [chatProps.selected?.id, userSocket]);
 
