@@ -146,7 +146,8 @@ const ContentChat = () => {
   };
 
 	const handleGameInvite = () => {
-		sendGameInvite(
+		navigate(`/game`);
+    sendGameInvite(
 			chatProps.selected?.user.id,
 			userSocket,
 			chatProps,

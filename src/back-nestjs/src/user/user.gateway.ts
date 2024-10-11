@@ -347,7 +347,6 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gameService.setGameSate(roomId, false);
     client.emit('startGame', 2);
     room[0].client.emit('startGame', 1);
-    this.handlePauseGame(room[0].client);
     return roomId;
   }
 

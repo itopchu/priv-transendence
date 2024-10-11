@@ -5,7 +5,6 @@ import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
 import { NavigateFunction } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
 import { formatDate, getLink, getTimeDiff, INVITE_DOMAIN } from "../../Providers/ChannelContext/utils";
-import Play from "../../Pages/Game/Play";
 import {
 	MsgContextMenu,
 	ChatBubble,
