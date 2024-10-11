@@ -17,8 +17,7 @@ export type Message = {
 export interface IChat {
   id: number;
   user: UserPublic;
-	modified: Date;
-  unreadMsgCount: number;
+  modified: Date;
 }
 
 export interface ChatProps {

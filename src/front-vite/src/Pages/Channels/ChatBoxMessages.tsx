@@ -58,6 +58,11 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 		setSelectedMessage(undefined);
 	}
 
+	const copyMessage = async (msg: Message) => {
+		await navigator.clipboard.writeText(msg.content);
+		handleClose();
+	}
+
 	const openContextMenu = (event: React.MouseEvent<HTMLElement>, msg: Message) => {
 		if (msg.author.id !== localUser.id || (editMode && selectedMessage?.id === msg.id)) return;
 
@@ -130,6 +135,7 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 							onClose={handleClose}
 							onEditClick={() => enableEditMode(msg)}
 							onDeleteClick={() => deleteMessage(msg.id)}
+							onCopyClick={() => copyMessage(msg)}
 						/>
 						{isDiffDay && (
 							<Box flexGrow={1} paddingTop={3} >

@@ -38,16 +38,16 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 	const channel = channelProps.selected?.channel;
 	if (!channel) return;
 
-  const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
+	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 	const searchRef = useRef<HTMLInputElement>(null);
 
 	const [searchResults, setSearchResults] = useState<Message[]>([]);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
 	const closePopper = () => {
-			setSelectedMsgId(undefined);
-			setAnchorEl(null);
+		setSelectedMsgId(undefined);
+		setAnchorEl(null);
 	}
 
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {

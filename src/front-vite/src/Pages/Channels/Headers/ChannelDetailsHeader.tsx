@@ -14,7 +14,7 @@ import {
 	PeopleRounded as DefaultChannelIcon,
 	ContentCopy as CopyIcon,
 } from '@mui/icons-material';
-import { Channel, ChannelStates, UpdateType } from "../../../Providers/ChannelContext/Types";
+import { Channel, ChannelRole, ChannelStates, ChannelType, UpdateType } from "../../../Providers/ChannelContext/Types";
 import React, { ReactElement, useEffect, useRef, useState } from "react";
 import { UserPublic, UserStatusType, useUser } from "../../../Providers/UserContext/User";
 import { createInvite, updatePropArray } from "../../../Providers/ChannelContext/utils";
@@ -65,15 +65,17 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 	const { channelProps, channelLineProps, changeProps, changeLineProps } = useChannel();
 	if (!channelProps.selected) return;
 	const { user: localUser, userSocket } = useUser();
+	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
 	const channel = channelProps.selected.channel; 
 	const myChannels = channelProps.memberships
 		.filter((membership) => membership.channel.id !== channel.id)
 		.map((membership) => membership.channel);
+	const popperOpen = Boolean(anchorEl) && (channel.type === ChannelType.public || channelProps.selected.role < ChannelRole.member)
+
 	const searchRef = useRef<HTMLInputElement>(null);
 	const theme = useTheme();
 
-	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
 	const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
 		setAnchorEl(event.currentTarget);
@@ -94,7 +96,10 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 		const [inviteLink, setInviteLink] = useState<string | undefined>(undefined);
 
 		useEffect(() => {
-			if (!anchorEl) return;
+			if (!popperOpen) {
+				if (anchorEl) handleClose();
+				return;
+			}
 			setPopupLoading(true);
 
 			const getFriends = async () => {
@@ -347,7 +352,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 		return (
 			<div>
 				<Popover
-					open={Boolean(anchorEl)}
+					open={popperOpen}
 					anchorEl={anchorEl}
 					onClose={handleClose}
 					anchorOrigin={{
@@ -545,7 +550,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 					</Stack>
 				</DetailHeaderPart>
 				<DetailHeaderPart
-					visibility={isMod ? 'visible' : 'hidden'}
+					visibility={channel.type === ChannelType.public || isMod ? 'visible' : 'hidden'}
 					sx={{
 						borderLeft: `1px solid ${theme.palette.secondary.dark}`,
 						borderBottomLeftRadius: '2em',
@@ -553,7 +558,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 					}}
 				>
 					{!editMode && <HeaderIconButton Icon={CreateInviteIcon} onClick={handleOpen} />}
-					<HeaderIconButton Icon={!editMode ? EditIcon : EditOffIcon} onClick={onEditClick} />
+					{isMod && <HeaderIconButton Icon={!editMode ? EditIcon : EditOffIcon} onClick={onEditClick} />}
 					{editMode && <HeaderIconButton Icon={ApplyIcon} onClick={onApplyClick} />}
 				</DetailHeaderPart>
 			</Stack>

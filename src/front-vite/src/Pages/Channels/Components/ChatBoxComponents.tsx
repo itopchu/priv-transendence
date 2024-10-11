@@ -9,9 +9,6 @@ import { getInvite } from "../../../Providers/ChannelContext/utils";
 
 const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
 	fontSize: '.9rem',
-	[theme.breakpoints.down('sm')]: {
-		margin:  -8,
-	},
 }))
 
 export const ChatBubble = styled(Box)(({ theme }) => ({
@@ -146,6 +143,7 @@ interface MsgContextMenuType {
 	onClose: () => void;
 	onEditClick: () => void;
 	onDeleteClick: () => void;
+	onCopyClick: () => void;
 }
 
 export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
@@ -154,34 +152,46 @@ export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
 	anchorPosition,
 	onEditClick,
 	onDeleteClick,
-}) => (
-	<Menu
-		open={open}
-		onClose={onClose}
-		anchorReference="anchorPosition"
-		anchorPosition={anchorPosition}
-		sx={{
-			'& .MuiPaper-root': {
-				padding: '0px 8px',
-			},
-		}}
-	>
-		<MessageMenuItem onClick={undefined}>
-			Copy Message
-		</MessageMenuItem >
-		<Divider />
-		<MessageMenuItem onClick={onEditClick}>
-			Edit Message
-		</MessageMenuItem >
-		<Divider />
-		<MessageMenuItem
-			onClick={onDeleteClick}
-			sx={{ color: 'red' }}
+	onCopyClick,
+}) => {
+	const selection = window.getSelection()?.toString;
+
+	const handleCopySelection = async () => {
+		const selectedText = selection?.toString();
+		if (selectedText) {
+			await navigator.clipboard.writeText(selectedText);
+			onClose();
+		}
+	}
+
+	return (
+		<Menu
+			open={open}
+			onClose={onClose}
+			anchorReference="anchorPosition"
+			anchorPosition={anchorPosition}
+			MenuListProps={{ autoFocus: false }}
 		>
-			Delete Message
-		</MessageMenuItem>
-	</Menu>
-)
+			{selection && selection.length > 0 && (
+				<MessageMenuItem divider onClick={handleCopySelection} >
+					Copy Highlighted
+				</MessageMenuItem>
+			)}
+			<MessageMenuItem divider onClick={onCopyClick}>
+				Copy Message
+			</MessageMenuItem >
+			<MessageMenuItem divider onClick={onEditClick}>
+				Edit Message
+			</MessageMenuItem >
+			<MessageMenuItem
+				onClick={onDeleteClick}
+				sx={{ color: 'red' }}
+			>
+				Delete Message
+			</MessageMenuItem>
+		</Menu>
+	);
+}
 
 type InviteMessageType = {
 	link: string,
@@ -234,6 +244,7 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 				spacing={theme.spacing(1)}
 			>
 				<Typography
+					noWrap
 					variant="body1"
 					fontSize={"large"}
 					color={'textSecondary'}

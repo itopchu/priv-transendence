@@ -23,6 +23,9 @@ export async function handleChatInvite(
 			selected: chat,
 			chatStatus: ChatStatus.Chatbox,
 		});
+		if (menuCloseFunc) {
+			menuCloseFunc();
+		}
 		return;
 	}
 

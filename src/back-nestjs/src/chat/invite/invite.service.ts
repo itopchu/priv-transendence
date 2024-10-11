@@ -60,7 +60,7 @@ export class InviteService {
 		}
 		const isBanned = await this.channelService.isUserBanned(invite.destinationId, user.id);
 		if (isBanned) {
-			throw new UnauthorizedException('User is banned from this channel');
+			throw new UnauthorizedException('You are banned from this channel');
 		}
 		return (invite);
 	}

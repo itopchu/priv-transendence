@@ -7,7 +7,6 @@ import {
   Button,
   Typography,
   CircularProgress,
-  stackClasses,
 } from "@mui/material";
 import {
 	Send as SendIcon,
@@ -37,9 +36,7 @@ const ContentChat = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const [errorMessage, setErrorMessage] = useState<string | undefined>(
-    undefined
-  );
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [user, setUser] = useState<UserPublic | undefined>(
     chatProps.selected?.user
   );
@@ -110,19 +107,14 @@ const ContentChat = () => {
     function handleMessageUpdate(data: DataUpdateType<Message>) {
       if (data.id === chatProps.selected?.id) {
         setMessageLog((prevMap) => updateMap(prevMap, data));
+				if (errorMessage) {
+					setErrorMessage(undefined);
+				}
       }
     }
 
     function handleMessageError(message: string) {
       setErrorMessage(message);
-      setTimeout(() => {
-        setErrorMessage((currentErrorMessage) => {
-          if (message === currentErrorMessage) {
-            return undefined;
-          }
-          return currentErrorMessage;
-        });
-      }, 60000); // 1 min delay
     }
 
     userSocket?.on("profileStatus", onProfileStatus);

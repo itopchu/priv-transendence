@@ -96,11 +96,11 @@ export class ChannelController {
 		return ({ memberships: clientMemberships });
 	}
 
-	@Get('invite/:id')
+	@Get('invite/:inviteId')
 	@UseGuards(AuthGuard)
 	async getInvite(
 		@Req() req: Request,
-		@Param('id', new ParseUUIDPipe()) inviteId: string,
+		@Param('inviteId', new ParseUUIDPipe()) inviteId: string,
 	) {
 		const user = req.authUser;
 		const invite = await this.inviteService.validateJoin(user, inviteId);

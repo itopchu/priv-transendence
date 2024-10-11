@@ -1,6 +1,6 @@
 import axios from "axios";
 import { BACKEND_URL, formatErrorMessage, handleError } from "../../Pages/Channels/utils";
-import { ChannelFilters, ChannelMember, ChannelType, DataUpdateType, formatDateType, UpdateType, Invite, ChannelPropsType } from "./Types";
+import { ChannelFilters, ChannelMember, ChannelType, DataUpdateType, formatDateType, UpdateType, Invite, ChannelPropsType, ChannelStates } from "./Types";
 import React from "react";
 
 export const FRONTEND_URL: string = import.meta.env.ORIGIN_URL_FRONT || 'http://localhost.codam.nl:3000';
@@ -186,15 +186,14 @@ export async function acceptInvite(
 	setErrMsg?: React.Dispatch<React.SetStateAction<string>>,
 ) {
 	if (invite?.isJoined) {
-		console.log(channelProps);
 		const membership = channelProps.memberships.find((membership => {
 			return (membership.channel.id === invite?.destination?.id);
 		}));
 
-		console.log(invite);
 		setChannelProps((prevProps) => ({
 			...prevProps,
 			selected: membership,
+			state: ChannelStates.chat,
 		}));
 	} else {
 		try {
@@ -204,6 +203,7 @@ export async function acceptInvite(
 				setChannelProps((prevProps) => ({
 					...prevProps,
 					memberships: [...prevProps.memberships, newMembership],
+					selected: newMembership,
 				}));
 			}
 		} catch (error) {

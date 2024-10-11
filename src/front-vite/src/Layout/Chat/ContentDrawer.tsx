@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { ChatStatus, IChat } from './InterfaceChat';
-import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography, Avatar, Popover, Card, CardHeader, CardContent, CardActions, Button } from '@mui/material';
+import { Box, Drawer, Divider, Stack, IconButton, InputBase, Typography, Avatar } from '@mui/material';
 import { darken, alpha, useTheme } from '@mui/material/styles';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useChat } from '../../Providers/ChatContext/Chat';
@@ -12,7 +12,7 @@ const ContentDrawer = () => {
 	const searchRef = useRef<HTMLInputElement>(null);
 	const { chatProps, changeChatProps } = useChat();
 
-	const [searchedChats, setFilteredChats] = useState<IChat[]>(chatProps.chats);
+	const [searchedChats, setSearchedChats] = useState<IChat[]>(chatProps.chats);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   const toggleChatStatus = (status: ChatStatus, selection: IChat | undefined) => {
@@ -42,7 +42,8 @@ const ContentDrawer = () => {
 
 			return (chatname.match(regex));
 		});
-		setFilteredChats(chats);
+		chats.sort((a, b) => new Date(a.modified).getTime() - new Date(b.modified).getTime());
+		setSearchedChats(chats);
   };
 
   const DrawerContent = (

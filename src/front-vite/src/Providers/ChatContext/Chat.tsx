@@ -23,10 +23,6 @@ export const ChatContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 	const changeChatProps = (newProps: Partial<ChatProps>) => {
 		const newChats = newProps.chats ? newProps.chats : [];
 
-		if (newProps.selected) {
-			newProps.selected.unreadMsgCount = 0;
-		}
-
 		setChatProps((prevProps) => ({
 			...prevProps,
 			...newProps,
