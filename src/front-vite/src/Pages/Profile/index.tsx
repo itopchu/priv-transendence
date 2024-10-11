@@ -6,15 +6,19 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import VisitedInfo from './ownerInfo';
 import StatsContainer from './statsContainer';
 import FriendsBox from './friends';
+import { useChat } from '../../Providers/ChatContext/Chat';
+
+export let visitedUserId: number = 0;
 
 const ProfilePage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const visitedUserId = location.pathname.split('/').pop();
-  const [visitedUser, setVisitedUser] = useState<UserPublic>({ id: Number(visitedUserId) });
+  visitedUserId = Number(location.pathname.split('/').pop());
+  const [visitedUser, setVisitedUser] = useState<UserPublic>({ id: visitedUserId });
   const { user, userSocket } = useUser();
+  const { chatProps } = useChat();
 
   function handleSubscriptionError(errorMessage: string) {
     console.error(`Subscription error: ${errorMessage}`);
@@ -25,8 +29,9 @@ const ProfilePage: React.FC = () => {
     if (!userSocket) return;
 
     function handleProfileStatus(receivedUser: UserPublic) {
-			if (receivedUser?.id === Number(visitedUserId))
+			if (receivedUser?.id === visitedUserId) {
 				setVisitedUser(receivedUser);
+			}
     };
 
     userSocket.emit('profileStatus', visitedUserId);
@@ -35,13 +40,15 @@ const ProfilePage: React.FC = () => {
 
     return () => {
       if (userSocket) {
-        userSocket.emit('unsubscribeProfileStatus', visitedUserId);
-        userSocket.off('profileStatus', handleSubscriptionError);
+		console.log('OFF')
+		if (chatProps.selected?.user.id !== Number(visitedUserId))
+			userSocket.emit('unsubscribeProfileStatus', visitedUserId);
+        userSocket.off('profileStatus', handleProfileStatus);
         userSocket.off('subscriptionError', handleSubscriptionError);
       }
       setVisitedUser({ id: 0 });
     };
-  }, [userSocket, visitedUserId]);
+  }, [userSocket, location]);
 
   return (
     <>

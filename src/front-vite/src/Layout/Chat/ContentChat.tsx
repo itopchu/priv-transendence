@@ -27,6 +27,7 @@ import { DataUpdateType } from '../../Providers/ChannelContext/Types';
 import { updateMap } from '../../Providers/ChannelContext/utils';
 import { StatusTypography } from '../../Pages/Channels/Components/ChatBoxComponents';
 import { sendGameInvite } from "../../Providers/ChatContext/utils";
+import { visitedUserId } from "../../Pages/Profile/index";
 
 const ContentChat = () => {
   const { chatProps, changeChatProps } = useChat();
@@ -37,9 +38,8 @@ const ContentChat = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  const [user, setUser] = useState<UserPublic | undefined>(
-    chatProps.selected?.user
-  );
+  const [user, setUser] = useState<UserPublic | undefined>(chatProps.selected?.user);
+	console.log(user);
   const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
 
   const isDisabled = chatProps.loading;
@@ -91,7 +91,7 @@ const ContentChat = () => {
 
     getMessages();
     return () => {
-      controller.abort;
+      controller.abort();
       changeChatProps({ loading: true });
       setMessageLog(new Map());
     };
@@ -99,7 +99,7 @@ const ContentChat = () => {
 
   useEffect(() => {
     function onProfileStatus(updatedUser: UserPublic) {
-      if (updatedUser.id === user?.id) {
+      if (updatedUser.id === chatProps.selected?.user.id) {
         setUser(updatedUser);
       }
     }
@@ -117,13 +117,15 @@ const ContentChat = () => {
       setErrorMessage(message);
     }
 
+		console.log('rerender socket');
     userSocket?.on("profileStatus", onProfileStatus);
     userSocket?.on("newChatMessageUpdate", handleMessageUpdate);
     userSocket?.on("chatMessageError", handleMessageError);
-    userSocket?.emit("profileStatus", user?.id);
+    userSocket?.emit("profileStatus", chatProps.selected?.user.id);
 
     return () => {
-      userSocket?.emit("unsubscribeProfileStatus", user?.id);
+			if (visitedUserId !== chatProps.selected?.user.id)
+				userSocket?.emit("unsubscribeProfileStatus", chatProps.selected?.user.id);
       userSocket?.off("chatMessageError", handleMessageError);
       userSocket?.off("newChatMessageUpdate", handleMessageUpdate);
       userSocket?.off("profileStatus", onProfileStatus);
