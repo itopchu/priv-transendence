@@ -58,6 +58,11 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 		setSelectedMessage(undefined);
 	}
 
+	const copyMessage = async (msg: Message) => {
+		await navigator.clipboard.writeText(msg.content);
+		handleClose();
+	}
+
 	const openContextMenu = (event: React.MouseEvent<HTMLElement>, msg: Message) => {
 		if (msg.author.id !== localUser.id || (editMode && selectedMessage?.id === msg.id)) return;
 
@@ -139,6 +144,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 							onClose={handleClose}
 							onEditClick={() => enableEditMode(msg)}
 							onDeleteClick={() => deleteMessage(msg.id)}
+							onCopyClick={() => copyMessage(msg)}
 						/>
 						{isDiffHour && (
 							<Box flexGrow={1} paddingTop={3} >
