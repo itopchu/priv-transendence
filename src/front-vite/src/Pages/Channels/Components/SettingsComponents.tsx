@@ -2,18 +2,16 @@ import { Box, Divider, styled, SxProps, Theme } from "@mui/material";
 import { CustomScrollBox } from "../Components/Components";
 
 export const SettingsTextFieldSx = (theme: Theme): SxProps<Theme> => ({
-	'& input': {
-		textAlign: 'center',
-		[theme.breakpoints.up('sm')]: {
-			textAlign: 'left',
-		},
-	},
   '& .MuiInputBase-input': {
+		textAlign: 'center',
     padding: '0px 4px',
     fontSize: '1.5rem',
     fontWeight: 'bold',
     lineHeight: 1.334,
     letterSpacing: '0em',
+		[theme.breakpoints.up('md')]: {
+			textAlign: 'left',
+		},
   },
 })
 

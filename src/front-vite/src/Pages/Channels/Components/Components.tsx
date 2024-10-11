@@ -28,7 +28,7 @@ interface IHeaderIconButtonType {
 	Icon: SvgIconComponent;
 	label?: string;
 	iconFontSize?: string;
-	onClick?: () => void;
+	onClick?: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
 interface IImageInput {
@@ -37,7 +37,6 @@ interface IImageInput {
 }
 
 export const CustomAvatar = styled(Avatar)(({ theme }) => ({
-  margin: '0 auto',
   border: '3px solid',
   borderColor: theme.palette.primary.dark,
 }));
@@ -114,10 +113,15 @@ export const ImageInput: React.FC<IImageInput> = ({ children, onFileInput }) => 
 	)
 }
 
-export const ClickTypography = styled(Typography)(({}) => ({
-	cursor: 'pointer',
+type ClickTypographyType = {
+	disabled?: boolean,
+}
+
+export const ClickTypography = styled(Typography)<ClickTypographyType>(({ disabled }) => ({
+	cursor: disabled ? 'default' : 'pointer',
+	pointerEvents: disabled ? 'none' : 'auto',
 	'&:hover': {
-	  textDecoration: 'underline',
+	  textDecoration: disabled ? 'none' : 'underline',
 	}
 }));
 
@@ -131,7 +135,7 @@ export const LoadingBox = styled(Box)(() => ({
 
 interface IAvatarButton {
 	src?: string;
-	clickEvent?: () => void;
+	clickEvent?: (event: React.MouseEvent<HTMLElement>) => void;
 	children?: ReactNode;
 	avatarSx?: object;
 	defaultIcon?: ReactElement;
@@ -290,13 +294,13 @@ export const SearchBar = forwardRef<HTMLInputElement, ISearchBar>(({ sx, boxSx, 
 ))
 
 export const HeaderIconButton: React.FC<IHeaderIconButtonType> = ({ Icon, onClick, iconFontSize, label }) => (
-		<IconButton
-			aria-label={label}
-			sx={{ width: '40px', height: '40px' }}
-			onClick={onClick}
-		>
-			<Icon sx={{ fontSize: iconFontSize || '32px' }} />
-		</IconButton>
+	<IconButton
+		aria-label={label}
+		sx={{ width: '40px', height: '40px' }}
+		onClick={onClick}
+	>
+		<Icon sx={{ fontSize: iconFontSize || '32px' }} />
+	</IconButton>
 )
 
 interface IPasswordTextField {

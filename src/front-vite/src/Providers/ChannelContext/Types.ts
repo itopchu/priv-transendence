@@ -94,6 +94,12 @@ export interface Channel {
 	description: string;
 }
 
+export interface Invite {
+	id: string;
+	destination: Channel;
+	isJoined?: boolean;
+}
+
 export const enum UpdateType {
 	updated = 'updated',
 	created = 'created',

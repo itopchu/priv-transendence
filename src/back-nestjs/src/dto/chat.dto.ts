@@ -1,12 +1,13 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsDate, ValidateNested, IsBoolean } from 'class-validator';
-import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Message, Mute } from '../entities/chat.entity';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsDate, ValidateNested, IsBoolean, Length, IsUUID } from 'class-validator';
+import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Invite, Message, Mute } from '../entities/chat.entity';
 import { UserClient, UserPublicDTO } from './user.dto';
 import { Type } from 'class-transformer';
 
-export class CreateChannelDto {
+export class CreateChannelDto extends PartialType(PickType(Channel, ['type', 'name', 'password'] as const)) {
   @IsString()
 	@IsNotEmpty({ message: 'Channel Name must not be empty' })
+	@Length(0, 30)
   name: string;
 
   @IsString()
@@ -14,7 +15,7 @@ export class CreateChannelDto {
 	@IsNotEmpty({ message: 'Channel Password must not be empty' })
   password?: string;
 
-  @IsString()
+	@IsEnum(ChannelType)
 	@IsNotEmpty({ message: 'Channel Type must not be empty' })
   type: ChannelType;
 }
@@ -27,6 +28,7 @@ export class UpdateChannelDto extends PartialType(PickType(Channel, ['type', 'na
 
 	@IsString()
 	@IsOptional()
+	@Length(0, 20)
 	@IsNotEmpty({ message: 'Channel Name must not be empty' })
 	name?: string;
 
@@ -37,6 +39,7 @@ export class UpdateChannelDto extends PartialType(PickType(Channel, ['type', 'na
 
 	@IsString()
 	@IsOptional()
+	@Length(0, 100)
 	@IsNotEmpty({ message: 'Channel Description must not be empty' })
 	description?: string;
 }
@@ -96,35 +99,6 @@ export class MemberPublicDTO {
 	role: ChannelRoles;
 }
 
-export class MessagePublicDTO {
-	constructor(message: Message) {
-		this.id = message.id;
-		this.timestamp = message.timestamp;
-		this.author = new UserPublicDTO(message.author, null);
-		this.content = message.content;
-		this.edited = message.edited;
-	}
-
-	@IsNumber()
-	id: number;
-
-	@IsDate()
-	@Type(() => Date)
-	timestamp: Date;
-	
-	@IsNotEmpty()
-	@ValidateNested()
-	@Type(() => UserPublicDTO)
-	author: UserPublicDTO;
-
-	@IsString()
-	@IsNotEmpty()
-	content: string;
-
-	@IsBoolean()
-	edited: boolean
-}
-
 export class ChannelPublicDTO {
 	constructor(channel: Channel) {
 		this.id = channel.id;
@@ -161,6 +135,53 @@ export class ChannelPublicDTO {
 	bannedUsers?: UserPublicDTO[];
 }
 
+export class InvitePublicDTO {
+	constructor(inviteId: string, destination: Channel, isJoined?: boolean) {
+		this.id = inviteId;
+		this.destination = new ChannelPublicDTO(destination);
+		this.isJoined = isJoined;
+	}
+
+	@IsUUID()
+	@IsNotEmpty()
+	id: string;
+
+	@ValidateNested()
+	@Type(() => UserPublicDTO)
+	destination: ChannelPublicDTO;
+
+	@IsBoolean()
+	isJoined: boolean;
+}
+
+export class MessagePublicDTO {
+	constructor(message: Message) {
+		this.id = message.id;
+		this.timestamp = message.timestamp;
+		this.author = new UserPublicDTO(message.author, null);
+		this.content = message.content;
+		this.edited = message.edited;
+	}
+
+	@IsNumber()
+	id: number;
+
+	@IsDate()
+	@Type(() => Date)
+	timestamp: Date;
+	
+	@IsNotEmpty()
+	@ValidateNested()
+	@Type(() => UserPublicDTO)
+	author: UserPublicDTO;
+
+	@IsString()
+	@IsNotEmpty()
+	content: string;
+
+	@IsBoolean()
+	edited: boolean
+}
 
 export class ChannelClientDTO {
 	constructor(channel: Channel) {

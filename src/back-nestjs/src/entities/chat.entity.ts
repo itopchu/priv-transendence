@@ -8,7 +8,8 @@ import {
 	ManyToMany,
 	JoinTable,
 	PrimaryColumn,
-	JoinColumn
+	JoinColumn,
+    Unique
 } from 'typeorm';
 import { User } from './user.entity';
 
@@ -32,10 +33,13 @@ export class Channel {
 	@Column({ nullable: true, default: null })
 	image: string | null;
 
-	@Column()
+	@Column({ length: 30 })
 	name: string;
 
-	@Column({ default: 'This is a channel for nerds' })
+	@Column({
+		length: 100,
+		default: 'This is a channel for nerds'
+	})
 	description: string;
 
 	@Column({ nullable: true, default: null })
@@ -117,6 +121,23 @@ export class ChannelMember {
 		default: ChannelRoles.member,
 	})
 	role: ChannelRoles;
+}
+
+@Entity()
+@Unique(['id'])
+export class Invite {
+	@PrimaryGeneratedColumn('uuid')
+	id: string;
+
+	@Column()
+	destinationId: number;
+
+	@JoinTable()
+	@ManyToOne(() => User)
+	creator: User;
+
+	@Column({ type: 'timestamp' })
+	expireAt: Date;
 }
 
 @Entity()

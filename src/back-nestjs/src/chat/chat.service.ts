@@ -15,6 +15,16 @@ export class ChatService {
 		private readonly userService: UserService,
 	) {}
 
+	async isUserInChat(chatId: number, userId: number) {
+		const count = await this.chatRepository
+			.createQueryBuilder('chat')
+			.innerJoin('users.users', 'user', 'user.id = :userId', { userId })
+			.where('chat.id = :chatId', { chatId })
+			.getCount();
+
+		return (count > 0);
+	}
+
 	async getChatById(chatId: number, relations?: string[]) {
 		try {
 			const chat = await this.chatRepository.findOne({
@@ -29,7 +39,7 @@ export class ChatService {
 		}
 	}
 
-	async getChatByUsersId(user1Id: number, user2Id: number) {
+	async getChatByUsersId(user1Id: number, user2Id: number): Promise<Chat | null> {
 		try {
 			const chat = await this.chatRepository.createQueryBuilder('chat')
 				.leftJoinAndSelect('chat.users', 'users')

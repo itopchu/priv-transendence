@@ -20,10 +20,7 @@ import {
   CustomAvatar,
   PasswordTextField,
 } from '../Components/Components';
-import {
-		PeopleRounded as DefaultChannelIcon,
-        Height,
-} from '@mui/icons-material'
+import { PeopleRounded as DefaultChannelIcon, } from '@mui/icons-material'
 import { BACKEND_URL, getUsername, handleError, onFileUpload } from '../utils';
 import { SettingsDivider, SettingsTextFieldSx } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
@@ -89,9 +86,7 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 
   useEffect(() => {
     if (!nameRef.current || !descriptionRef.current) return;
-
-    nameRef.current.value = channel.name;
-    descriptionRef.current.value = channel.description;
+		reset();
   }, [editMode]);
 
   const reset = () => {
@@ -138,11 +133,10 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
         },
         withCredentials: true,
       });
-			reset();
+			toggleEditMode();
     } catch (error) {
       handleError('Could not apply changes:', error);
     }
-		toggleEditMode();
   };
 
   const onDelete = async () => {
@@ -198,19 +192,41 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 				</CustomAvatar>
 
         <Stack>
-          <Typography variant="h5" fontWeight="bold">
+          <Typography
+						variant="h5"
+						fontWeight="bold"
+						sx={{ textAlign: isSmallScreen ? 'center' : 'left' }}
+					>
             {channel.name}
           </Typography>
           <ChannelStatus />
         </Stack>
       </Stack>
 
-      <DescriptionBox sx={{ width: '65%',  minWidth: '20em' }}>
+      <DescriptionBox 
+				sx={{
+					width: '65%',
+					minWidth: '20em',
+					overflow: 'hidden',
+				}}
+			>
         <Typography
 					sx={{
 						overflowY: 'auto',
 						wordBreak: 'break-word',
 						whiteSpace: 'pre-wrap',
+						maxHeight: '100%',
+						width: '100%',
+						'&::-webkit-scrollbar-track': {
+							display: 'none',
+						},
+						'&::-webkit-scrollbar': {
+							width: '4px',
+						},
+						'&::-webkit-scrollbar-thumb': {
+							backgroundColor: theme.palette.primary.dark,
+							borderRadius: '1em',
+						},
 					}}
 				>
           {channel.description}
@@ -257,12 +273,9 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
           <TextField
             inputRef={nameRef}
             variant="standard"
+						inputProps={{ maxLength: 30, }}
 						sx={SettingsTextFieldSx(theme)}
-            placeholder={
-              nameRef.current?.value.length
-                ? undefined
-                : 'Enter channel name...'
-            }
+            placeholder={'Enter channel name...'}
           />
           {isAdmin
 						? (
@@ -294,11 +307,8 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 							textAlign: 'center',
 						},
 					}}
-          placeholder={
-            descriptionRef.current?.value === ''
-              ? undefined
-              : 'Enter a description...'
-          }
+					inputProps={{ maxLength: 100, }}
+          placeholder={'Enter a description...'}
         />
       </DescriptionBox>
     </>
@@ -309,7 +319,11 @@ export const ChannelDetails: React.FC<SettingsBoxType> = ({ membership }) => {
 			sx={{
 				height: '80vh',
 				bgcolor: theme.palette.primary.light,
+				overflowY: 'auto',
 				overflowX: 'hidden',
+				'&::-webkit-scrollbar': {
+					display: 'none',
+				},
 			}}
 		>
 			<ChannelDetailsHeader

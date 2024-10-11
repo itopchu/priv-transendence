@@ -1,13 +1,8 @@
 import React, { useContext, useEffect, useState, createContext } from "react";
-import { ChatProps, ChatStatus, IChat, Message } from "../../Layout/Chat/InterfaceChat";
+import { ChatProps, ChatStatus, IChat } from "../../Layout/Chat/InterfaceChat";
 import axios from "axios";
 import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
 import { useUser } from "../UserContext/User";
-
-type DirectMessageDataType = {
-	chatId: number,
-	message: Message,
-}
 
 type ChatContextType = {
 	chatProps: ChatProps,

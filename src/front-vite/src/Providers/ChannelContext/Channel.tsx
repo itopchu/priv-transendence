@@ -14,7 +14,7 @@ import {
 import { getChannelTypeFromFilter, updatePropArray,  retryOperation } from "./utils";
 import { useMediaQuery, useTheme } from "@mui/material";
 
-type ChannelContextType = {
+export type ChannelContextType = {
 	channelProps: ChannelPropsType,
 	channelLineProps: ChannelLinePropsType,
 	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
@@ -149,8 +149,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		if (channelLineProps.filter === ChannelFilters.myChannels) return;
 
 		const onPublicChannelUpdate = (data: DataUpdateType<Channel>) => {
-			if (data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)
-					&& data.updateType !== UpdateType.deleted) {
+			if (data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)) {
 				return;
 			}
 

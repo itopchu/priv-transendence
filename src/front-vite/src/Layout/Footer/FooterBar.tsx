@@ -15,7 +15,7 @@ const team: Developer[] = [
     git: 'https://www.github.com/itopchu'
   },
   {
-    photo: 'https://cdn.discordapp.com/attachments/979485078499520593/1218094374022414476/Tiger.gif?ex=66f46089&is=66f30f09&hm=a8e25f106a9dc6c83bd47bc9f5671b9fb96c41ec9ac24a639f68ba8838bbcd1b&',
+    photo: 'https://cdn.intra.42.fr/users/32d1861e218fefe1b67852e07c5a7ae6/bjacobs.jpg',
     name: 'Brian Jacobs',
     git: 'https://github.com/bjacobs42'
   },

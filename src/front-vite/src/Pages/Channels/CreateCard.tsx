@@ -21,7 +21,7 @@ import {
 import { PeopleRounded as DefaultChannelIcon } from '@mui/icons-material';
 import { AvatarUploadIcon, ImageInput, PasswordTextField, UploadAvatar } from './Components/Components';
 import { BACKEND_URL, handleError, onFileUpload } from './utils';
-import { Channel, ChannelMember, ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
+import { ChannelMember, ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
 import { retryOperation } from '../../Providers/ChannelContext/utils';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
 
@@ -50,9 +50,9 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   const [avatarSrc, setAvatarSrc] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-	if (nameRef.current) {
-		nameRef.current.value = `${user.nameNick || user.nameFirst}'s Channel`;
-	}
+		if (nameRef.current) {
+			nameRef.current.value = `${user.nameNick || user.nameFirst}'s Channel`;
+		}
   }, []);
 
   const changeChannelData = (newData: Partial<ChannelDataType>) => {
@@ -157,6 +157,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 										variant='outlined'
 										inputRef={nameRef}
 										autoComplete='off'
+										inputProps={{ maxLength: 30, }}
 										InputProps={{
 											style: {
 												padding: '4px 4px',

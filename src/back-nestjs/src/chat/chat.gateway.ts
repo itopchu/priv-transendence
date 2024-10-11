@@ -1,15 +1,16 @@
-import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, ConnectedSocket } from '@nestjs/websockets'; import { Server, Socket } from 'socket.io';
+import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, ConnectedSocket } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
 import { ChannelService } from './channel/channel.service';
 import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
 import { NotFoundException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ChannelPublicDTO, ChatClientDTO, MemberClientDTO, MessagePublicDTO } from '../dto/chat.dto';
+import { ChannelPublicDTO, ChatClientDTO, MessagePublicDTO } from '../dto/chat.dto';
 import { MemberService } from './channel/member.service';
 import { Chat } from '../entities/chat.entity';
 import { ChatService } from './chat.service';
-import { FriendshipAttitude } from '../entities/user.entity';
+import { InviteService } from './invite/invite.service';
 
 export enum UpdateType {
 	deleted = 'deleted',
@@ -30,18 +31,26 @@ type emitUpdateDTO<Type> = {
 
 @WebSocketGateway(3001, { cors: { origin: "*" } })
 export class ChatGateway {
-	constructor(private readonly userService: UserService,
-				private readonly configService: ConfigService,
-				private readonly channelService: ChannelService,
-				private readonly memberService: MemberService,
-				private readonly chatService: ChatService,
-			   ) { }
+	constructor(
+		private readonly userService: UserService,
+		private readonly configService: ConfigService,
+		private readonly channelService: ChannelService,
+		private readonly memberService: MemberService,
+		private readonly chatService: ChatService,
+		private readonly inviteService: InviteService,
+	) { }
 
 	@WebSocketServer()
 	server: Server;
 
 	private connectedUsers: Map<number, UserSocket> = new Map();
 	
+	@Cron(CronExpression.EVERY_HOUR)
+	async checkInvites() {
+		const expiredInvites = await this.inviteService.getExpiredInvites();
+		await this.inviteService.removeInvite(expiredInvites);
+	}
+
 	@Cron(CronExpression.EVERY_MINUTE)
 	async checkMutes() {
 		const expiredMutes = await this.channelService.getExpiredMutes();
@@ -107,27 +116,6 @@ export class ChatGateway {
 		client.leave(RoomInitials.publicUpdate);
 	}
 
-	@SubscribeMessage('joinChannel')
-	async onJoinChannel(@MessageBody(ParseIntPipe) channelId: number, @ConnectedSocket() client: UserSocket) {
-		const user = client.authUser;
-		if (!user) {
-			throw new UnauthorizedException('Unauthorized: User not found');
-		}
-
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id);
-		if (!membership) {
-			throw new UnauthorizedException('Unauthorized: Membership not found');
-		}
-
-		this.handleChannelJoinLeave(channelId, client, 'join');
-		client.emit(`newChannelUpdate`, {
-			channelId,
-			content: new MemberClientDTO(membership),
-			updateType: UpdateType.updated,
-		})
-		console.log(`${user.nameFirst} has subscribed to channel ${membership.channel.name}`);
-	}
-
 	@SubscribeMessage('subscribeChannel')
 	async onSubscribeChannel(@MessageBody(ParseIntPipe) channelId: number, @ConnectedSocket() client: UserSocket) {
 		const user = client.authUser;
@@ -135,13 +123,12 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, ['channel']);
-		if (!membership) {
-			throw new UnauthorizedException('Unauthorized: Membership not found');
+		if (!(await this.channelService.isUserInChannel(channelId, user.id))) {
+			throw new UnauthorizedException('Unauthorized: User is not in channel');
 		}
 
 		this.handleChannelJoinLeave(channelId, client, 'join');
-		console.log(`${user.nameFirst} has subscribed to channel ${membership.channel.name}`);
+		//console.log(`${user.nameFirst} has subscribed to a channel`);
 	}
 
 	@SubscribeMessage('unsubscribeChannel')
@@ -168,8 +155,8 @@ export class ChatGateway {
 		}
 	}
 
-	@SubscribeMessage('message')
-	async onMessage(@MessageBody() data: { message: string, channelId: number }, @ConnectedSocket() client: UserSocket) {
+	@SubscribeMessage('sendChannelMessage')
+	async onChannelMessage(@MessageBody() data: { message: string, channelId: number }, @ConnectedSocket() client: UserSocket) {
 		try {
 			const user = client.authUser;
 			if (!user) {

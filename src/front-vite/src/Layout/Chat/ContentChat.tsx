@@ -7,6 +7,7 @@ import {
   Button,
   Typography,
   CircularProgress,
+  stackClasses,
 } from "@mui/material";
 import {
 	Send as SendIcon,
@@ -289,7 +290,7 @@ const ContentChat = () => {
           <Stack
             ref={messagesEndRef}
             flexGrow={1}
-            direction="column"
+            direction="column-reverse"
             padding="0.5em"
             paddingBottom={"1em"}
             bgcolor={(theme) => theme.palette.background.default}
@@ -309,10 +310,12 @@ const ContentChat = () => {
               },
             }}
           >
-            <LoadingBox sx={{ display: chatProps.loading ? "flex" : "none" }}>
-              <CircularProgress size={70} />
-            </LoadingBox>
-            {renderMessages()}
+						<Stack>
+							<LoadingBox sx={{ display: chatProps.loading ? "flex" : "none" }}>
+								<CircularProgress size={70} />
+							</LoadingBox>
+							{renderMessages()}
+						</Stack>
           </Stack>
           <StatusTypography
             hidden={!Boolean(errorMessage)}

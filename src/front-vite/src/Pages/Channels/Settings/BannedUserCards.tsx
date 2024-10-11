@@ -45,7 +45,7 @@ export const BannedUserCards: React.FC<BannedUserCardsType> = ({ users, channelI
 				const username = getUsername(user);
 
 				return (
-					<BarCard>
+					<BarCard key={user.id} >
 						<ButtonAvatar
 							src={user?.image}
 							clickEvent={() => {

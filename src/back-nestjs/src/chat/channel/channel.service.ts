@@ -1,5 +1,7 @@
 import {
 	BadRequestException,
+	forwardRef,
+	Inject,
 	Injectable,
 	InternalServerErrorException,
 	NotFoundException,
@@ -26,6 +28,7 @@ import { unlinkSync, writeFileSync } from 'fs';
 import * as argon2 from 'argon2'
 import path from 'path';
 import { UserService } from '../../user/user.service';
+import { InviteService } from '../invite/invite.service';
 
 const createImage = (channelId: number, image: Express.Multer.File) => {
 	const timestamp = Date.now();
@@ -47,6 +50,8 @@ export class ChannelService {
 		private readonly messageService: MessageService,
 		private readonly memberService: MemberService,
 		private readonly userService: UserService,
+		@Inject(forwardRef(() => InviteService))
+		private readonly inviteService: InviteService,
 	) {}
 
 	async verifyPassword(plainPassword: string, hashPassword: string): Promise<Boolean> {
@@ -65,6 +70,27 @@ export class ChannelService {
 			console.warn(error.message);
 			throw new InternalServerErrorException('Error hashing password');
 		}
+	}
+
+	async isUserBanned(channelId: number, userId: number): Promise<Boolean> {
+		const count = await this.channelRespitory
+			.createQueryBuilder('channel')
+			.innerJoin('channel.bannedUsers', 'users', 'users.id = :userId', { userId })
+			.where('channel.id = :channelId', { channelId })
+			.getCount();
+
+		return (count > 0);
+	}
+
+	async isUserInChannel(channelId: number, userId: number): Promise<boolean> {
+		const count = await this.channelRespitory
+			.createQueryBuilder('channel')
+			.innerJoin('channel.members', 'members')
+			.innerJoin('members.user', 'user', 'user.id = :userId', { userId })
+			.where('channel.id = :channelId', { channelId })
+			.getCount();
+
+		return (count > 0);
 	}
 
 	async getChannelById(channelId: number, requestedRelations?: string[]): Promise<Channel> {
@@ -108,6 +134,9 @@ export class ChannelService {
 		let newMember: ChannelMember;
 
 		newChannel.name = newChannel.name.replace(/\s+/g, ' ').trim();
+		if (!newChannel.name.length) {
+			throw new BadRequestException('Name must not be empty');
+		}
 		try {
 			newChannel = await this.channelRespitory.save(newChannel);
 			newMember = await this.memberService.createMember(newChannel, creator, ChannelRoles.admin);
@@ -119,10 +148,10 @@ export class ChannelService {
 				await this.channelRespitory.save(newChannel);
 		}
 		} catch(error) {
-			if (newChannel.id) {
+			if (newChannel?.id) {
 				await this.channelRespitory.delete(newChannel.id);
 			}
-			if (newMember.id) {
+			if (newMember?.id) {
 				await this.memberService.deleteMember(newMember.id);
 			}
 			throw new InternalServerErrorException(`Failed to create channel and associate member: ${error.message}`);
@@ -212,6 +241,10 @@ export class ChannelService {
 		}
 
 		try {
+			const invites = await this.inviteService.getAllInviteByChannelId(channel.id);
+			if (invites) {
+				this.inviteService.removeInvite(invites);
+			}
 			if (channel.mutedUsers) {
 				await this.muteRespitory.remove(channel.mutedUsers);
 			}
@@ -268,12 +301,12 @@ export class ChannelService {
 	}
 	
 	async kickMember(kicker: User, victimId: number, channelId: number) {
-		const kickerMembership = await this.memberService.getMembershipByChannel(channelId, kicker.id, []);
+		const kickerMembership = await this.memberService.getMembershipByChannel(channelId, kicker.id);
 		if (!kickerMembership)
-			throw new NotFoundException('User or Channel not found');
-		const victimMembership = await this.memberService.getMembershipByChannel(channelId, victimId, []);
+			throw new NotFoundException('User or membership not found');
+		const victimMembership = await this.memberService.getMembershipByChannel(channelId, victimId);
 		if (!victimMembership)
-			throw new NotFoundException('Victim not found');
+			throw new NotFoundException('Victim membership not found');
 
 		if (kickerMembership.role > victimMembership.role)
 			throw new UnauthorizedException('Unauthorized user')
@@ -314,8 +347,8 @@ export class ChannelService {
 	}
 
 	async transferOwnership(user: User, newOwnerId: number, channelId: number): Promise<ChannelMember[]> {
-		const admin = await this.memberService.getMembershipByChannel(channelId, user.id, []);
-		const newAdmin = await this.memberService.getMembershipByChannel(channelId, newOwnerId, []);
+		const admin = await this.memberService.getMembershipByChannel(channelId, user.id);
+		const newAdmin = await this.memberService.getMembershipByChannel(channelId, newOwnerId);
 		if (!admin || !newAdmin) {
 			throw new NotFoundException('User(s) not found');
 		}
@@ -368,10 +401,8 @@ export class ChannelService {
 			}
 		}
 
-		if (updateChannelDto.name) {
-			updateChannelDto.name = updateChannelDto?.name.replace(/\s+/g, ' ').trim();
-		}
-		await this.channelRespitory.update(channelId, updateChannelDto);
+		if (Object.keys(updateChannelDto).length)
+			await this.channelRespitory.update(channelId, updateChannelDto);
 		return (membership.channel);
 	}
 

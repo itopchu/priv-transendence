@@ -9,7 +9,7 @@ import { UserModule } from './user/user.module';
 import { ChatModule } from './chat/chat.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { GameHistory } from './entities/game.history.entity';
-import { Channel, ChannelMember, Message, Mute, Chat } from './entities/chat.entity';
+import { Channel, ChannelMember, Message, Mute, Chat, Invite } from './entities/chat.entity';
 import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 
@@ -34,7 +34,7 @@ import { join } from 'path';
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
-        entities: [User, Friendship, GameHistory, Channel, Chat, ChannelMember, Message, Mute],
+        entities: [User, Friendship, GameHistory, Channel, Chat, ChannelMember, Message, Mute, Invite],
         synchronize: true,
       })
     }),

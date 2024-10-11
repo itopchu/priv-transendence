@@ -5,7 +5,6 @@ import { ChatService } from "./chat.service";
 import { ChatClientDTO, MessagePublicDTO } from "../dto/chat.dto";
 import { UserService } from "../user/user.service";
 import { ChatGateway } from "./chat.gateway";
-import { FriendshipAttitude, User } from "../entities/user.entity";
 
 @Controller('chat')
 export class ChatController {

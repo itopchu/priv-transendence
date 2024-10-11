@@ -1,8 +1,11 @@
-import { Box, Divider, InputBase, Menu, MenuItem, PopoverPosition, styled, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, InputBase, Menu, MenuItem, PopoverPosition, Stack, styled, SxProps, Theme, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { BACKEND_URL, handleError } from "../utils";
 import axios from "axios";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { Invite } from "../../../Providers/ChannelContext/Types";
+import { ClickTypography, CustomAvatar, LoadingBox } from "./Components";
+import { getInvite } from "../../../Providers/ChannelContext/utils";
 
 const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
 	fontSize: '.9rem',
@@ -163,6 +166,10 @@ export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
 			},
 		}}
 	>
+		<MessageMenuItem onClick={undefined}>
+			Copy Message
+		</MessageMenuItem >
+		<Divider />
 		<MessageMenuItem onClick={onEditClick}>
 			Edit Message
 		</MessageMenuItem >
@@ -175,3 +182,151 @@ export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
 		</MessageMenuItem>
 	</Menu>
 )
+
+type InviteMessageType = {
+	link: string,
+	onJoin?: (invite: Invite) => Promise<void>,
+	bubbleSx?: SxProps<Theme>,
+	small?: boolean,
+}
+
+export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbleSx, small }) => {
+	const theme = useTheme();
+	const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')) || small;
+
+	const [joining, setJoining] = useState<boolean>(false);
+	const [loading, setLoading] = useState<boolean>(true);
+	const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
+	const [invite, setInvite] = useState<Invite | undefined>(undefined);
+
+	useEffect(() => {
+		async function getInviteInfo() {
+			await getInvite(link, setInvite, setErrorMsg);
+			setLoading(false);
+		}
+
+		setLoading(true);
+		getInviteInfo();
+
+		return () => {
+			setInvite(undefined);
+		};
+	}, [link]);
+
+	async function handleJoin() {
+		if (invite && onJoin) {
+			setJoining(true);
+			await onJoin(invite);
+			setJoining(false);
+		}
+	}
+
+	return (
+		<ChatBubble 
+			sx={{
+				width: 'fit-content',
+				minWidth: isSmallScreen || loading ? '200px' : '350px',
+				...bubbleSx
+			}}
+		>
+			<Stack
+				padding={theme.spacing(.5)}
+				spacing={theme.spacing(1)}
+			>
+				<Typography
+					variant="body1"
+					fontSize={"large"}
+					color={'textSecondary'}
+					sx={{
+						cursor: 'default',
+						fontWeight: 'bold',
+					}}
+				>
+					{invite || loading ? 'You have been invite to...' : 'You have been invited, but...'}
+				</Typography>
+				<Stack
+					flexDirection={isSmallScreen ? 'column' : 'row'}
+					justifyContent={'space-between'}
+					alignItems={'center'}
+					gap={theme.spacing(isSmallScreen ? 1 : 2)}
+					textOverflow={'ellipsis'}
+				>
+					{loading ? (
+						<LoadingBox>
+							<CircularProgress size={50} color="secondary" />
+						</LoadingBox>
+					) : (
+						<>
+							<Stack
+								flexDirection={isSmallScreen ? 'column' : 'row'}
+								alignItems={'center'}
+								gap={theme.spacing(1)}
+							>
+								<CustomAvatar
+									alt=":C"
+									src={invite?.destination.image}
+									sx={{ height: '3em', width: '3em' }}
+								>
+								</CustomAvatar>
+								<Stack
+									flexGrow={1} 
+									spacing={theme.spacing(-.5)}
+								>
+									<ClickTypography
+										onClick={handleJoin}
+										disabled={!invite}
+										noWrap
+										sx={{
+											color: invite ? undefined : theme.palette.error.main,
+											overflow: 'hidden',
+											fontWeight: 'bold',
+											fontSize: 'large',
+											textOverflow: 'ellipsis',
+											textAlign: isSmallScreen ? 'center' : 'left',
+										}}
+									>
+										{invite?.destination.name || 'Invalid Invite'}
+									</ClickTypography>
+									<Typography
+										color={'textSecondary'}
+										sx={{
+											cursor: 'default',
+											display: '-webkit-box',
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											WebkitBoxOrient: 'vertical',
+											textAlign: isSmallScreen ? 'center' : 'left',
+											WebkitLineClamp: 2,
+											lineClamp: 2,
+										}}
+									>
+										{invite?.destination.description || errorMsg || 'We have no clue why...'}
+									</Typography>
+								</Stack>
+							</Stack>
+
+							<Button
+								onClick={handleJoin}
+								disabled={!invite}
+								variant='contained'
+								color={'success'}
+								fullWidth={isSmallScreen}
+								sx={{
+									width: isSmallScreen ? undefined : '5em',
+									height: isSmallScreen ? undefined : '3em',
+									whiteSpace: 'nowrap',
+								}}
+							>
+								{joining ? (
+									<CircularProgress size={20} />
+								) : (
+									invite?.isJoined ? 'Joined' : 'Join'
+								)}
+							</Button>
+						</>
+					)}
+				</Stack>
+			</Stack>
+		</ChatBubble>
+	);
+}

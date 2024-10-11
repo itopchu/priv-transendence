@@ -1,10 +1,10 @@
 import React, { useRef, useState } from "react";
 import { Message } from "./InterfaceChat";
-import { Box, Divider, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Divider, Stack, SxProps, Theme, Typography, useTheme } from "@mui/material";
 import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
 import { NavigateFunction } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
-import { formatDate, getTimeDiff } from "../../Providers/ChannelContext/utils";
+import { formatDate, getLink, getTimeDiff, INVITE_DOMAIN } from "../../Providers/ChannelContext/utils";
 import Play from "../../Pages/Game/Play";
 import {
 	MsgContextMenu,
@@ -14,46 +14,17 @@ import {
 	useEditCancel,
 	useEditMsg,
 	ChatBubbleInputBase,
-	StatusTypography
+	StatusTypography,
+	InviteMessage
 } from "../../Pages/Channels/Components/ChatBoxComponents";
 import { HiddenTimestamp } from "../../Pages/Channels/Components/ChatBoxComponents";
-import { join } from "path";
 import { handleError } from "../../Pages/Channels/utils";
+import { Invite } from "../../Providers/ChannelContext/Types";
 
 type ChatBoxType = {
 	messages: Message[];
 	navigate: NavigateFunction;
 }
-
-export const PendingMessages: React.FC<{ messages: Message[] }> = ({ messages }) => {
-	if (!messages.length) return (null);
-
-	return (
-		<>
-			{messages.map((msg, index) => (
-				<Stack
-					key={index}
-					flexGrow={1}
-					flexDirection={'row-reverse'}
-				>
-					<ChatBubble
-						sx={{
-							backgroundColor: 'gray',
-						}}
-					>
-						<Typography
-							variant="body1"
-							sx={{ whiteSpace: 'pre-line' }}
-						>
-							{msg.content}
-						</Typography>
-					</ChatBubble>
-				</Stack>
-			))}
-		</>
-	);
-}
-
 
 const timeSeparation = 3 * 60 * 1000; // 2 min in milisecondes
 const oneHour = 60 * 60 *  1000;
@@ -99,7 +70,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 		setMenuId(msg.id);
 	}
 
-	const handleInputChange = (event: React.KeyboardEvent<HTMLElement>) =>  {
+	const handleInputChange = (event: React.KeyboardEvent<HTMLElement>) => {
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
 			if (selectedMessage && editMsgRef.current) {
@@ -108,9 +79,31 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 		}
 	}
 
+	const handleInviteJoin = async (invite: Invite) => {
+		navigate(`channels?inviteId=${invite.id}&destinationId=${invite.destination.id}${invite.isJoined ? '&isJoined=1' : ''}`);
+	}
+
 	const handleClose = () => {
 		setMousePosition(null);
 		setMenuId(null);
+	}
+
+	const createBubbleSx = (
+		isLocalUser: boolean,
+		isNewMsgBlock: boolean,
+		isMsgBlockEnd: boolean,
+	): SxProps<Theme> => {
+		if (isLocalUser) {
+			return ({
+				borderTopRightRadius: isNewMsgBlock ? undefined : '0.2em',
+				borderBottomRightRadius: isMsgBlockEnd ? undefined : '0.2em',
+			});
+		}
+		return ({
+			backgroundColor: '#7280ce',
+			borderTopLeftRadius: isNewMsgBlock ? undefined : '0.2em',
+			borderBottomLeftRadius: isMsgBlockEnd ? undefined : '0.2em',
+		});
 	}
 
 	return (
@@ -129,8 +122,9 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 				const isDifferentUser = isFirstMessage || messages[index - 1].author.id !== msg.author.id;
 				const isLocalUser = msg.author.id === localUser.id;
 				const isEditing = editMode && selectedMessage?.id === msg.id;
-				const isLastUserMessage = isLastMessage || messages[index + 1].author.id !== msg.author.id;
+				const inviteLink = getLink(INVITE_DOMAIN, msg.content);
 
+				const isLastUserMessage = isLastMessage || messages[index + 1].author.id !== msg.author.id;
 				const isNewMsgBlock = isDifferentUser || isPrevDiffTime;
 				const isMsgBlockEnd = isLastUserMessage || isDiffTime;
 
@@ -161,10 +155,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 							}}
 						/>
 						<Stack
-							direction={'row'}
-							spacing={1}
 							paddingTop={isNewMsgBlock ? 1 : 0}
-							alignItems="flex-start"
 							onContextMenu={(event) => openContextMenu(event, msg)}
 							sx={{
 								backgroundColor: isEditing || menuId === msg.id
@@ -177,91 +168,117 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 								},
 							}}
 						>
-							{isMsgBlockEnd && !isLocalUser && (
-								<ButtonAvatar
-									clickEvent={() => {
-										navigate(`/profile/${msg.author.id}`);
-									}}
-									avatarSx={{ width: '36px', height: '36px', border: '0px' }}
-									sx={{ boxShadow: theme.shadows[5] }}
-									src={msg.author?.image}
-								/>
-							)}
-
 							<Stack
-								paddingLeft={isLocalUser || isMsgBlockEnd ? 0 : 5.5}
-								justifyContent={'space-between'}
-								flexGrow={1}
-								flexDirection={isLocalUser ? 'row-reverse' : 'row'}
+								direction={'row'}
+								spacing={1}
+								alignItems="flex-start"
 							>
-								<ChatBubble
-									sx={{
-										backgroundColor: isLocalUser ? undefined : '#7280ce',
-										borderTopLeftRadius: isLocalUser || isNewMsgBlock ? undefined : '0.2em',
-										borderBottomLeftRadius: isLocalUser || isMsgBlockEnd ? undefined : '0.2em',
-										borderTopRightRadius: !isLocalUser || isNewMsgBlock ? undefined : '0.2em',
-										borderBottomRightRadius: !isLocalUser || isMsgBlockEnd ? undefined : '0.2em',
-										flexGrow: isEditing ? 1 : undefined,
-									}}
+								{isMsgBlockEnd && !isLocalUser && (
+									<ButtonAvatar
+										clickEvent={() => {
+											navigate(`/profile/${msg.author.id}`);
+										}}
+										avatarSx={{ width: '36px', height: '36px', border: '0px' }}
+										sx={{ boxShadow: theme.shadows[5] }}
+										src={msg.author?.image}
+									/>
+								)}
+
+								<Stack
+									paddingLeft={isLocalUser || isMsgBlockEnd ? 0 : 5.5}
+									justifyContent={'space-between'}
+									flexGrow={1}
+									flexDirection={isLocalUser ? 'row-reverse' : 'row'}
 								>
-									<Stack spacing={-.5} display={isEditing ? 'none' : 'flex'} >
-										{msg.content.startsWith('GameRoom-') ? (
-											isLocalUser ? (
-											<Typography
-												variant="body1"
-												sx={{ whiteSpace: 'pre-line', fontStyle: 'italic' }}
-											>
-												Game invitation has been sent.
-											</Typography>
+									<ChatBubble
+										sx={{
+											flexGrow: isEditing ? 1 : undefined,
+											...createBubbleSx(isLocalUser, isNewMsgBlock, !inviteLink && isMsgBlockEnd),
+										}}
+									>
+										<Stack spacing={-.5} display={isEditing ? 'none' : 'flex'} >
+											{msg.content.startsWith('GameRoom-') ? (
+												isLocalUser ? (
+												<Typography
+													variant="body1"
+													sx={{ whiteSpace: 'pre-line', fontStyle: 'italic' }}
+												>
+													Game invitation has been sent.
+												</Typography>
+												) : (
+												<Typography
+													variant="body1"
+													sx={{ whiteSpace: 'pre-line', cursor: 'pointer', fontStyle: 'italic' }}
+													onClick={() => {
+														navigate(`/game`);
+														userSocket?.emit("joinGame", msg.content, (roomId: string) => {
+															if (!roomId.startsWith('GameRoom-'))
+																handleError(roomId);
+														})
+													}}
+												>
+													Click here to join the game.
+												</Typography>
+												)
 											) : (
 											<Typography
 												variant="body1"
-												sx={{ whiteSpace: 'pre-line', cursor: 'pointer', fontStyle: 'italic' }}
-												onClick={() => {
-													navigate(`/game`);
-													userSocket?.emit("joinGame", msg.content, (roomId: string) => {
-														if (!roomId.startsWith('GameRoom-'))
-															handleError(roomId);
-													})
-												}}
+												sx={{ whiteSpace: 'pre-line' }}
 											>
-												Click here to join the game.
+												{msg.content}
 											</Typography>
-											)
-										) : (
-										<Typography
-											variant="body1"
-											sx={{ whiteSpace: 'pre-line' }}
-										>
-											{msg.content}
-										</Typography>
+											)}
+											<StatusTypography
+												hidden={!msg.edited || isEditing}
+												sx={{ alignSelf: isLocalUser ? 'flex-start' : 'flex-end' }}
+											>
+												(edited)
+											</StatusTypography>
+										</Stack>
+
+										{isEditing && (
+											<ChatBubbleInputBase
+												multiline
+												inputRef={editMsgRef}
+												onKeyDown={handleInputChange}
+											/>
 										)}
-										<StatusTypography
-											hidden={!msg.edited || isEditing}
-											sx={{ alignSelf: isLocalUser ? 'flex-start' : 'flex-end' }}
-										>
-											(edited)
-										</StatusTypography>
-									</Stack>
+									</ChatBubble>
 
-									{isEditing && (
-										<ChatBubbleInputBase
-											multiline
-											inputRef={editMsgRef}
-											onKeyDown={handleInputChange}
-										/>
-									)}
-								</ChatBubble>
-
-								<HiddenTimestamp
-									timestamp={timestamp.time}
+									<HiddenTimestamp
+										timestamp={timestamp.time}
+										sx={{
+											alignSelf: 'flex-end',
+											paddingInline: '5px',
+											minWidth: '50px',
+										}}
+									/>
+								</Stack>
+							</Stack>
+						{inviteLink && (
+							<>
+								<Divider
 									sx={{
-										alignSelf: 'flex-end',
-										paddingInline: '5px',
-										minWidth: '50px',
+										alignSelf: 'flex-start',
+										backgroundColor: theme.palette.primary.light,
 									}}
 								/>
-							</Stack>
+								<Box
+									paddingLeft={isLocalUser ? 0 : 5.5}
+									sx={{
+										display: 'flex',
+										flexDirection: isLocalUser ? 'row-reverse' : 'row',
+									}}
+								>
+									<InviteMessage
+										link={inviteLink}
+										onJoin={handleInviteJoin}
+										bubbleSx={ createBubbleSx(isLocalUser, false, isMsgBlockEnd) }
+										small
+									/>
+								</Box>
+							</>
+						)}
 						</Stack>
 					</React.Fragment>
 				);

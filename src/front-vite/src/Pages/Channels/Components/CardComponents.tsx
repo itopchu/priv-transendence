@@ -13,6 +13,7 @@ export const BarCard = styled(Card)(({ theme }) => ({
 	alignItems: 'center',
 	padding: theme.spacing(1),
 	backgroundColor: theme.palette.primary.main,
+	minWidth: '300px'
 }));
 
 export const CenteredCard = styled(Card)(({ theme }) => ({

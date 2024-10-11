@@ -1,9 +1,14 @@
-import { ChannelFilters, ChannelMember, ChannelType, DataUpdateType, formatDateType, UpdateType } from "./Types";
+import axios from "axios";
+import { BACKEND_URL, formatErrorMessage, handleError } from "../../Pages/Channels/utils";
+import { ChannelFilters, ChannelMember, ChannelType, DataUpdateType, formatDateType, UpdateType, Invite, ChannelPropsType } from "./Types";
+import React from "react";
+
+export const FRONTEND_URL: string = import.meta.env.ORIGIN_URL_FRONT || 'http://localhost.codam.nl:3000';
+export const INVITE_DOMAIN = `${FRONTEND_URL}/channels?inviteId=`;
 
 export function getChannelTypeFromFilter(filter: ChannelFilters) {
 	return (filter === ChannelFilters.protected ? ChannelType.protected : ChannelType.public);
 }
-
 
 export function updateMap<Type extends { id: number }>(
 	map: Map<number, Type>,
@@ -118,6 +123,93 @@ export async function retryOperation (operation: () => Promise<any>, retries = 3
 			} else {
 				throw error;
 			}
+		}
+	}
+}
+
+export function getLink(domain: string, content: string) {
+	const escapedDomain = domain
+		.replace(/^https?:\/\/(www\.)?/, '')
+		.replace(/[-\/\\^$.*+?()[\]{}|]/g, '\\$&');
+
+	const regex = new RegExp(`(https?:\\/\\/)?(www\\.)?(${escapedDomain})[^\\s]+`, 'i');
+	const match = content.match(regex);
+	return (match ? match[0] : null);
+}
+
+export async function getInvite(
+	link: string,
+	setFunc: React.Dispatch<React.SetStateAction<Invite | undefined>>,
+	setErrorMsg?: React.Dispatch<React.SetStateAction<string | undefined>>,
+) {
+	const inviteId = new URL(link).searchParams.get('inviteId');
+	console.log(link, inviteId);
+	if (!inviteId) return;
+
+	try {
+		const response = await axios.get(`${BACKEND_URL}/channel/invite/${inviteId}`, { withCredentials: true });
+		if (response?.data.invite) {
+			setFunc(response.data.invite);
+		}
+	} catch (error) {
+		if (setErrorMsg)
+			setErrorMsg(formatErrorMessage('', error));
+	}
+}
+
+export async function createInvite(
+	destinationId: number,
+	errorFunc?: (error: any) => void,
+): Promise<string | undefined> {
+	try {
+		const response = await axios.post(`${BACKEND_URL}/channel/invite/${destinationId}`,
+			{},
+			{ withCredentials: true },
+		);
+		const inviteId = response.data.inviteId;
+		if (inviteId) {
+			return (`${INVITE_DOMAIN}${inviteId}`);
+		}
+	} catch (error) {
+		if (errorFunc) {
+			errorFunc(error);
+		} else  {
+			handleError('Could not create invite:', error);
+		}
+	}
+}
+
+export async function acceptInvite(
+	invite: Partial<Invite>,
+	channelProps: ChannelPropsType,
+	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
+	setErrMsg?: React.Dispatch<React.SetStateAction<string>>,
+) {
+	if (invite?.isJoined) {
+		console.log(channelProps);
+		const membership = channelProps.memberships.find((membership => {
+			return (membership.channel.id === invite?.destination?.id);
+		}));
+
+		console.log(invite);
+		setChannelProps((prevProps) => ({
+			...prevProps,
+			selected: membership,
+		}));
+	} else {
+		try {
+			const response = await axios.patch(`${BACKEND_URL}/channel/invite/${invite.id}`, {}, { withCredentials: true });
+			const newMembership = response.data.membership;
+			if (newMembership) {
+				setChannelProps((prevProps) => ({
+					...prevProps,
+					memberships: [...prevProps.memberships, newMembership],
+				}));
+			}
+		} catch (error) {
+			console.warn(formatErrorMessage('Failed to accept invite:', error));
+			if (setErrMsg)
+				setErrMsg(formatErrorMessage('', error));
 		}
 	}
 }

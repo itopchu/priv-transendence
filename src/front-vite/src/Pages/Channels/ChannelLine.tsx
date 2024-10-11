@@ -31,7 +31,7 @@ interface ChannelLineType {
 export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 	const theme = useTheme();
 	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
-	const { channelLineProps, channelProps, changeProps, changeLineProps } = useChannel();
+	const { channelLineProps: lineProps, channelProps, changeProps, changeLineProps } = useChannel();
 
 	const searchRef = useRef<HTMLInputElement>(null);
 	const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
@@ -41,9 +41,9 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 		if (!searchRef.current) return;
 
 		const regex = new RegExp(searchRef.current.value, "i");
-		const channels = channelLineProps.filter === ChannelFilters.myChannels
+		const channels = lineProps.filter === ChannelFilters.myChannels
 			? channelProps.memberships.map((membership) => membership.channel)
-			: channelLineProps.channels
+			: lineProps.channels
 
 		setFilteredChannels(channels.filter((channel) => channel.name.match(regex)));
 	}
@@ -56,16 +56,13 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 	}
 
 	const ChannelLineHeader = () => {
-		const theme = useTheme();
-		const { channelProps, channelLineProps: lineProps, changeLineProps } = useChannel();
-
 		let controller: AbortController | undefined = undefined;
 
 		const getPublicChannels = async (type: ChannelType) => {
 			changeLineProps({ loading: true });
 			try {
 				const channels: Channel[] = await retryOperation(async () => {
-					const response = await axios.get(`${BACKEND_URL}/channel/public/${type}`, {
+					const response = await axios.get(`${BACKEND_URL}/channel/${type}`, {
 						withCredentials: true,
 						signal: controller?.signal,
 					});
@@ -98,29 +95,27 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 			changeLineProps({ filter });
 		}
 
-		const filterGroup = () => {
-			return (
-				<>
-					{ChannelFilterValues.map((value) => (
-						<Typography
-							key={value}
-							onClick={() => onChangeChannelFilter(value)}
-							sx={{
-								fontSize: 'small',
-								cursor: 'pointer',
-							}}
-							color={
-								value === lineProps.filter
-									? undefined
-									: 'textSecondary'
-							}
-						>
-							{value}
-						</Typography>
-					))}
-				</>
-			);
-		};
+		const filterGroup = () => (
+			<>
+				{ChannelFilterValues.map((value) => (
+					<Typography
+						key={value}
+						onClick={() => onChangeChannelFilter(value)}
+						sx={{
+							fontSize: 'small',
+							cursor: 'pointer',
+						}}
+						color={
+							value === lineProps.filter
+								? undefined
+								: 'textSecondary'
+						}
+					>
+						{value}
+					</Typography>
+				))}
+			</>
+		);
 
 		return (
 			<Stack
@@ -217,10 +212,10 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 		</Stack>
   );
   let generateChannels = () => {
-		const isMyChannels = channelLineProps.filter === ChannelFilters.myChannels;
+		const isMyChannels = lineProps.filter === ChannelFilters.myChannels;
 		const channels = searchRef.current?.value.length
 			? filteredChannels
-			: channelLineProps.channels
+			: lineProps.channels
 		if (!channels.length) return;
 
 		return (
@@ -255,7 +250,7 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 
 	return (
 		<Stack
-			display={channelLineProps.hidden ? 'none' : 'flex'}
+			display={lineProps.hidden ? 'none' : 'flex'}
 			direction={'column'}
 			height={'80vh'}
 			bgcolor={theme.palette.primary.light}
@@ -288,9 +283,9 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 						{errorMessage}
 					</StatusTypography>
 				</Stack>
-			{!channelLineProps.loading && generateChannels()}
+			{!lineProps.loading && generateChannels()}
 			</Stack>
-			{channelLineProps.loading && (
+			{lineProps.loading && (
 				<LoadingBox>
 					<CircularProgress size={70} />
 				</LoadingBox>

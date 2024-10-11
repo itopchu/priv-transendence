@@ -7,6 +7,7 @@ import {
   IconButton,
   CircularProgress,
   InputBase,
+  InputAdornment,
 } from '@mui/material';
 import {
   SendRounded as SendIcon,
@@ -36,7 +37,7 @@ const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
 	overflowX: 'hidden',
 }));
 
-const TextBar = styled(Box)(({ theme }) => ({
+const InputBar = styled(Box)(({ theme }) => ({
   display: 'flex',
 	minWidth: '250px',
 	width: '100%',
@@ -46,7 +47,7 @@ const TextBar = styled(Box)(({ theme }) => ({
   borderRadius: '2em',
   backgroundColor: theme.palette.primary.dark,
   boxShadow: theme.shadows[5],
-	overflow: 'hidden',
+	overflowY: 'auto',
 }));
 
 function scrollToElement(ref: React.RefObject<HTMLDivElement>) {
@@ -203,7 +204,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
         message: cleanMessage,
         channelId: channel.id,
       };
-      userSocket?.emit('message', payload);
+      userSocket?.emit('sendChannelMessage', payload);
     }
 		inputRef.current.value = '';
   };
@@ -260,25 +261,44 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 				>
 					{errorMessage}
 				</StatusTypography>
-				<TextBar>
+				<InputBar>
 					<InputBase
 						fullWidth
 						multiline
-						maxRows={4}
+						maxRows={8}
 						disabled={membership.isMuted || loading}
 						inputRef={inputRef}
+						placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
 						onKeyDown={(e) => {
 							if (e.key === 'Enter' && !e.shiftKey) {
 								e.preventDefault();
 								handleSend();
 							}
 						}}
-						placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
+						sx={{
+							padding: theme.spacing(1),
+							'& .MuiInputBase-input': {
+								'&::-webkit-scrollbar-track': {
+									display: 'none',
+								},
+								'&::-webkit-scrollbar': {
+									width: '4px',
+								},
+								'&::-webkit-scrollbar-thumb': {
+									backgroundColor: theme.palette.primary.main,
+									borderRadius: '1em',
+								},
+							},
+						}}
+						endAdornment={
+							<InputAdornment position='end'>
+								<IconButton disabled={membership.isMuted} onClick={handleSend}>
+									{membership.isMuted ? <MutedIcon /> : <SendIcon />}
+								</IconButton>
+							</InputAdornment>
+						}
 					/>
-					<IconButton disabled={membership.isMuted} onClick={handleSend}>
-						{membership.isMuted ? <MutedIcon /> : <SendIcon />}
-					</IconButton>
-				</TextBar>
+				</InputBar>
 			</Stack>
 		</>
   );

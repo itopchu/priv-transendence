@@ -17,14 +17,15 @@ import {
 	Delete,
 	UseInterceptors,
 	UploadedFile,
-    ParseEnumPipe
+    ParseEnumPipe,
+    ParseUUIDPipe
 } from '@nestjs/common';
 import { Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-    ChannelClientDTO,
 	ChannelPublicDTO,
 	CreateChannelDto,
+	InvitePublicDTO,
 	MemberClientDTO,
 	MessagePublicDTO,
 	UpdateChannelDto,
@@ -36,33 +37,35 @@ import { AuthGuard } from '../../auth/auth.guard';
 import { multerOptions } from '../../user/user.controller';
 import { ChatGateway, UpdateType } from '../chat.gateway';
 import { allMemberRelations, MemberService } from './member.service';
+import { InviteService } from '../invite/invite.service';
 
 @Controller('channel')
 export class ChannelController {
 	constructor(
 		private readonly channelService: ChannelService,
 		private readonly memberService: MemberService,
-		private readonly channelGateway: ChatGateway
+		private readonly chatGateway: ChatGateway,
+		private readonly inviteService: InviteService,
 	) {}
 
 	@Get('messages/:id')
 	@UseGuards(AuthGuard)
-	async getMessageLog(@Req() req: Request, @Param('id', ParseIntPipe) id: number) {
+	async getMessageLog(@Req() req: Request, @Param('id', ParseIntPipe) channelId: number) {
 		const user = req.authUser;
-		let channel: Channel;
 
+		const isMember = await this.channelService.isUserInChannel(channelId, user.id);
+		if (!isMember) {
+			throw new UnauthorizedException('Unauthorized: User not part of channel');
+		}
+
+		let channel: Channel;
 		try {
-			channel = await this.channelService.getChannelById(id, ['log', 'log.author', 'members.user']);
+			channel = await this.channelService.getChannelById(channelId, ['log', 'log.author']);
 		} catch(error) {
 			throw new InternalServerErrorException(`Could not retrieve messages: ${error.message}`);
 		}
 		if (!channel) {
 			throw new NotFoundException(`Channel not found`);
-		}
-
-		const isMember = channel.members.some(member => member.user.id === user.id);
-		if (!isMember) {
-			throw new UnauthorizedException('Unauthorized: User not part of channel');
 		}
 
 		const publicLog = channel.log.map(message => new MessagePublicDTO(message));
@@ -93,11 +96,28 @@ export class ChannelController {
 		return ({ memberships: clientMemberships });
 	}
 
-	@Get('public/:type')
+	@Get('invite/:id')
+	@UseGuards(AuthGuard)
+	async getInvite(
+		@Req() req: Request,
+		@Param('id', new ParseUUIDPipe()) inviteId: string,
+	) {
+		const user = req.authUser;
+		const invite = await this.inviteService.validateJoin(user, inviteId);
+		const destination = await this.channelService.getChannelById(invite.destinationId);
+		if (!destination) {
+			throw new NotFoundException('Destination unknown');
+		}
+
+		const isJoined = await this.channelService.isUserInChannel(destination.id, user.id);
+		return ({ invite: new InvitePublicDTO(invite.id, destination, isJoined) });
+	}
+
+	@Get(':type')
 	@UseGuards(AuthGuard)
 	async getPublicChannels(@Param('type', new ParseEnumPipe(ChannelType)) channelType: ChannelType) {
 		if (channelType === ChannelType.private) {
-			throw new UnauthorizedException('Unauthorized: Cannot GET private channels');
+			throw new UnauthorizedException('Unauthorized: Private channels are private... THINK');
 		}
 		try {
 			const channels = await this.channelService.getPublicChannels(channelType);
@@ -119,7 +139,7 @@ export class ChannelController {
 		const user = req.authUser;
 
 		const newMembership = await this.channelService.joinChannel(user, channelId, password);
-		this.channelGateway.emitMemberJoined(channelId, user.id);
+		this.chatGateway.emitMemberJoined(channelId, user.id);
 		const newMembershipWithRel = await this.memberService.getMembershipById(newMembership.id, allMemberRelations);
 		return ({ membership: new MemberClientDTO(newMembershipWithRel) });
 	}
@@ -142,14 +162,53 @@ export class ChannelController {
 			const newChannel = await this.channelService.createChannel(user, createChannelDto, image);
 			if (newChannel.type !== ChannelType.private) {
 				const publicChannel = new ChannelPublicDTO(newChannel);
-				this.channelGateway.emitPublicChannelUpdate(publicChannel, UpdateType.updated);
+				this.chatGateway.emitPublicChannelUpdate(publicChannel, UpdateType.updated);
 			}
-			this.channelGateway.emitMemberJoined(newChannel.id, user.id);
-			const newMembership= await this.memberService.getMembershipByChannel(newChannel.id, user.id, allMemberRelations);
+			this.chatGateway.emitMemberJoined(newChannel.id, user.id);
+			const newMembership = await this.memberService.getMembershipByChannel(newChannel.id, user.id, allMemberRelations);
 			return ({ membership: new MemberClientDTO(newMembership) });
 		} catch(error) {
 			throw new InternalServerErrorException(`Channel creation failed: ${error.message}`);
 		}
+	}
+	
+	@Post('invite/:destinationId')
+	@UseGuards(AuthGuard)
+	async createInvite(
+		@Req() req: Request,
+		@Param('destinationId', new ParseIntPipe) destinationId: number,
+	) {
+		const user = req.authUser;
+		const membership = await this.memberService.getMembershipByChannel(destinationId, user.id, ['channel']);
+		if (!membership ) {
+			throw new UnauthorizedException('Unauthorized: Channel does not exist or user is not in channel');
+		}
+		if (membership.channel.type !== ChannelType.public && membership.role > ChannelRoles.moderator) {
+			throw new UnauthorizedException('Unauthorized: Insufficient privileges');
+		}
+
+		const invite = await this.inviteService.createInvite(user.id, destinationId);
+		return ({ inviteId: invite.id });
+	}
+
+	@Patch('invite/:inviteId')
+	@UseGuards(AuthGuard)
+	async acceptInvite(
+		@Req() req: Request,
+		@Param('inviteId',  new ParseUUIDPipe()) inviteId: string,
+	) {
+		const user = req.authUser;
+		const invite = await this.inviteService.validateJoin(user, inviteId);
+		const userIsInChannel = await this.channelService.isUserInChannel(invite.destinationId, user.id);
+		if (userIsInChannel) {
+			throw new BadRequestException('You are already in this channel');
+		}
+
+		const channel = await this.channelService.getChannelById(invite.destinationId);
+		const newMembership = await this.memberService.createMember(channel, user);
+		this.chatGateway.emitMemberJoined(invite.destinationId, user.id);
+		const newMembershipWithRel = await this.memberService.getMembershipById(newMembership.id, allMemberRelations);
+		return ({ membership: new MemberClientDTO(newMembershipWithRel) });
 	}
 
 	@Patch('kick/:id')
@@ -160,10 +219,8 @@ export class ChannelController {
 			throw new BadRequestException('Kicking yourself.. Really?');
 		}
 
-		const kickedMember = await this.channelService.kickMember(user, victimId, channelId);
-		if (!Array.isArray(kickedMember)) {
-			this.channelGateway.emitMemberLeft(victimId, channelId);
-		}
+		await this.channelService.kickMember(user, victimId, channelId);
+		this.chatGateway.emitMemberLeft(victimId, channelId);
 	}
 
 	@Patch('mute/:id')
@@ -181,7 +238,7 @@ export class ChannelController {
 		}
 
 		await this.channelService.muteMember(user, victimId, duration, channelId);
-		this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
+		this.chatGateway.emitMemberUpdate(channelId, UpdateType.updated);
 	}
 
 	@Patch('ban/:id')
@@ -207,7 +264,7 @@ export class ChannelController {
 				throw new UnauthorizedException('Unauthorized: Insufficient privileges');
 			}
 			await this.channelService.unbanUser(victimId, channel);
-			this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
+			this.chatGateway.emitMemberUpdate(channelId, UpdateType.updated);
 		} else {
 			const victimMembership = channel.members.find((membership) => membership.user.id === victimId)
 			if (!victimMembership) {
@@ -218,10 +275,10 @@ export class ChannelController {
 				throw new UnauthorizedException('Unauthorized: Insufficient privileges');
 			}
 			await this.channelService.banUser(victimMembership, channel);
-			this.channelGateway.emitMemberLeft(victimId, channelId);
+			this.chatGateway.emitMemberLeft(victimId, channelId);
 		}
 		if (channel.type !== ChannelType.private) {
-			this.channelGateway.emitToClientPublicUpdate(victimId, new ChannelPublicDTO(channel), UpdateType.updated);
+			this.chatGateway.emitToClientPublicUpdate(victimId, new ChannelPublicDTO(channel), UpdateType.updated);
 		}
 	}
 
@@ -238,7 +295,7 @@ export class ChannelController {
 		}
 
 		await this.channelService.transferOwnership(user, victimId, channelId);
-		this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
+		this.chatGateway.emitMemberUpdate(channelId, UpdateType.updated);
 	}
 
 	@Patch(':id')
@@ -253,8 +310,22 @@ export class ChannelController {
 	) {
 		const user = req.authUser;
 
-		if (!Object.keys(updateChannelDto).length) {
+		if (!Object.keys(updateChannelDto).length && !image) {
 			return;
+		}
+
+		if (updateChannelDto.name) {
+			updateChannelDto.name = updateChannelDto?.name.replace(/\s+/g, ' ').trim();
+			if (!updateChannelDto.name.length) {
+				throw new BadRequestException('Channel name must not be empty');
+			}
+		}
+
+		if (updateChannelDto.description) {
+			updateChannelDto.description = updateChannelDto?.description.trim();
+			if (!updateChannelDto.description.length) {
+				throw new BadRequestException('Channel description must not be empty');
+			}
 		}
 
 		if (updateChannelDto.type && updateChannelDto.type === 'protected') {
@@ -269,9 +340,9 @@ export class ChannelController {
 
 		if (updatedChannel.type !== ChannelType.private || oldChannel.type !== ChannelType.private)
 		{
-			this.channelGateway.emitPublicChannelUpdate(new ChannelPublicDTO(updatedChannel), UpdateType.updated);
+			this.chatGateway.emitPublicChannelUpdate(new ChannelPublicDTO(updatedChannel), UpdateType.updated);
 		}
-		this.channelGateway.emitMemberUpdate(channelId, UpdateType.updated);
+		this.chatGateway.emitMemberUpdate(channelId, UpdateType.updated);
 	}
 
 	@Patch('/member/:id')
@@ -308,7 +379,7 @@ export class ChannelController {
 		}
 		
 		await this.memberService.updateMember(member.id, updateMemberDto);
-		this.channelGateway.emitMemberUpdate(member.channel.id, UpdateType.updated);
+		this.chatGateway.emitMemberUpdate(member.channel.id, UpdateType.updated);
 	}
 	
 	@Delete(':id')
@@ -327,9 +398,9 @@ export class ChannelController {
 
 		const deletedChannel = await this.channelService.removeChannel(channelId);
 		if (deletedChannel.type !== ChannelType.protected) {
-			this.channelGateway.emitPublicChannelUpdate({ id: channelId } as ChannelPublicDTO, UpdateType.deleted);
+			this.chatGateway.emitPublicChannelUpdate({ id: channelId } as ChannelPublicDTO, UpdateType.deleted);
 		}
-		this.channelGateway.emitChannelDeleted(channelId);
+		this.chatGateway.emitChannelDeleted(channelId);
 	}
 	
 	@Delete('leave/:id')
@@ -345,11 +416,11 @@ export class ChannelController {
 		const leftChannel = await this.channelService.leaveChannel(user, membership); 
 		if ('type' in leftChannel) {
 			if (leftChannel.type !== ChannelType.private) {
-				this.channelGateway.emitPublicChannelUpdate({ id: membership.channel.id } as ChannelPublicDTO, UpdateType.deleted);
+				this.chatGateway.emitPublicChannelUpdate({ id: membership.channel.id } as ChannelPublicDTO, UpdateType.deleted);
 			}
-			this.channelGateway.emitChannelDeleted(membership.channel.id);
+			this.chatGateway.emitChannelDeleted(membership.channel.id);
 		} else {
-			this.channelGateway.emitMemberLeft(user.id, membership.channel.id);
+			this.chatGateway.emitMemberLeft(user.id, membership.channel.id);
 		}
 		return (leftChannel);
 	}
