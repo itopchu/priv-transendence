@@ -44,6 +44,9 @@ export class ChatService {
 			const chat = await this.chatRepository.createQueryBuilder('chat')
 				.leftJoinAndSelect('chat.users', 'users')
 				.where('users.id IN (:...userIds)', { userIds: [user1Id, user2Id] })
+				.groupBy('chat.id')
+				.having('COUNT(DISTINCT users.id) = 2')
+				.select('chat', 'users')
 				.getOne();
 
 			return (chat);

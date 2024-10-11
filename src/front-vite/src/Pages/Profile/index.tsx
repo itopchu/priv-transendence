@@ -29,13 +29,13 @@ const ProfilePage: React.FC = () => {
     };
 
     userSocket.emit('profileStatus', visitedUserId);
-    userSocket.on('profileStatus', handleProfileStatus);
+    userSocket.on(`profileStatus${visitedUserId}`, handleProfileStatus);
     userSocket.on('profileError', handleSubscriptionError);
 
     return () => {
       if (userSocket) {
         userSocket.emit('unsubscribeProfileStatus', visitedUserId);
-        userSocket.off('profileStatus', handleSubscriptionError);
+        userSocket.off(`profileStatus${visitedUserId}`, handleSubscriptionError);
         userSocket.off('subscriptionError', handleSubscriptionError);
       }
       setVisitedUser({ id: 0 });

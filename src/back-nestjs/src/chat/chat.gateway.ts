@@ -239,8 +239,10 @@ export class ChatGateway {
 		content: MessagePublicDTO,
 		updateType: UpdateType,
 	) {
-		if (!chat.users) {
+		if (!chat.users || chat.users.length != 2) {
 			chat = await this.chatService.getChatById(chat.id, ['users']);
+			if (!chat)
+				throw new NotFoundException('Chat not found');
 		}
 		const user1Socket = this.connectedUsers.get(chat.users[0].id);
 		const user2Socket = this.connectedUsers.get(chat.users[1].id);

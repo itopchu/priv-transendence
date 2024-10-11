@@ -36,7 +36,6 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 	const { chatProps, changeChatProps } = useChat();
 
 	const [friends, setFriends] = useState<UserPublic[]>([]);
-	const [selectedUser, setSelectedUser] = useState<UserPublic | undefined>(undefined);
 	const [searchedFriends, setSearchedFriends] = useState<UserPublic[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
 
@@ -64,7 +63,6 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 		userSocket?.on('profileStatus', onProfileStatus);
 
 		getFriends();
-		setSelectedUser(undefined);
 		if (searchRef.current) {
 			searchRef.current.value = '';
 		}
@@ -87,12 +85,8 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 		)));
 	}
 
-	const handleUserClick = (user: UserPublic) => {
-		setSelectedUser(user);
-	}
-
-	const handleCreate = () => {
-		handleChatInvite(selectedUser, chatProps, changeChatProps, handleClose)
+	const handleCreate = (user: UserPublic) => {
+		handleChatInvite(user, chatProps, changeChatProps, handleClose)
 	}
 
 	const UserPanel: React.FC<{ user: UserPublic }> = ({ user }) => {
@@ -105,9 +99,8 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 				justifyContent={'center'}
 				spacing={theme.spacing(2)}
 				padding={theme.spacing(.2)}
-				onClick={() => handleUserClick(user)}
+				onClick={() => handleCreate(user)}
 				sx={{
-					border: selectedUser === user ? '1px solid rgba(255, 255, 255, .1)' : '0px',
 					borderRadius: '8px',
 					cursor: 'default',
 					textAlign: 'center',
@@ -188,9 +181,9 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 								<Button
 									fullWidth
 									variant='contained'
-									onClick={handleCreate}
+									onClick={handleClose}
 								>
-									Create
+									Cancel
 								</Button>
 							</CardActions>
 						</>

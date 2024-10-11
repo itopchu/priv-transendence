@@ -2,9 +2,9 @@ import React, { useRef, useState } from "react";
 import { Message } from "./InterfaceChat";
 import { Box, Divider, Stack, SxProps, Theme, Typography, useTheme } from "@mui/material";
 import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
-import { NavigateFunction } from "react-router-dom";
+import { NavigateFunction, useNavigate } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
-import { formatDate, getLink, getTimeDiff, INVITE_DOMAIN } from "../../Providers/ChannelContext/utils";
+import { acceptInvite, formatDate, getLink, getTimeDiff, INVITE_DOMAIN } from "../../Providers/ChannelContext/utils";
 import {
 	MsgContextMenu,
 	ChatBubble,
@@ -22,15 +22,13 @@ import { Invite } from "../../Providers/ChannelContext/Types";
 
 type ChatBoxType = {
 	messages: Message[];
-	navigate: NavigateFunction;
 }
 
 const timeSeparation = 3 * 60 * 1000; // 2 min in milisecondes
 const oneHour = 60 * 60 *  1000;
-export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate }) => {
-	if (!messages.length) return;
-
-	const { user: localUser } = useUser();
+export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages }) => {
+	const { user: localUser, userSocket } = useUser();
+	const navigate = useNavigate();
 	const theme = useTheme();
 	const editMsgRef = useRef<HTMLInputElement>();
 
@@ -38,6 +36,8 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 	const [selectedMessage, setSelectedMessage] = useState<Message | undefined>(undefined);
 	const [menuId, setMenuId] = useState<number | null>(null);
 	const [editMode, setEditMode] = useState<boolean>(false);
+
+	if (!messages.length) return (<></>);
 
 	const resetEdit = () => {
 		setEditMode(false);
@@ -84,7 +84,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 	}
 
 	const handleInviteJoin = async (invite: Invite) => {
-		navigate(`channels?inviteId=${invite.id}&destinationId=${invite.destination.id}${invite.isJoined ? '&isJoined=1' : ''}`);
+		acceptInvite(invite);
 	}
 
 	const handleClose = () => {
@@ -133,8 +133,6 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages, navigate 
 				const isMsgBlockEnd = isLastUserMessage || isDiffTime;
 
 				const timestamp = formatDate(msg.timestamp);
-
-				const { userSocket } = useUser();
 
 				return (
 					<React.Fragment key={msg.id}>

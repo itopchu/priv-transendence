@@ -99,9 +99,7 @@ const ContentChat = () => {
 
   useEffect(() => {
     function onProfileStatus(updatedUser: UserPublic) {
-      if (updatedUser.id === user?.id) {
-        setUser(updatedUser);
-      }
+			setUser(updatedUser);
     }
 
     function handleMessageUpdate(data: DataUpdateType<Message>) {
@@ -117,7 +115,7 @@ const ContentChat = () => {
       setErrorMessage(message);
     }
 
-    userSocket?.on("profileStatus", onProfileStatus);
+    userSocket?.on(`profileStatus${user?.id}`, onProfileStatus);
     userSocket?.on("newChatMessageUpdate", handleMessageUpdate);
     userSocket?.on("chatMessageError", handleMessageError);
     userSocket?.emit("profileStatus", user?.id);
@@ -126,9 +124,9 @@ const ContentChat = () => {
       userSocket?.emit("unsubscribeProfileStatus", user?.id);
       userSocket?.off("chatMessageError", handleMessageError);
       userSocket?.off("newChatMessageUpdate", handleMessageUpdate);
-      userSocket?.off("profileStatus", onProfileStatus);
+      userSocket?.off(`profileStatus${user?.id}`, onProfileStatus);
     };
-  }, [userSocket]);
+  }, [chatProps.selected?.id, userSocket]);
 
   const toggleChatStatus = (
     status: ChatStatus,
@@ -166,7 +164,7 @@ const ContentChat = () => {
     if (!messageLog.size) return null;
     const messages = Array.from(messageLog.values());
 
-    return <ContentChatMessages navigate={navigate} messages={messages} />;
+    return <ContentChatMessages messages={messages} />;
   };
 
   return (
@@ -362,9 +360,7 @@ const ContentChat = () => {
                 handleSend();
               }
             }}
-            placeholder={
-              inputRef.current?.value?.length ? undefined : "Type a message..."
-            }
+            placeholder={"Type a message..."}
           />
           <Button
             variant="contained"

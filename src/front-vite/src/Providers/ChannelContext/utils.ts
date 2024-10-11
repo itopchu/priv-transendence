@@ -181,11 +181,11 @@ export async function createInvite(
 
 export async function acceptInvite(
 	invite: Partial<Invite>,
-	channelProps: ChannelPropsType,
-	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
+	channelProps?: ChannelPropsType,
+	setChannelProps?: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
 	setErrMsg?: React.Dispatch<React.SetStateAction<string>>,
 ) {
-	if (invite?.isJoined) {
+	if (invite?.isJoined && channelProps && setChannelProps) {
 		const membership = channelProps.memberships.find((membership => {
 			return (membership.channel.id === invite?.destination?.id);
 		}));
@@ -195,21 +195,24 @@ export async function acceptInvite(
 			selected: membership,
 			state: ChannelStates.chat,
 		}));
+		return (true);
 	} else {
 		try {
 			const response = await axios.patch(`${BACKEND_URL}/channel/invite/${invite.id}`, {}, { withCredentials: true });
 			const newMembership = response.data.membership;
-			if (newMembership) {
+			if (newMembership && setChannelProps) {
 				setChannelProps((prevProps) => ({
 					...prevProps,
 					memberships: [...prevProps.memberships, newMembership],
 					selected: newMembership,
 				}));
 			}
+			return (true);
 		} catch (error) {
 			console.warn(formatErrorMessage('Failed to accept invite:', error));
 			if (setErrMsg)
 				setErrMsg(formatErrorMessage('', error));
 		}
+		return (false);
 	}
 }

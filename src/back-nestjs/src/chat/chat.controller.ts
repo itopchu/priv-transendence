@@ -45,29 +45,26 @@ export class ChatController {
 
 	@Post(':id')
 	@UseGuards(AuthGuard)
-	async createChat(@Req() req: Request, @Param('id', ParseIntPipe) recipientId: number) {
+	async createChat(@Req() req: Request, @Param('id', ParseIntPipe) receiverId: number) {
 		const user = req.authUser;
 
-		if (user.id === recipientId) {
+		if (user.id === receiverId) {
 			throw new BadRequestException('User dming themselves, try making some friends maybe?');
 		}
 
-		const recipient = await this.userService.getUserById(recipientId);
-		if (!recipient) {
+		const chat = await this.chatService.getChatByUsersId(user.id, receiverId);
+		if (chat) {
+			return ({ chat: new ChatClientDTO(chat, user.id) });
+		}
+
+		const receiver = await this.userService.getUserById(receiverId);
+		if (!receiver) {
 			throw new NotFoundException('Recipient not found');
 		}
 
-		const userChats = await this.chatService.getUserChats(user);
-		for (const chat of userChats ?? []) {
-			const alreadyExists = chat.users.find((chatUser) => chatUser.id === recipientId);
-			if (alreadyExists) {
-				return (alreadyExists);
-			}
-		}
+		await this.chatService.validateRelationship(user.id, receiver.id);
 
-		await this.chatService.validateRelationship(user.id, recipient.id);
-
-		const newChat = await this.chatService.createChat(user, recipient);
+		const newChat = await this.chatService.createChat(user, receiver);
 		this.chatGateway.emitNewChat(newChat);
 		return ({ chat: new ChatClientDTO(newChat, user.id) });
 	}

@@ -105,8 +105,8 @@ export async function handleMsgEdit(msgId: number, newContent: string,  reset: (
 }
 
 export function useEditMsg(
-	ref: React.MutableRefObject<HTMLInputElement | undefined>,
-	msg: Message | undefined
+	ref: React.MutableRefObject<HTMLInputElement | undefined | null>,
+	msg: Message | undefined | null
 ) {
 	useEffect(() => {
 		if (!ref.current || !msg) return;

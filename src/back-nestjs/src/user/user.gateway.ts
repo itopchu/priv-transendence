@@ -140,9 +140,9 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   public emitStatus(user: User) {
     const userStatus = this.connectedUsers.get(user.id) | 0
     if (userStatus === 0)
-      this.server.to(String(user.id)).emit('profileStatus', new UserPublicDTO(user, 'offline'))
+      this.server.to(String(user.id)).emit(`profileStatus${user.id}`, new UserPublicDTO(user, 'offline'))
     else if (userStatus > 0) {
-      this.server.to(String(user.id)).emit('profileStatus', new UserPublicDTO(user, 'online'))
+      this.server.to(String(user.id)).emit(`profileStatus${user.id}`, new UserPublicDTO(user, 'online'))
     }
   }
 

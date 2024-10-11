@@ -25,6 +25,7 @@ import { useMediaQuery } from "@mui/material";
 import { useChat } from '../../Providers/ChatContext/Chat';
 import axios from "axios";
 import { handleChatInvite, sendGameInvite } from "../../Providers/ChatContext/utils";
+import { useNavigate } from "react-router-dom";
 
 
 interface VisitedInfoProps {
@@ -73,6 +74,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
     useState<FriendshipAttitude>(FriendshipAttitude.available);
   const { user, userSocket } = useUser();
 	const { chatProps, changeChatProps } = useChat();
+  const nav = useNavigate();
 
   useEffect(() => {
     const getFriendshipAttitude = async () => {
@@ -219,6 +221,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
   function handleGameInvite() {
 		if (userSocket) {
 			sendGameInvite(visitedUser?.id, userSocket, chatProps, changeChatProps);
+      nav('/game');
 		}
   }
   

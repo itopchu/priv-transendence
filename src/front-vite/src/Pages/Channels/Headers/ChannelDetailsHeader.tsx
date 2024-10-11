@@ -1,5 +1,5 @@
 import { Box, Button, Card, CardActions, CardContent, CardHeader, CircularProgress, Divider, IconButton, Popover, Stack, styled, Typography, useTheme } from "@mui/material";
-import { CustomAvatar, HeaderIconButton, LoadingBox, SearchBar } from "../Components/Components";
+import { CustomAvatar, HeaderIconButton, SearchBar } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
 import {
 	ModeEdit as EditIcon,

@@ -65,7 +65,7 @@ const ContentDrawer = () => {
           '&:hover': {
             boxShadow: `0px ${theme.spacing(0.5)} ${theme.spacing(0.75)} rgba(0, 0, 0, 1)`,
             backgroundColor: alpha(theme.palette.background.default, 0.9),
-            borderRadius: '2em',
+            borderRadius: '1em',
           },
         },
       }}
@@ -91,11 +91,11 @@ const ContentDrawer = () => {
 					placeholder="Search..."
 				/>
       </Stack>
-      <Box sx={{ height: '0', color: 'transparent', bgcolor: 'transparent' }}>
+      <Box sx={{ height: 0, color: 'transparent', bgcolor: 'transparent' }}>
         <Divider orientation="horizontal" />
       </Box>
-      {searchedChats.map((chat, index) => (
-        <Stack key={index} direction={'row'} onClick={() => toggleChatStatus(ChatStatus.Chatbox, chat)}
+      {searchedChats.map((chat) => (
+        <Stack key={chat.user.id} direction={'row'} onClick={() => toggleChatStatus(ChatStatus.Chatbox, chat)}
           sx={{
             cursor: 'pointer',
             justifyContent: 'space-between',
