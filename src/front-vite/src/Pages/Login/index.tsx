@@ -5,7 +5,7 @@ const LoginPage: React.FC = () => {
   const theme = useTheme();
 
   function goAuth() {
-    window.location.href = import.meta.env.VITE_AUTH_URL;
+    window.location.href = `https://api.intra.42.fr/oauth/authorize?client_id=${import.meta.env.SECRET_UID}&redirect_uri=${import.meta.env.REDIRECT_URI}&response_type=code`;
   };
   return (
     <Box
