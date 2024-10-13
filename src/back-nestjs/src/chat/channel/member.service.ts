@@ -1,19 +1,9 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { UpdateMemberDto } from "../../dto/chat.dto";
 import { ChannelMember, Channel, ChannelRoles } from "../../entities/chat.entity";
 import { User } from "../../entities/user.entity";
 import { Repository } from "typeorm";
-
-export const allMemberRelations: string[] = [
-	'user',
-	'channel',
-	'channel.members',
-	'channel.members.user',
-	'channel.mutedUsers',
-	'channel.mutedUsers.user',
-	'channel.bannedUsers',
-];
 
 @Injectable()
 export class MemberService {
@@ -43,16 +33,12 @@ export class MemberService {
 		return (membership);
 	}
 
-	async getMemberships(user: User): Promise<ChannelMember[]> {
+	async getMemberships(user: User): Promise<ChannelMember[] | null> {
 		const userMemberships = await this.memberRespitory.createQueryBuilder('membership')
 		.leftJoinAndSelect('membership.user', 'user')
 		.where('user.id = :id', { id: user.id })
 		.leftJoinAndSelect('membership.channel', 'channel')
-		.leftJoinAndSelect('channel.bannedUsers', 'bannedUsers')
-		.leftJoinAndSelect('channel.mutedUsers', 'mutedUsers')
-		.leftJoinAndSelect('mutedUsers.user', 'mute')
-		.leftJoinAndSelect('channel.members', 'members')
-		.leftJoinAndSelect('members.user', 'channelUsers')
+		.leftJoinAndSelect('channel.mutedUsers', 'mute')
 		.getMany();
 		
 		return (userMemberships);
@@ -62,6 +48,7 @@ export class MemberService {
 		const newMember = this.memberRespitory.create({
 			role: role,
 			user: user,
+			userId: user.id,
 			channel: channel,
 		})
 		try {

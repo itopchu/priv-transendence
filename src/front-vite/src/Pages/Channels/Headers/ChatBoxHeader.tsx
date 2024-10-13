@@ -1,7 +1,7 @@
 import {
-    Box,
-    IconButton,
-    lighten,
+	Box,
+	IconButton,
+	lighten,
 	Popper,
 	Stack,
 	Typography,
@@ -16,13 +16,14 @@ import {
 } from "@mui/icons-material"
 import { ButtonAvatar, ClickTypography, CustomAvatar, HeaderIconButton, SearchBar } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
-import { ChannelStates } from "../../../Providers/ChannelContext/Types";
-import React, { SetStateAction, useRef, useState } from "react";
+import { ChannelStates, DataUpdateType } from "../../../Providers/ChannelContext/Types";
+import React, { SetStateAction, useEffect, useRef, useState } from "react";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
 import { ChatBubble } from "../Components/ChatBoxComponents";
 import { getUsername } from "../utils";
 import { formatDate } from "../../../Providers/ChannelContext/utils";
 import { useUser } from "../../../Providers/UserContext/User";
+import { useChannelLine } from "../../../Providers/ChannelContext/ChannelLine";
 
 type ChatBoxHeaderType = {
 	setSelectedMsgId: React.Dispatch<SetStateAction<number | undefined>>,
@@ -31,18 +32,38 @@ type ChatBoxHeaderType = {
 
 export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, messageLog }) => {
 	const theme = useTheme();
-	const { channelProps, channelLineProps, changeProps, changeLineProps } = useChannel();
-	const { user: localUser } = useUser();
-
-	const channel = channelProps.selected?.channel;
-	if (!channel) return;
+	const { channelProps, changeProps, } = useChannel();
+	const { channelLineProps, changeLineProps } = useChannelLine();
+	const { user: localUser, userSocket } = useUser();
 
 	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
 	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 	const searchRef = useRef<HTMLInputElement>(null);
 
+	const [activeMembersCount, setActiveMemberCount] = useState<number | undefined>(undefined);
 	const [searchResults, setSearchResults] = useState<Message[]>([]);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+	const channel = channelProps.selected?.channel;
+	if (!channel) return (null);
+
+	useEffect(() => {
+		if (!channelProps.selected || !userSocket) return;
+
+		const onActiveCountUpdate = (data: DataUpdateType<number>) => {
+			if (data.id === channel.id) {
+				setActiveMemberCount(data.content);
+			}
+		}
+
+		userSocket.emit('getActiveMemberCount', onActiveCountUpdate)
+		userSocket.on('activeMemberCount', onActiveCountUpdate);
+		return () => {
+			if (userSocket) {
+				userSocket.off('activeMemberCount', onActiveCountUpdate);
+			}
+		};
+	}, [channelProps.selected?.id, userSocket]);
 
 	const closePopper = () => {
 		setSelectedMsgId(undefined);
@@ -230,9 +251,9 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 					<Typography
 						variant="caption"
 						color={'textSecondary'}
-						sx={{ fontSize: 'small', }}
+						sx={{ fontSize: 'small', cursor: 'default', }}
 					> 
-						{`${channel.onlineMembers || '0'} ${(channel.onlineMembers || 1) > 1 ? 'members' : 'member'} active`}
+						{`${activeMembersCount || '0'} ${(activeMembersCount || 1) > 1 ? 'members' : 'member'} active`}
 					</Typography>
 				</Stack>
 			</Stack>

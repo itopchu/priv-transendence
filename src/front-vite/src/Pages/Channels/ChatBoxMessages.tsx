@@ -200,6 +200,7 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 									{isNewMsgBlock && (
 										<Stack flexDirection="row">
 											<ClickTypography
+												noWrap
 												paddingLeft={2}
 												variant="h3"
 												onClick={() => {
@@ -210,6 +211,7 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 												{username}
 											</ClickTypography>
 											<Typography
+												noWrap
 												variant="caption"
 												color={'textSecondary'}
 												whiteSpace={'nowrap'}

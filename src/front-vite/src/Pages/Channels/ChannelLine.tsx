@@ -1,4 +1,4 @@
-import { Avatar, CircularProgress, Divider, Fab, IconButton, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Avatar, CircularProgress, Divider, Fab, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { LoadingBox, SearchBar } from "./Components/Components";
 import { useChannel } from "../../Providers/ChannelContext/Channel";
 import React, { useRef, useState } from "react";
@@ -8,11 +8,12 @@ import {
 	InfoOutlined as MiscIcon,
 	People as DefaultChannelIcon,
 } from '@mui/icons-material';
-import { Channel, ChannelFilters, ChannelFilterValues, ChannelMember, ChannelStates, ChannelType } from "../../Providers/ChannelContext/Types";
+import { ChannelBase, ChannelFilters, ChannelFilterValues, MemberClientBase, ChannelPublic, ChannelStates, ChannelType } from "../../Providers/ChannelContext/Types";
 import { StatusTypography } from "./Components/ChatBoxComponents";
 import { retryOperation } from "../../Providers/ChannelContext/utils";
 import { BACKEND_URL, formatErrorMessage } from "./utils";
 import axios from "axios";
+import { useChannelLine } from "../../Providers/ChannelContext/ChannelLine";
 
 interface ChannelCardType {
   component: React.ReactNode;
@@ -30,11 +31,11 @@ interface ChannelLineType {
 
 export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 	const theme = useTheme();
-	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
-	const { channelLineProps: lineProps, channelProps, changeProps, changeLineProps } = useChannel();
+	const { channelProps, changeProps } = useChannel();
+	const { channelLineProps: lineProps, changeLineProps } = useChannelLine();
 
 	const searchRef = useRef<HTMLInputElement>(null);
-	const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
+	const [filteredChannels, setFilteredChannels] = useState<ChannelBase[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
 	function	onLineInputChange(): void {
@@ -48,10 +49,7 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 		setFilteredChannels(channels.filter((channel) => channel.name.match(regex)));
 	}
 
-	function	channelCardClick(membership: ChannelMember | undefined, state: ChannelStates) {
-		if (isTinyScreen) {
-			changeLineProps({ hidden: true });
-		}
+	function	channelCardClick(membership: MemberClientBase | undefined, state: ChannelStates) {
 		changeProps({ selected: membership, state });
 	}
 
@@ -61,13 +59,16 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 		const getPublicChannels = async (type: ChannelType) => {
 			changeLineProps({ loading: true });
 			try {
-				const channels: Channel[] = await retryOperation(async () => {
-					const response = await axios.get(`${BACKEND_URL}/channel/${type}`, {
+				const channels: ChannelPublic[] = await retryOperation(async () => {
+					const response = await axios.get(`${BACKEND_URL}/channel/type/${type}`, {
 						withCredentials: true,
 						signal: controller?.signal,
 					});
 					return (response.data.channels || []);
 				})
+				if (errorMessage) {
+					setErrorMessage(undefined);
+				}
 				changeLineProps({ channels });
 			} catch(error) {
 				if (!axios.isCancel(error)) {
@@ -175,13 +176,13 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 				width: '100%',
 				cursor: 'pointer',
 				transition: 'padding-left ease-in-out 0.3s, padding-right ease-in-out 0.3s, border-radius ease-in-out 0.3s, background-color ease-in-out 0.3s',
-				paddingLeft: isSelected ? '1em' : '0.5em',
+				paddingLeft: isSelected ? '.7em' : '0.5em',
 				paddingRight: isSelected ? '0.02em' : '0em',
-				borderRadius: isSelected ? '1.9em' : '0em',
+				borderRadius: isSelected ? '1em' : '0em',
 				'&:hover': {
 					bgcolor: theme.palette.primary.dark,
-					borderRadius: '2em',
-					paddingLeft: '1em',
+					borderRadius: '1em',
+					paddingLeft: '.7em',
 					paddingRight: '0.02em',
 				},
 			}}
@@ -211,7 +212,8 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 			</IconButton>
 		</Stack>
   );
-  let generateChannels = () => {
+
+  const generateChannels = () => {
 		const isMyChannels = lineProps.filter === ChannelFilters.myChannels;
 		const channels = searchRef.current?.value.length
 			? filteredChannels

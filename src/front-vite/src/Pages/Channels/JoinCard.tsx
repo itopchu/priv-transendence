@@ -1,7 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
 import axios from 'axios';
-import { useUser } from '../../Providers/UserContext/User';
 import {
   ButtonBar,
   CenteredCard,
@@ -20,46 +19,106 @@ import {
   Typography,
 } from '@mui/material';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
-import { BACKEND_URL, handleError } from './utils';
-import { Channel, ChannelMember, ChannelStates } from '../../Providers/ChannelContext/Types';
+import { BACKEND_URL, formatErrorMessage, handleError } from './utils';
+import { MemberClient, ChannelPublic, ChannelStates, ChannelType, DataUpdateType, UpdateType } from '../../Providers/ChannelContext/Types';
 import { retryOperation } from '../../Providers/ChannelContext/utils';
+import { useUser } from '../../Providers/UserContext/User';
 
-interface JoinCardType {
-  channel: Channel | undefined;
-}
-
-export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
-	if (!channel) return (null);
-
+export const JoinCard: React.FC = () => {
   const { channelProps, changeProps, setChannelProps } = useChannel();
-  const { user } = useUser();
+	const { userSocket } = useUser();
 
-  const [loading, setLoading] = useState(false);
+  const [channel, setChannel] = useState<ChannelPublic | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  const alreadyJoined = channelProps.memberships.some((member) => member.channel.id === channel.id);
-	console.log(channel);
-  const isBanned = channel.bannedUsers
-		? channel.bannedUsers.some((bannedUser) => bannedUser.id === user.id)
-		: false;
-  const joinDisabled = alreadyJoined || isBanned;
+	if (!channelProps.selectedJoin) return (null);
+
+	useEffect(() => {
+		if (!channelProps.selectedJoin) return;
+
+		const controller = new AbortController();
+
+		const getChannelInfo = async () => {
+			try {
+				const { data: { channel } } = await axios.get<{ channel: ChannelPublic }>(
+					`${BACKEND_URL}/channel/${channelProps.selectedJoin?.id}`,
+					{
+						withCredentials: true,
+						signal: controller.signal,
+					}
+				);
+				if (channel) {
+					setChannel(channel);
+				} else {
+					throw new Error('No channel received');
+				}
+			} catch (error) {
+				if (!axios.isCancel(error)) {
+					setErrorMsg(formatErrorMessage('Failed to get channel info:', error));
+				}
+			}	
+		}
+
+		getChannelInfo();
+		return () => {
+			controller.abort();
+			setLoading(true);
+			setErrorMsg(undefined);
+		}
+	}, [channelProps.selectedJoin.id]);
+	
+	useEffect(() => {
+		if (!channelProps.selectedJoin) return;
+
+		function handleUpdate(data: DataUpdateType<ChannelPublic>) {
+			if (data.updateType !== UpdateType.updated) return;
+
+			setChannel((prevProp) => {
+				if (prevProp?.id !== data.id) return (prevProp);
+
+				return ({ ...prevProp, ...data.content as ChannelPublic })
+			});
+		}
+
+		userSocket?.on('selectedPublicChannelUpdate', handleUpdate);
+		return () => {
+			userSocket?.off('selectedPublicChannelUpdate', handleUpdate);
+		};
+	}, [channelProps.selectedJoin.id]);
+
+	useEffect(() => {
+		if (!channel && !errorMsg) return;
+		setLoading(false);
+	}, [channel, errorMsg]);
 
   const onCancel = () => {
     changeProps({ selectedJoin: undefined });
   };
 
-  const onJoin = async () => {
-    setLoading(true);
+	const openChatBox = () => {
+		const membership = channelProps.memberships.find((membership) =>
+			membership.channel.id === channel?.id
+		);
+		changeProps({ selected: membership, state: ChannelStates.chat });
+		onCancel();
+	}
+
+  const handleJoin = async () => {
+		if (joining) return;
+    setJoining(true);
 
     const payload = {
       password:
-        channel.type === 'protected' ? passwordInputRef.current?.value : null,
+        channel?.type === ChannelType.protected ? passwordInputRef.current?.value : null,
     };
 
     try {
-			const membership: ChannelMember = await retryOperation(async () =>{
+			const membership: MemberClient = await retryOperation(async () =>{
 				const response = await axios.post(
-					`${BACKEND_URL}/channel/join/${channel.id}`,
+					`${BACKEND_URL}/channel/join/${channel?.id}`,
 					payload,
 					{
 						withCredentials: true,
@@ -67,18 +126,19 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 				);
 				return (response.data.membership);
 			})
-			setChannelProps((prev) => ({
-				...prev,
-				selected: prev.selected ? prev.selected : membership,
-				state: prev.selected ? prev.state : ChannelStates.chat,
-			}));
+			if (membership) {
+				setChannelProps((prev) => ({
+					...prev,
+					selected: membership,
+					state: ChannelStates.chat,
+				}));
+			}
+			onCancel();
     } catch (error: any) {
-	  handleError('Could not join channel: ', error);
-      setLoading(false);
-      return;
-    }
-    setLoading(false);
-    onCancel();
+			handleError('Could not join channel: ', error);
+    } finally {
+			setJoining(false);
+		}
   };
 
   return (
@@ -86,16 +146,16 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
       <CardOverlay onClick={onCancel} />
       <CenteredCard sx={{ overflow: 'auto' }}>
 				<CardLoadingBox>
-					<CircularProgress sx={{ size: 80, display: loading ? 'flex' : 'none' }}/>
+					<CircularProgress size={80} sx={{ display: loading ? 'flex' : 'none' }}/>
 				</CardLoadingBox>
 				<CustomCardContent sx={{ display: loading ? 'none' : 'flex' }}>
 					<Stack spacing={1.6} alignItems={'center'} >
 						<CustomAvatar
 							sx={{ height: 170, width: 170 }}
-							src={channel.image}
+							src={channel?.image}
 						/>
 
-						<Typography fontSize={'large'}>{channel.name}</Typography>
+						<Typography fontSize={'large'}>{channel?.name || '???'}</Typography>
 
 						<DescriptionBox sx={{ overflow: 'hidden' }}>
 							<Typography
@@ -108,11 +168,11 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 									wordBreak: 'break-word',
 									whiteSpace: 'pre-wrap'
 								}}>
-								{channel.description}
+								{channel?.description ||'None provided :c'}
 							</Typography>
 						</DescriptionBox>
 
-						{channel.type === 'protected' && !joinDisabled && (
+						{channel?.type === ChannelType.protected && !channel.isJoined && !channel.isBanned && (
 							<TextFieldWrapper>
 								<FormControl fullWidth variant="outlined">
 									<CustomFormLabel>Enter Password</CustomFormLabel>
@@ -139,15 +199,18 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 
 					<div style={{ flexGrow: 1 }} />
 
-					{alreadyJoined && (
-						 <Typography variant="body2">
-							 You are already in this channel
-						 </Typography>
-					)}
-					{isBanned && (
-						 <Typography variant="body2">
-							 You are banned from this channel
-						 </Typography>
+					{(channel?.isJoined || channel?.isBanned || errorMsg) && (
+						<Typography
+							variant="body2"
+							color={'textSecondary'}
+							sx={{
+								fontSize: 'medium',
+							}}
+						>
+							{errorMsg
+								|| (channel?.isJoined && 'You are already in this channel')
+								|| (channel?.isBanned && 'You are banned from this channel')}
+						</Typography>
 					)}
 
 					<ButtonBar>
@@ -157,17 +220,16 @@ export const JoinCard: React.FC<JoinCardType> = ({ channel }) => {
 
 						<Button
 							variant="contained"
-							onClick={onJoin}
-							disabled={joinDisabled}
+							onClick={channel?.isJoined ? openChatBox : handleJoin}
+							disabled={channel?.isBanned || Boolean(errorMsg)}
 							sx={{
 								minWidth: 100,
 								height: 40,
-								backgroundColor: joinDisabled 
-									? 'rgba(128, 128, 128, 0.5)'
-									: undefined,
 							}}
 						>
-							Join
+							{joining
+								? <CircularProgress color='secondary' size={30} />
+								: channel?.isJoined ? 'Joined' : 'join'}
 						</Button>
 					</ButtonBar>
 				</CustomCardContent>

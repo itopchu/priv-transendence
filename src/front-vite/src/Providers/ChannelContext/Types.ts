@@ -49,30 +49,32 @@ export const enum ChannelStates {
 
 export type ChannelLinePropsType = {
 	filter: ChannelFilters,
-	channels: Channel[],
+	channels: ChannelBase[],
 	hidden: boolean,
 	loading: boolean,
 }
 
 export type ChannelPropsType = {
-	memberships: ChannelMember[],
-	selected: ChannelMember | undefined,
-	selectedJoin: Channel | undefined,
+	memberships: MemberClient[],
+	selected: MemberClient | null,
+	selectedJoin: ChannelBase | null,
 	state: ChannelStates | undefined,
+	loading: boolean,
 }
 
-export type ChannelMember = {
+export interface MemberBase {
 	id: number;
-	user: User;
-	channel: Channel;
 	role: ChannelRole;
-	isMuted: boolean;
 }
 
-export type ChannelMemberPublic = {
-	id: number;
+export interface MemberPublic extends MemberBase {
 	user: UserPublic;
-	role: ChannelRole;
+	isMuted?: boolean;
+}
+
+export interface MemberClient extends MemberPublic {
+	user: User;
+	channel: ChannelBase;
 }
 
 export type MutedUser = {
@@ -82,21 +84,23 @@ export type MutedUser = {
 	muteUntil: Date;
 }
 
-export interface Channel {
+export interface ChannelBase {
 	id: number;
 	image?: string;
 	name: string;
-	bannedUsers?: User[];
-	mutedUsers?: MutedUser[];
-	onlineMembers?: number;
-	members: ChannelMemberPublic[];
 	type: ChannelType;
 	description: string;
 }
 
+export interface ChannelPublic extends ChannelBase {
+	isBanned?: boolean;
+	isJoined?: boolean;
+	membersCount?: number;
+}
+
 export interface Invite {
 	id: string;
-	destination: Channel;
+	destination: ChannelPublic;
 	isJoined?: boolean;
 }
 
@@ -106,9 +110,11 @@ export const enum UpdateType {
 	deleted = 'deleted',
 }
 
-export type DataUpdateType<Type>  = {
+export type PartialWithId<IdType, Type extends { id: IdType }> = Partial<Type> & { id: IdType };
+
+export type DataUpdateType<Type extends { id: number }>  = {
 	id: number,
-	content: Type,
+	content: PartialWithId<number, Type>,
 	updateType: UpdateType,
 }
 

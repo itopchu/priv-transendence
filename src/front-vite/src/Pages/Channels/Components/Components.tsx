@@ -20,9 +20,10 @@ import {
 	Search as SearchIcon,
 	Visibility as ShowPasswordIcon,
 	VisibilityOff as HidePasswordIcon,
+	PeopleRounded as DefaultChannelIcon,
 } from '@mui/icons-material'
 import React, { forwardRef, ReactElement, ReactNode, useState } from "react";
-import { useChannel } from "../../../Providers/ChannelContext/Channel";
+import { useChannelLine } from "../../../Providers/ChannelContext/ChannelLine";
 
 interface IHeaderIconButtonType {
 	Icon: SvgIconComponent;
@@ -40,6 +41,19 @@ export const CustomAvatar = styled(Avatar)(({ theme }) => ({
   border: '3px solid',
   borderColor: theme.palette.primary.dark,
 }));
+
+export const CustomChannelAvatar: React.FC<{ sx?: SxProps, src?: string }> = ({ sx, src }) => (
+	<Avatar
+		alt=':C'
+		src={src}
+		sx={{
+			boxShadow: (theme) => theme.shadows[5],
+			...sx,
+		}}
+	>
+		<DefaultChannelIcon />
+	</Avatar>
+);
 
 export const CustomScrollBox = styled(Box)(({ theme }) => ({
 	overflowY: 'auto',
@@ -65,7 +79,7 @@ export const Overlay = styled(Box)(() => ({
 	width: '100%',
 	height: '100%',
 	backgroundColor: 'rgba(0, 0, 0, .5)',
-	zIndex: 1,
+	zIndex: 3,
 }))
 
 export const DescriptionBox = styled(CustomScrollBox)(({ theme }) => ({
@@ -192,7 +206,7 @@ export const UploadAvatar: React.FC<IAvatarButton> = ({ children, src, clickEven
 
 export const lonelyBox = () => {
 	const theme = useTheme();
-	const { channelLineProps, changeLineProps } = useChannel();
+	const { channelLineProps, changeLineProps } = useChannelLine();
 
 	return (
 		<Stack

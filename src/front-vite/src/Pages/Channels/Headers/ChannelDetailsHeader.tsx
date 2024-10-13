@@ -14,13 +14,14 @@ import {
 	PeopleRounded as DefaultChannelIcon,
 	ContentCopy as CopyIcon,
 } from '@mui/icons-material';
-import { Channel, ChannelRole, ChannelStates, ChannelType, UpdateType } from "../../../Providers/ChannelContext/Types";
+import { ChannelBase, ChannelRole, ChannelStates, ChannelType, UpdateType } from "../../../Providers/ChannelContext/Types";
 import React, { ReactElement, useEffect, useRef, useState } from "react";
 import { UserPublic, UserStatusType, useUser } from "../../../Providers/UserContext/User";
 import { createInvite, updatePropArray } from "../../../Providers/ChannelContext/utils";
 import axios from "axios";
 import { BACKEND_URL, getFullname, getUsername } from "../utils";
 import { getStatusColor } from "../../Profile/ownerInfo";
+import { useChannelLine } from "../../../Providers/ChannelContext/ChannelLine";
 
 const enum SectionType {
 	friends = 'Friends',
@@ -31,6 +32,7 @@ const SectionTypeValues = [SectionType.friends, SectionType.channels];
 interface IChannelDetailsHeaderType {
 	isMod: boolean;
 	editMode: boolean;
+	membersCount: number;
 	onApplyClick: () => void;
 	onEditClick: () => void;
 }
@@ -59,13 +61,16 @@ const DetailHeaderPart = styled(Stack)(({ theme }) => ({
 export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 	isMod,
 	editMode,
+	membersCount,
 	onApplyClick,
 	onEditClick,
 }) => {
-	const { channelProps, channelLineProps, changeProps, changeLineProps } = useChannel();
-	if (!channelProps.selected) return;
+	const { channelProps, changeProps } = useChannel();
+	const { channelLineProps, changeLineProps } = useChannelLine();
 	const { user: localUser, userSocket } = useUser();
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+	if (!channelProps.selected) return (null);
 
 	const channel = channelProps.selected.channel; 
 	const myChannels = channelProps.memberships
@@ -88,8 +93,8 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 	const InvitePopup = () => {
 		const [section, setSection] = useState<SectionType>(SectionType.friends);
 		const [selectedUsers, setSelectedUsers] = useState<UserPublic[]>([]);
-		const [selectedChannels, setSelectedChannels] = useState<Channel[]>([]);
-		const [searchedItems, setSearchedItems] = useState<UserPublic[] | Channel[]>([]);
+		const [selectedChannels, setSelectedChannels] = useState<ChannelBase[]>([]);
+		const [searchedItems, setSearchedItems] = useState<UserPublic[] | ChannelBase[]>([]);
 		const [friends, setFriends] = useState<UserPublic[]>([]);
 		const [popupLoading, setPopupLoading] = useState<boolean>(true);
 		const [creatingLink, setCreatingLink] = useState<boolean>(false);
@@ -241,7 +246,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 							alt={primaryText}
 							src={avatarSrc}
 							sx={{
-								border: `2px solid ${getStatusColor(statusColor)}`
+								border: `2px solid ${getStatusColor(statusColor, theme)}`
 							}}
 						>
 							{!avatarSrc && defaultIcon}
@@ -300,7 +305,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 
 		const channelSelection = () => {
 			const channelList = searchRef.current?.value.length
-				? searchedItems as Channel[]
+				? searchedItems as ChannelBase[]
 				: myChannels;
 
 			return (
@@ -309,7 +314,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 						const isSelected = selectedChannels.some((selectedChannel) =>
 							selectedChannel.id === channel.id
 						);
-						const secondaryText = `${channel.members.length} ${channel.members.length > 1 ? 'members' : 'member'}`
+						const secondaryText = `${membersCount} ${membersCount > 1 ? 'members' : 'member'}`
 
 						return (
 							<Panel

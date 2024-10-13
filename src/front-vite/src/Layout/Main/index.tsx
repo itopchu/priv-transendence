@@ -10,7 +10,7 @@ import ChannelsPage from '../../Pages/Channels/index';
 import LogoutPage from '../../Pages/Logout';
 import { useUser } from '../../Providers/UserContext/User';
 import AuthPage from '../../Pages/2FA';
-import { ChannelContextProvider } from '../../Providers/ChannelContext/Channel';
+import { ChannelLineContextProvider } from '../../Providers/ChannelContext/ChannelLine';
 
 export const Main: React.FC = () => {
   const { user } = useUser();
@@ -23,7 +23,7 @@ export const Main: React.FC = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/logout" element={<LogoutPage />} />
           <Route path="/game" element={<Game />} />
-          <Route path="/channels" element={<ChannelContextProvider> <ChannelsPage /> </ChannelContextProvider>} />
+          <Route path="/channels" element={<ChannelLineContextProvider> <ChannelsPage /> </ChannelLineContextProvider>} />
           <Route path="/profile/settings" element={<UserSettings />} />
           <Route path="/profile/:userid" element={<ProfilePage />} />
           <Route path="/profile/" element={<Navigate replace to={`/profile/${user.id}`} />} />

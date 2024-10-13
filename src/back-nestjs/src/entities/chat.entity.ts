@@ -62,6 +62,9 @@ export class Channel {
 	@OneToMany(() => ChannelMember, member => member.channel, { cascade: ['remove'], })
 	members: ChannelMember[];
 
+	@OneToMany(() => Invite, invite => invite.destination, { cascade: ['remove'], })
+	invites: Invite[];
+
 	@OneToMany(() => Message, message => message.channel, { cascade: ['remove'], })
 	log: Message[];
 }
@@ -109,6 +112,9 @@ export class ChannelMember {
 	@PrimaryGeneratedColumn()
 	id: number;
 
+	@Column()
+	userId: number;
+
 	@ManyToOne(() => User, user => user.memberships)
 	user: User;
 
@@ -131,6 +137,10 @@ export class Invite {
 
 	@Column()
 	destinationId: number;
+
+	@JoinTable()
+	@ManyToOne(() => Channel, channel => channel.invites)
+	destination: Channel;
 
 	@JoinTable()
 	@ManyToOne(() => User)

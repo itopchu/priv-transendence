@@ -1,6 +1,17 @@
 import axios from "axios";
 import { BACKEND_URL, formatErrorMessage, handleError } from "../../Pages/Channels/utils";
-import { ChannelFilters, ChannelMember, ChannelType, DataUpdateType, formatDateType, UpdateType, Invite, ChannelPropsType, ChannelStates } from "./Types";
+import {
+	ChannelFilters,
+	ChannelType,
+	DataUpdateType,
+	formatDateType,
+	UpdateType,
+	Invite,
+	ChannelPropsType,
+	ChannelStates,
+	PartialWithId,
+	MemberClient
+} from "./Types";
 import React from "react";
 
 export const FRONTEND_URL: string = import.meta.env.ORIGIN_URL_FRONT || 'http://localhost.codam.nl:3000';
@@ -10,7 +21,7 @@ export function getChannelTypeFromFilter(filter: ChannelFilters) {
 	return (filter === ChannelFilters.protected ? ChannelType.protected : ChannelType.public);
 }
 
-export function updateMap<Type extends { id: number }>(
+export function updatePropMap<Type extends { id: number }>(
 	map: Map<number, Type>,
 	data: DataUpdateType<Type>
 ): Map<number, Type> {
@@ -18,38 +29,44 @@ export function updateMap<Type extends { id: number }>(
 
 	switch (data.updateType) {
 		case UpdateType.updated:
-			if (data.content) {
-				updatedMap.set(data.content.id, data.content);
-			}
+			const oldContent = updatedMap.get(data.content.id);
+			
+			updatedMap.set(data.content.id, { ...oldContent, ...data.content as Type });
+			break;
+		case UpdateType.created:
+			updatedMap.set(data.content.id, data.content as Type);
 			break;
 		default:
-			console.log(updatedMap.values(), data);
 			updatedMap.delete(data.content.id);
 			break;
 	}
 	return (updatedMap);
 }
 
-export function updatePropArray<Type>(prevArray: Type[], newData: DataUpdateType<any>): Type[] {
-	const index = prevArray.findIndex((prevArray: any) => prevArray.id === newData.content?.id)
+export function updatePropArray<Type extends { id: number }>(prevArray: Type[], newData: DataUpdateType<Type>): Type[] {
+	const index = prevArray.findIndex((prevArray) => prevArray.id === newData.content?.id)
 	if (index === -1) {
-		if (newData.updateType === UpdateType.updated) {
+		if (newData.updateType === UpdateType.created) {
 			return ([...prevArray, newData.content as Type]);
 		}
-		return ([...prevArray]);
+		return ([...prevArray ]);
 	}
 
 	let updatedArray = [...prevArray];
-	if (newData.updateType === UpdateType.updated) {
-		updatedArray[index] = newData.content as Type;
-	} else {
-		updatedArray.splice(index, 1);
+	switch (newData.updateType) {
+		case UpdateType.updated:
+			updatedArray[index] = { ...updatedArray[index], ...newData.content as Type };
+			break;
+
+		case UpdateType.created:
+			updatedArray[index] = newData.content as Type;
+			break;
+
+		default:
+			updatedArray.splice(index, 1);
+			break;
 	}
 	return (updatedArray);
-}
-
-export function getMembershipbyChannel(memberships: ChannelMember[], channelId: number): ChannelMember | undefined {
-	return (memberships.find((membership) => membership.channel.id === channelId));
 }
 
 export function formatDate(timestamp: Date): formatDateType {
@@ -180,39 +197,39 @@ export async function createInvite(
 }
 
 export async function acceptInvite(
-	invite: Partial<Invite>,
-	channelProps?: ChannelPropsType,
-	setChannelProps?: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
+	invite: PartialWithId<string, Invite>,
+	channelProps: ChannelPropsType,
+	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
 	setErrMsg?: React.Dispatch<React.SetStateAction<string>>,
 ) {
-	if (invite?.isJoined && channelProps && setChannelProps) {
-		const membership = channelProps.memberships.find((membership => {
-			return (membership.channel.id === invite?.destination?.id);
-		}));
+	const membership = channelProps.memberships.find((membership => {
+		return (membership.channel.id === invite?.destination?.id);
+	}));
 
+	if (membership) {
 		setChannelProps((prevProps) => ({
 			...prevProps,
 			selected: membership,
 			state: ChannelStates.chat,
 		}));
-		return (true);
 	} else {
 		try {
-			const response = await axios.patch(`${BACKEND_URL}/channel/invite/${invite.id}`, {}, { withCredentials: true });
-			const newMembership = response.data.membership;
-			if (newMembership && setChannelProps) {
+			const { data: { membership: newMembership } } = await axios.patch<{ membership: MemberClient }>(
+				`${BACKEND_URL}/channel/invite/${invite.id}`, {}, { withCredentials: true }
+			);
+			if (newMembership) {
 				setChannelProps((prevProps) => ({
 					...prevProps,
 					memberships: [...prevProps.memberships, newMembership],
 					selected: newMembership,
+					state: ChannelStates.chat,
 				}));
 			}
-			return (true);
 		} catch (error) {
 			console.warn(formatErrorMessage('Failed to accept invite:', error));
-			if (setErrMsg)
+			if (setErrMsg) {
 				setErrMsg(formatErrorMessage('', error));
+			}
 		}
-		return (false);
 	}
 }

@@ -7,6 +7,7 @@ import {
   Button,
   Typography,
   CircularProgress,
+  Theme,
 } from "@mui/material";
 import {
 	Send as SendIcon,
@@ -24,7 +25,7 @@ import { ContentChatMessages } from './ContentChatMessages';
 import { getStatusColor } from '../../Pages/Profile/ownerInfo';
 import axios from 'axios';
 import { DataUpdateType } from '../../Providers/ChannelContext/Types';
-import { updateMap } from '../../Providers/ChannelContext/utils';
+import { updatePropMap } from '../../Providers/ChannelContext/utils';
 import { StatusTypography } from '../../Pages/Channels/Components/ChatBoxComponents';
 import { sendGameInvite } from "../../Providers/ChatContext/utils";
 import { visitedUserId } from "../../Pages/Profile/index";
@@ -39,7 +40,6 @@ const ContentChat = () => {
 
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [user, setUser] = useState<UserPublic | undefined>(chatProps.selected?.user);
-	console.log(user);
   const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
 
   const isDisabled = chatProps.loading;
@@ -106,7 +106,7 @@ const ContentChat = () => {
 
     function handleMessageUpdate(data: DataUpdateType<Message>) {
       if (data.id === chatProps.selected?.id) {
-        setMessageLog((prevMap) => updateMap(prevMap, data));
+        setMessageLog((prevMap) => updatePropMap(prevMap, data));
 				if (errorMessage) {
 					setErrorMessage(undefined);
 				}
@@ -117,9 +117,8 @@ const ContentChat = () => {
       setErrorMessage(message);
     }
 
-		console.log('rerender socket');
     userSocket?.on("profileStatus", onProfileStatus);
-    userSocket?.on("newChatMessageUpdate", handleMessageUpdate);
+    userSocket?.on("chatMessageUpdate", handleMessageUpdate);
     userSocket?.on("chatMessageError", handleMessageError);
     userSocket?.emit("profileStatus", chatProps.selected?.user.id);
 
@@ -127,7 +126,7 @@ const ContentChat = () => {
 			if (visitedUserId !== chatProps.selected?.user.id)
 				userSocket?.emit("unsubscribeProfileStatus", chatProps.selected?.user.id);
       userSocket?.off("chatMessageError", handleMessageError);
-      userSocket?.off("newChatMessageUpdate", handleMessageUpdate);
+      userSocket?.off("chatMessageUpdate", handleMessageUpdate);
       userSocket?.off("profileStatus", onProfileStatus);
     };
   }, [chatProps.selected?.id, userSocket]);
@@ -224,7 +223,7 @@ const ContentChat = () => {
 						clickEvent={() => (navigate(`/profile/${user?.id}`))}
 						src={user?.image}
 						avatarSx={{
-							border: `2px solid ${getStatusColor(user?.status)}`,
+							border: (theme: Theme) => `2px solid ${getStatusColor(user?.status, theme)}`,
 						}}
 					/>
 					<Stack spacing={-1} >

@@ -3,69 +3,46 @@ import React, { useContext, useEffect, useState, createContext } from "react";
 import { useUser } from "../../Providers/UserContext/User";
 import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
 import {
-    Channel,
-	ChannelFilters,
-	ChannelLinePropsType,
-	ChannelMember,
+	MemberClient,
 	ChannelPropsType,
+	ChannelPublic,
 	DataUpdateType,
-	UpdateType
+    UpdateType,
 } from "./Types";
-import { getChannelTypeFromFilter, updatePropArray,  retryOperation } from "./utils";
-import { useMediaQuery, useTheme } from "@mui/material";
+import {  retryOperation, updatePropArray } from "./utils";
 
 export type ChannelContextType = {
 	channelProps: ChannelPropsType,
-	channelLineProps: ChannelLinePropsType,
 	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
-	setChannelLineProps: React.Dispatch<React.SetStateAction<ChannelLinePropsType>>,
 	changeProps: (newProps: Partial<ChannelPropsType>) => void,
-	changeLineProps: (newProps: Partial<ChannelLinePropsType>) => void,
 }
 
 const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
 
 export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [channelProps, setChannelProps] = useState<ChannelPropsType>({
+	const { user, userSocket } = useUser();
+
+	const [channelProps, setChannelProps] = useState<ChannelPropsType>({
 		memberships: [],
-		selected: undefined,
-		selectedJoin: undefined,
+		selected: null,
+		selectedJoin: null,
 		state: undefined,
-	});
-	const [channelLineProps, setChannelLineProps] = useState<ChannelLinePropsType>({
-		channels: [],
-		filter: ChannelFilters.myChannels,
-		hidden: false,
 		loading: true,
-	})
+	});
 
-	const theme = useTheme();
-	const { userSocket } = useUser();
-	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
-
-	const changeLineProps = (newProps: Partial<ChannelLinePropsType>) => {
-		setChannelLineProps((prev)  => ({
+	const changeProps = (newProps: Partial<ChannelPropsType>) => {
+		setChannelProps((prev) => ({
 			...prev,
-			... newProps,
+			...newProps,
 		}))
 	}
 
-  const changeProps = (newProps: Partial<ChannelPropsType>) => {
-		if (isTinyScreen && newProps.selected && !channelLineProps.hidden) {
-			changeLineProps({ hidden: true });
-		}
-		
-	  setChannelProps((prev) => ({
-		  ...prev,
-		  ...newProps,
-	  }))
-  }
-
 	useEffect(() => {
+		if (!user.id) return;
+
 		const getJoinedChannels = async () => {
-			changeLineProps({ loading: true });
 			try {
-				const memberships: ChannelMember[] = await retryOperation(async () => {
+				const memberships: MemberClient[] = await retryOperation(async () => {
 					const response = await axios.get(`${BACKEND_URL}/channel/joined`, { withCredentials: true });
 					return (response.data.memberships || []);
 				})
@@ -76,118 +53,71 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			} catch(error: any) {
 				handleError('Unable to get joined channels:',  error);
 			}
-			changeLineProps({ loading: false });
+			changeProps({ loading: false });
 		};
 
-		async function updateMemberships(data: DataUpdateType<ChannelMember>) {
-			try {
-				const membership: ChannelMember | null = await retryOperation(async () => {
-					const response = await axios.get(`${BACKEND_URL}/channel/joined/${data.id}`, {
-						withCredentials: true
-					});
-					return (response.data.membership);
-				})
-				if (!membership) return;
-
-				data.content = membership;
-				setChannelProps((prevProps) => ({
-					...prevProps,
-					memberships: updatePropArray(prevProps.memberships, data),
-					selected: prevProps.selected?.id === data.content.id ? data.content : prevProps.selected,
-				}));
-			} catch (error: any) {
-				handleError('Unable to update joined channel:',  error);
-			}
-		}
-
-		const onChannelUpdate = (data: DataUpdateType<ChannelMember>) => {
-			if (data.updateType === UpdateType.updated) {
-				updateMemberships(data);
-			} else {
-				setChannelProps((prevProps) => {
-					const deletedMembership = prevProps.memberships.find((membership) => membership.channel.id === data.id);
-					if (!deletedMembership) {
-						return (prevProps);
-					}
-					data.content = deletedMembership;
-					return ({
-						...prevProps,
-						memberships: updatePropArray(prevProps.memberships, data),
-						selected: prevProps.selected?.id === deletedMembership.id ? undefined : prevProps.selected,
-					});
-				});
-			}
-		}
-
-		const onMemberCountUpdate = (data: DataUpdateType<number>) => {
+		const onMembershipUpdate = (data: DataUpdateType<MemberClient>) => {
 			setChannelProps((prevProps) => {
-				const targetIndex = prevProps.memberships.findIndex((membership) => membership.channel.id === data.id);
-				if (targetIndex === -1) {
-					return (prevProps);
-				}
-				const updatedMemberships = [...prevProps.memberships];
-				updatedMemberships[targetIndex].channel.onlineMembers = data.content;
-				const targetMembership = updatedMemberships[targetIndex];
+				const updatedMemberships = updatePropArray(prevProps.memberships, data);
+				const updatedSelected = data.updateType !== UpdateType.deleted
+					? updatedMemberships.find((membership) => membership.id === data.content.id)
+					: null;
+
 				return ({
 					...prevProps,
 					memberships: updatedMemberships,
-					selected: prevProps.selected?.id === targetMembership.id ? targetMembership : prevProps.selected,
+					selected: updatedSelected !== undefined ? updatedSelected : prevProps.selected,
 				});
-			})
+			});
 		}
 
-		userSocket?.on('newChannelUpdate', onChannelUpdate);
-		userSocket?.on('onlineMembersCount', onMemberCountUpdate);
+		const onChannelUpdate = (data: DataUpdateType<ChannelPublic>) => {
+			if (data.updateType === UpdateType.created) return;
+
+			setChannelProps((prevProps) => {
+				const targetIndex = prevProps.memberships.findIndex((member) =>
+					member.channel.id === data.id
+				);
+				if (targetIndex === -1) {
+					return (prevProps);
+				}
+
+				const updatedMemberships = [...prevProps.memberships];
+				if (data.updateType ===  UpdateType.deleted) {
+					updatedMemberships.splice(targetIndex, 1);
+				} else {
+					const targetChannel = updatedMemberships[targetIndex].channel;
+					updatedMemberships[targetIndex].channel = { ...targetChannel, ...data.content };
+				}
+				const updatedSelected = updatedMemberships[targetIndex];
+
+				return ({
+					...prevProps,
+					memberships: updatedMemberships,
+					selected: updatedSelected?.id === prevProps.selected?.id ? updatedSelected : prevProps.selected,
+				});
+			});
+		}
+
+		userSocket?.on('membershipUpdate', onMembershipUpdate);
+		userSocket?.on('channelUpdate', onChannelUpdate);
 		getJoinedChannels();
 		return () => {
-			userSocket?.emit('unsubscribeChannel', -1);
-			userSocket?.off('newChannelUpdate', onChannelUpdate);
-		}
-	}, [userSocket]);
-
-	useEffect(() => {
-		if (channelLineProps.filter === ChannelFilters.myChannels) return;
-
-		const onPublicChannelUpdate = (data: DataUpdateType<Channel>) => {
-			if (data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)) {
-				return;
+			changeProps({ loading: true });
+			if (userSocket) {
+				userSocket.emit('unsubscribeChannel', -1);
+				userSocket.off('membershipUpdate', onChannelUpdate);
+				userSocket.off('channelUpdate', onChannelUpdate);
 			}
-
-			setChannelLineProps((prevProps) => ({
-				...prevProps,
-				channels: updatePropArray(prevProps.channels, data),
-			}));
 		}
-
-		userSocket?.on('newPublicChannelUpdate',  onPublicChannelUpdate);
-		userSocket?.emit('subscribePublicChannel');
-		return () => {
-			userSocket?.emit('unsubscribePublicChannel');
-			userSocket?.off('newPublicChannelUpdate');
-		}
-	}, [channelLineProps.filter, userSocket]);
-
-	useEffect(() => {
-		if (channelLineProps.filter !== ChannelFilters.myChannels) return;
-
-		changeLineProps({ channels: channelProps.memberships.map((membership) => membership.channel)});
-	}, [channelProps.memberships]);
-
-	useEffect(() => {
-		if (!isTinyScreen || !channelProps.selected) return;
-
-		changeLineProps({ hidden: true });
-	}, [isTinyScreen]);
+	}, [user.id, userSocket]);
 
 	return (
 		<ChannelContext.Provider
 			value={{
 				channelProps,
-				channelLineProps,
 				setChannelProps,
-				setChannelLineProps,
 				changeProps,
-				changeLineProps,
 			}}
 		>
 			{ children }

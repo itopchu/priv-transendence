@@ -81,10 +81,14 @@ export class MutePublicDTO {
 }
 
 export class MemberPublicDTO {
-	constructor(member: ChannelMember) {
+	constructor(member: ChannelMember, isMuted?: boolean) {
 		this.id = member.id;
 		this.user = new UserPublicDTO(member.user, null);
 		this.role = member.role;
+
+		if (isMuted !== undefined) {
+			this.isMuted = isMuted
+		}
 	}
 
 	@IsNumber()
@@ -97,17 +101,29 @@ export class MemberPublicDTO {
 
 	@IsEnum(ChannelRoles)
 	role: ChannelRoles;
+
+	@IsBoolean()
+	@IsOptional()
+	isMuted?: boolean;
 }
 
 export class ChannelPublicDTO {
-	constructor(channel: Channel) {
+	constructor(channel: Channel, userId?: number) {
 		this.id = channel.id;
 		this.image = channel.image ? `${process.env.ORIGIN_URL_BACK}/${channel.image}` : null;
 		this.name = channel.name;
 		this.description = channel.description;
 		this.type = channel.type;
 
-		this.bannedUsers = (channel?.bannedUsers ?? []).map(user => new UserPublicDTO(user, null));
+		if (channel.members) {
+			if (userId) {
+				this.isJoined = channel.members.some((member) => member?.userId === userId);
+			}
+			this.memberCount = channel.members.length;
+		}
+		if (channel.bannedUsers && userId) {
+			this.isBanned = channel.bannedUsers.some((bannedUser) => bannedUser.id === userId);
+		}
 	}
 
 	@IsNumber()
@@ -129,17 +145,23 @@ export class ChannelPublicDTO {
 	type: ChannelType;
 
 	@IsOptional()
-	@ValidateNested()
-	@Type(() => UserPublicDTO)
-	@ValidateNested({ each: true })
-	bannedUsers?: UserPublicDTO[];
+	@IsBoolean()
+	isJoined?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	isBanned?: boolean;
+
+	@IsOptional()
+	@IsNumber()
+	memberCount?: number;
 }
 
 export class InvitePublicDTO {
-	constructor(inviteId: string, destination: Channel, isJoined?: boolean) {
-		this.id = inviteId;
-		this.destination = new ChannelPublicDTO(destination);
-		this.isJoined = isJoined;
+	constructor(invite: Invite, userId: number) {
+		this.id = invite.id;
+		this.destination = new ChannelPublicDTO(invite.destination);
+		this.isJoined = invite.destination.members.some((member) => member.userId === userId);
 	}
 
 	@IsUUID()
@@ -183,54 +205,6 @@ export class MessagePublicDTO {
 	edited: boolean
 }
 
-export class ChannelClientDTO {
-	constructor(channel: Channel) {
-		this.id = channel.id;
-		this.image = channel.image ? `${process.env.ORIGIN_URL_BACK}/${channel.image}` : null;
-		this.name = channel.name;
-		this.description = channel.description;
-		this.type = channel.type;
-
-		this.members = (channel?.members ?? []).map(member => new MemberPublicDTO(member));
-		this.bannedUsers = (channel?.bannedUsers ?? []).map(user => new UserPublicDTO(user, null));
-		this.mutedUsers = (channel?.mutedUsers ?? []).map(user => new MutePublicDTO(user));
-	}
-
-	@IsNumber()
-	id: number;
-
-	@IsString()
-	@IsOptional()
-	image?: string | null;
-
-	@IsString()
-	@IsNotEmpty()
-	name: string;
-
-	@IsString()
-	@IsNotEmpty()
-	description: string;
-
-	@IsEnum(ChannelType)
-	type: ChannelType;
-
-	@IsOptional()
-	@ValidateNested()
-	@Type(() => UserPublicDTO)
-	@ValidateNested({ each: true })
-	bannedUsers?: UserPublicDTO[];
-
-	@IsOptional()
-	@ValidateNested({ each: true })
-	@Type(() => MutePublicDTO)
-	mutedUsers?: MutePublicDTO[];
-
-	@IsNotEmpty()
-	@ValidateNested({ each: true })
-	@Type(() => MemberPublicDTO)
-	members: MemberPublicDTO[];
-}
-
 export class ChatClientDTO {
 	constructor(chat: Chat, userId: number) {
 		this.id = chat.id;
@@ -254,14 +228,17 @@ export class ChatClientDTO {
 }
 
 export class MemberClientDTO {
-	constructor(member: ChannelMember) {
+	constructor(member: ChannelMember, userId: number) {
 		this.id = member.id;
 		this.user = new UserClient(member.user);
-		this.channel = new ChannelClientDTO(member.channel);
+		this.channel = new ChannelPublicDTO(member.channel);
 		this.role = member.role;
-		this.isMuted = member.channel.mutedUsers.some(
-			(mute) => mute.user.id === member.user.id
-		)
+
+		if (member.channel?.mutedUsers) {
+			this.isMuted = member.channel.mutedUsers.some((mute) =>
+				mute.userId === userId
+			)
+		}
 	}
 
 	@IsNumber()

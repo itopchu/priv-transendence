@@ -16,7 +16,6 @@ export async function getFriendshipAttitude(
 				signal: controller.signal,
 			}
 		);
-		console.log(response);
 		if (response.data.friendshipAttitude) {
 			setFunc(response.data.friendshipAttitude);
 		}

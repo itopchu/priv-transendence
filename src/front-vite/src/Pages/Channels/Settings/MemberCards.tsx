@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {
-  Channel,
-  ChannelMemberPublic,
+    ChannelBase,
+  MemberPublic,
   ChannelRole,
   ChannelRoleValues,
 } from '../../../Providers/ChannelContext/Types';
@@ -45,14 +45,14 @@ const MuteOptions: MuteOptionsType[] = [
 const ModerateOptions: string[] = ['kick', 'ban'];
 
 type MemberCardsType = {
-  channel: Channel;
-  members: ChannelMemberPublic[];
+  channel: ChannelBase;
+  members: MemberPublic[];
   editMode: boolean;
   isAdmin: boolean;
   isMod: boolean;
 };
 
-const onChangeRole = async (member: ChannelMemberPublic, newRole: ChannelRole) => {
+const onChangeRole = async (member: MemberPublic, newRole: ChannelRole) => {
 	const payload = {
 		role: newRole,
 	};
@@ -105,7 +105,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 	const [menuId, setMenuId] = useState<number | null>(null);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const [muteAnchorEl, setMuteAnchorEl] = useState<HTMLElement | null>(null);
-	const [publicMembers, setPublicMembers] = useState<ChannelMemberPublic[]>(members);
+	const [publicMembers, setPublicMembers] = useState<MemberPublic[]>(members);
 	const [friendshipAttitude, setFriendshipAttitude] = useState<FriendshipAttitude>(FriendshipAttitude.available);
 
 	useFriendshipAttitude(menuId, setFriendshipAttitude);
@@ -143,7 +143,9 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 
 		return (() => {
 			members.forEach((member) => {
-				userSocket?.emit('unsubscribeProfileStatus', member.user.id);
+				if (chatProps.selected?.user.id !==  member.user.id) {
+					userSocket?.emit('unsubscribeProfileStatus', member.user.id);
+				}
 			})
 			userSocket?.off('profileStatus');
 		});
@@ -169,10 +171,11 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 
 	const handleGameInvite = (receiverId: number) => {
 		sendGameInvite(receiverId, userSocket, chatProps, changeChatProps)
+		navigate('/game');
 		onMenuClose();
 	}
 
-  async function onMute(member: ChannelMemberPublic, duration: number | null, menuCloseFunc: () => void) {
+  async function onMute(member: MemberPublic, duration: number | null, menuCloseFunc: () => void) {
     const payload = {
       victimId: member.user.id,
       muteUntil: duration,
@@ -187,7 +190,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
     }
   };
 
-  const muteMenuItems = (member: ChannelMemberPublic, menuCloseFunc: () => void) => (
+  const muteMenuItems = (member: MemberPublic, menuCloseFunc: () => void) => (
     MuteOptions.map((mute, index) => {
       return (
 				<MenuItem key={index} onClick={() => onMute(member, mute.value, menuCloseFunc)}>
@@ -197,7 +200,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
     })
   )
 
-  const generateModerateList = (member: ChannelMemberPublic, menuCloseFunc: () => void) => (
+  const generateModerateList = (member: MemberPublic, menuCloseFunc: () => void) => (
 		ModerateOptions.map((option, index) => {
 			const capitalizedOption = option.charAt(0).toUpperCase() + option.slice(1);
 
@@ -220,9 +223,6 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 				const isDiffUser = member.user.id !== localUser.id;
 				const isModeratable = isAdmin || (member.role > ChannelRole.moderator && isMod);
 				const canChangeRole = editMode && isDiffUser && member.role !== ChannelRole.admin;
-				const isMemberMuted = channel?.mutedUsers?.some(
-					(mutedUser) => mutedUser.userId === member.user.id
-				);
 
 				return (
 					<BarCard key={member.id}>
@@ -235,7 +235,7 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 								width: 56,
 								height: 56,
 								border: '3px solid',
-								borderColor: getStatusColor(member.user?.status),
+								borderColor: getStatusColor(member.user?.status, theme),
 							}}
 							sx={{
 								marginRight: 2,
@@ -345,9 +345,9 @@ export const MemberCards: React.FC<MemberCardsType> = ({
 									{userRelationMenuItems(member.user, friendshipAttitude, setFriendshipAttitude, onMenuClose)}
 									{isModeratable && [
 										<Divider key={'div2'} />,
-										<MenuItem key={'mute'} onClick={isMemberMuted ? () => onMute(member, null, onMuteMenuClose) : onMuteMenuClick}>
-											{`${isMemberMuted ? 'Unmute' : 'Mute'} ${membername}`}
-											{!isMemberMuted && <MuteMenuArrowIcon />}
+										<MenuItem key={'mute'} onClick={member.isMuted ? () => onMute(member, null, onMuteMenuClose) : onMuteMenuClick}>
+											{`${member.isMuted ? 'Unmute' : 'Mute'} ${membername}`}
+											{!member.isMuted && <MuteMenuArrowIcon />}
 										</MenuItem>,
 										<Divider key={'div3'} />,
 										generateModerateList(member, onMenuClose),

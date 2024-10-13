@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Divider, Container, useTheme, Stack, useMediaQuery } from '@mui/material';
 import CreateCard from './CreateCard';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
@@ -7,31 +7,17 @@ import { JoinCard } from './JoinCard';
 import { lonelyBox, Overlay } from './Components/Components';
 import { ChannelDetails } from './Settings/ChannelDetails';
 import { ChannelLine } from './ChannelLine';
-import { Channel, ChannelStates, Invite } from '../../Providers/ChannelContext/Types';
-import { useLocation } from 'react-router-dom';
-import { acceptInvite } from '../../Providers/ChannelContext/utils';
+import { ChannelStates } from '../../Providers/ChannelContext/Types';
+import { useChannelLine } from '../../Providers/ChannelContext/ChannelLine';
 
 const ChannelsPage: React.FC = () => {
   const theme = useTheme();
-	const location = useLocation();
 	const isTinyScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const { channelProps } = useChannel();
+  const { channelLineProps, changeLineProps } = useChannelLine();
 
-  const { channelProps, channelLineProps, changeLineProps, setChannelProps } = useChannel();
   const [showCreateCard, setShowCreateCard] = useState(false);
 	
-	useEffect(() => {
-		const searchParams = new URLSearchParams(location.search);
-		const invite: Invite = {
-			id: searchParams.get('inviteId') || '',
-			isJoined: Boolean(searchParams.get('isJoined')),
-			destination: { id: Number(searchParams.get('destinationId')) } as Channel,
-		}
-
-		if (invite.id.length) {
-			acceptInvite(invite, channelProps, setChannelProps);
-		}
-	}, [location])
-
 	const renderChannelState = () => {
 		if (!channelProps.selected) return (lonelyBox());
 
@@ -39,7 +25,7 @@ const ChannelsPage: React.FC = () => {
 			case ChannelStates.chat:
 				return (<ChatBox membership={channelProps.selected} />);
 			case ChannelStates.details:
-				return (<ChannelDetails membership={channelProps.selected} />);
+				return (<ChannelDetails />);
 			default:
 				return (lonelyBox());
 		}
@@ -51,7 +37,7 @@ const ChannelsPage: React.FC = () => {
 				sx={{ padding: theme.spacing(3) }}
 			>
 				{showCreateCard && (<CreateCard setIsVisible={setShowCreateCard} />)}
-				{channelProps.selectedJoin && <JoinCard channel={channelProps.selectedJoin} />}
+				{channelProps.selectedJoin && <JoinCard />}
         <Stack
           direction={'row'}
           bgcolor={theme.palette.primary.dark}

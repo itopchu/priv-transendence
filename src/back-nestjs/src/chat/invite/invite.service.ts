@@ -53,12 +53,14 @@ export class InviteService {
 	}
 
 	async validateJoin(user: User, inviteId: string) {
-		const invite = await this.getInviteById(inviteId);
+		const invite = await this.getInviteById(
+			inviteId, ['destination.bannedUsers', 'destination.members']
+		);
 		
 		if (!invite) {
 			throw new NotFoundException('Invite has expired or was not found');
 		}
-		const isBanned = await this.channelService.isUserBanned(invite.destinationId, user.id);
+		const isBanned = invite.destination.bannedUsers.some((bannedUser) => bannedUser.id === user.id);
 		if (isBanned) {
 			throw new UnauthorizedException('You are banned from this channel');
 		}

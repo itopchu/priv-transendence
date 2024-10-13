@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { Message } from "./InterfaceChat";
 import { Box, Divider, Stack, SxProps, Theme, Typography, useTheme } from "@mui/material";
 import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
-import { NavigateFunction, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
 import { acceptInvite, formatDate, getLink, getTimeDiff, INVITE_DOMAIN } from "../../Providers/ChannelContext/utils";
 import {
@@ -19,6 +19,7 @@ import {
 import { HiddenTimestamp } from "../../Pages/Channels/Components/ChatBoxComponents";
 import { handleError } from "../../Pages/Channels/utils";
 import { Invite } from "../../Providers/ChannelContext/Types";
+import { useChannel } from "../../Providers/ChannelContext/Channel";
 
 type ChatBoxType = {
 	messages: Message[];
@@ -28,6 +29,7 @@ const timeSeparation = 3 * 60 * 1000; // 2 min in milisecondes
 const oneHour = 60 * 60 *  1000;
 export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages }) => {
 	const { user: localUser, userSocket } = useUser();
+	const { channelProps, setChannelProps } = useChannel();
 	const navigate = useNavigate();
 	const theme = useTheme();
 	const editMsgRef = useRef<HTMLInputElement>();
@@ -84,7 +86,8 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages }) => {
 	}
 
 	const handleInviteJoin = async (invite: Invite) => {
-		acceptInvite(invite);
+		await acceptInvite(invite, channelProps, setChannelProps);
+		navigate('/channels');
 	}
 
 	const handleClose = () => {

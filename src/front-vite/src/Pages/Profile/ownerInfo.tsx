@@ -20,7 +20,7 @@ import {
   VideogameAsset as GameIcon,
   Message as MessageIcon,
 } from "@mui/icons-material";
-import { darken, alpha } from "@mui/material/styles";
+import { darken, alpha, Theme } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
 import { useChat } from '../../Providers/ChatContext/Chat';
 import axios from "axios";
@@ -53,10 +53,8 @@ export enum FriendshipAttitudeBehaviour {
 const BACKEND_URL: string =
   import.meta.env.ORIGIN_URL_BACK || "http://localhost:4000";
 
-export function getStatusColor(status: UserStatusType | undefined) {
-  const theme = useTheme();
-
-	if (!status) {
+export function getStatusColor(status: UserStatusType | undefined, theme: Theme) {
+	if (!status || !theme) {
 		return (theme.palette.action.hover);
 	}
 
@@ -250,7 +248,7 @@ export const VisitedInfo: React.FC<VisitedInfoProps> = ({ visitedUser }) => {
             maxHeight: "200px",
             maxWidth: "200px",
             border: "2px solid",
-            borderColor: getStatusColor(visitedUser?.status),
+            borderColor: getStatusColor(visitedUser?.status, theme),
           }}
           src={visitedUser?.image ?? ""}
           alt="visitedUser"

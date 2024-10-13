@@ -71,12 +71,22 @@ export class ChannelService {
 			throw new InternalServerErrorException('Error hashing password');
 		}
 	}
-
-	async isUserBanned(channelId: number, userId: number): Promise<Boolean> {
+	
+	async memberCount(channelId: number): Promise<number> {
 		const count = await this.channelRespitory
 			.createQueryBuilder('channel')
-			.innerJoin('channel.bannedUsers', 'users', 'users.id = :userId', { userId })
 			.where('channel.id = :channelId', { channelId })
+			.innerJoin('channel.members', 'members')
+			.getCount();
+
+		return (count);
+	}
+
+	async isUserBanned(channelId: number, userId: number): Promise<boolean> {
+		const count = await this.channelRespitory
+			.createQueryBuilder('channel')
+			.where('channel.id = :channelId', { channelId })
+			.innerJoin('channel.bannedUsers', 'users', 'users.id = :userId', { userId })
 			.getCount();
 
 		return (count > 0);
@@ -85,9 +95,18 @@ export class ChannelService {
 	async isUserInChannel(channelId: number, userId: number): Promise<boolean> {
 		const count = await this.channelRespitory
 			.createQueryBuilder('channel')
-			.innerJoin('channel.members', 'members')
-			.innerJoin('members.user', 'user', 'user.id = :userId', { userId })
+			.innerJoin('channel.members', 'members', 'members.userId = :userId', { userId })
 			.where('channel.id = :channelId', { channelId })
+			.getCount();
+
+		return (count > 0);
+	}
+
+	async isUserMuted(channelId: number, userId: number): Promise<boolean> {
+		const count = await this.muteRespitory
+			.createQueryBuilder('mute')
+			.innerJoin('mute.channel', 'channel', 'channel.id = :channelId', { channelId })
+			.where('mute.userId = :userId', { userId })
 			.getCount();
 
 		return (count > 0);
@@ -121,11 +140,7 @@ export class ChannelService {
 	}
 
 	async getPublicChannels(channelType: ChannelType): Promise<Channel[]> {
-		const channels = await this.channelRespitory.find({
-			where: { type: channelType },
-			relations: ['bannedUsers'],
-		});
-
+		const channels = await this.channelRespitory.find({ where: { type: channelType } });
 		return (channels);
 	}
 
@@ -182,7 +197,7 @@ export class ChannelService {
 	}
 
 	async joinChannel(user: User, channelId: number, password?: string | null): Promise<ChannelMember> {
-		const channel = await this.getChannelById(channelId, ['members.user', 'bannedUsers']);
+		const channel = await this.getChannelById(channelId, ['members', 'bannedUsers']);
 		if (!channel) {
 			throw new NotFoundException(`Channel not found`);
 		}
@@ -195,7 +210,7 @@ export class ChannelService {
 			throw new UnauthorizedException('You are banned from this channel');
 		}
 
-		const isMember = channel.members.some(member => member.user.id === user.id);
+		const isMember = channel.members.some(member => member.userId === user.id);
 		if (isMember) {
 			throw new BadRequestException(`User is already in channel`);
 		}
@@ -206,44 +221,15 @@ export class ChannelService {
 		return (await this.memberService.createMember(channel, user));
 	}
 
-	async leaveChannel(user: User, membership: ChannelMember) {
-		if (membership.role  === ChannelRoles.admin) {
-			let channel: Channel;
-
-			if (!membership.channel) {
-				membership = await this.memberService.getMembershipById(membership.id, [
-					'channel',
-					'channel.members', 
-					'channel.members.user'
-				]);
-				channel = membership.channel;
-			} else if (!membership.channel.members) {
-				channel = await this.getChannelById(membership.channel.id, ['members', 'members.user'])
-			}
-
-			if (channel.members.length === 1) {
-				return (await this.removeChannel(channel.id));
-			}
-
-			let candidate = channel.members.find((member) => member.role === ChannelRoles.moderator);
-			if (!candidate) {
-				candidate = channel.members[1];
-			}
-			await this.transferOwnership(user, candidate.user.id, channel.id);
-		}
-		return (await this.memberService.removeMember(membership) as ChannelMember);
-	}
-
 	async removeChannel(channelId: number) {
-		let channel = await this.getChannelById(channelId, ['members', 'log', 'bannedUsers', 'mutedUsers']);
+		let channel = await this.getChannelById(channelId, ['members', 'log', 'bannedUsers', 'mutedUsers', 'invites']);
 		if (!channel) {
 			throw new NotFoundException('Channel not found');
 		}
 
 		try {
-			const invites = await this.inviteService.getAllInviteByChannelId(channel.id);
-			if (invites) {
-				this.inviteService.removeInvite(invites);
+			if (channel.invites) {
+				this.inviteService.removeInvite(channel.invites);
 			}
 			if (channel.mutedUsers) {
 				await this.muteRespitory.remove(channel.mutedUsers);
@@ -268,49 +254,15 @@ export class ChannelService {
 	async removeMute(userId: number, channelId: number) {
 		const mute = await this.getMuteById(userId, channelId);
 		if (!mute) {
-			return (null);
+			throw new NotFoundException('Mute not found');
 		}
 
 		return (await this.muteRespitory.remove(mute));
 	}
 
-	async muteMember(muter: User, victimId: number, muteUntil: number | null, channelId: number): Promise<Mute> {
-		const muterMembership = await this.memberService.getMembershipByChannel(channelId, muter.id, []);
-		if (!muterMembership) {
-			throw new NotFoundException('User or Channel not found');
-		}
-		const victimMembership = await this.memberService.getMembershipByChannel(channelId, victimId, []);
-		if (!victimMembership) {
-			throw new NotFoundException('Victim not found');
-		}
-
-		if (muterMembership.role > victimMembership.role) {
-			throw new UnauthorizedException('Unauthorized: Insufficient privileges')
-		}
-
-		try {
-			const isMuted = await this.removeMute(victimId, channelId);
-			if (isMuted) {
-				return (isMuted);
-			}
-		} catch (error) {
-			throw new InternalServerErrorException(`Could not unmute user: ${error.message}`);
-		}
+	async muteMember(victimId: number, channelId: number, muteUntil: number | null): Promise<Mute> {
 		const expireDate = muteUntil ? new Date(Date.now() + muteUntil * 60 * 1000) : null;
 		return (await this.createMute(victimId, channelId, expireDate));
-	}
-	
-	async kickMember(kicker: User, victimId: number, channelId: number) {
-		const kickerMembership = await this.memberService.getMembershipByChannel(channelId, kicker.id);
-		if (!kickerMembership)
-			throw new NotFoundException('User or membership not found');
-		const victimMembership = await this.memberService.getMembershipByChannel(channelId, victimId);
-		if (!victimMembership)
-			throw new NotFoundException('Victim membership not found');
-
-		if (kickerMembership.role > victimMembership.role)
-			throw new UnauthorizedException('Unauthorized user')
-		return (await this.memberService.removeMember(victimMembership));
 	}
 
 	async unbanUser(victimId: number, channel: Channel) {
@@ -346,17 +298,7 @@ export class ChannelService {
 		return (result);
 	}
 
-	async transferOwnership(user: User, newOwnerId: number, channelId: number): Promise<ChannelMember[]> {
-		const admin = await this.memberService.getMembershipByChannel(channelId, user.id);
-		const newAdmin = await this.memberService.getMembershipByChannel(channelId, newOwnerId);
-		if (!admin || !newAdmin) {
-			throw new NotFoundException('User(s) not found');
-		}
-
-		if (admin.role !== ChannelRoles.admin) {
-			throw new UnauthorizedException('Unauthorized: User is not an admin');
-		}
-
+	async transferOwnership(admin: ChannelMember, newAdmin: ChannelMember): Promise<ChannelMember[]> {
 		admin.role = ChannelRoles.moderator;
 		newAdmin.role = ChannelRoles.admin;
 		try {
@@ -367,20 +309,10 @@ export class ChannelService {
 		}
 	}
 
-	async updateChannel(user: User, channelId: number, updateChannelDto: UpdateChannelDto, image: Express.Multer.File) {
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, ['channel']);
-		if (!membership) {
-			throw new UnauthorizedException('Unauthorized user');
-		}
-
-		const isMod = membership.role < ChannelRoles.member;
-		const isAdmin = membership.role === ChannelRoles.admin;
-		if (!isMod || ((updateChannelDto.type || updateChannelDto.password) && !isAdmin)) {
-			throw new UnauthorizedException('Unauthorized user');
-		}
+	async updateChannel(channel: Channel, updateChannelDto: UpdateChannelDto, image: Express.Multer.File) {
+		if (!Object.keys(updateChannelDto).length) return (null);
 
 		if (image) {
-			const channel = membership.channel;
 			let newImage: string = undefined;
 			let uploadPath: string;
 
@@ -388,7 +320,7 @@ export class ChannelService {
 				const { fileName, imagePath } = createImage(channel.id, image);
 				newImage = fileName;
 				uploadPath = imagePath;
-				await this.channelRespitory.update(channelId, { image: newImage });
+				await this.channelRespitory.update(channel.id, { image: newImage });
 				if (channel.image) {
 					const oldImagePath = path.join('/app/uploads', channel.image);
 					unlinkSync(oldImagePath);
@@ -400,10 +332,7 @@ export class ChannelService {
 				throw new InternalServerErrorException(`Updating channel failed: ${error.message}`);
 			}
 		}
-
-		if (Object.keys(updateChannelDto).length)
-			await this.channelRespitory.update(channelId, updateChannelDto);
-		return (membership.channel);
+		return (await this.channelRespitory.update(channel.id, updateChannelDto));
 	}
 
 	async logMessage(channelId: number, author: User, message: string): Promise<Message> {
@@ -411,17 +340,17 @@ export class ChannelService {
 			throw new BadRequestException('Empty message');
 		}
 
-		const channel = await this.getChannelById(channelId, ['members', 'members.user']);
+		const channel = await this.getChannelById(channelId, ['members', 'mutedUsers']);
 		if (!channel)
 			throw new NotFoundException('Channel not found');
 
-		const isMember = channel.members.find(member => member.user.id === author.id);
+		const isMember = channel.members.find(member => member.userId === author.id);
 		if (!isMember) {
-			throw new UnauthorizedException('Unauthorized: Membership not found');
+			throw new UnauthorizedException('Unauthorized: You are not in this channel');
 		}
-		const isMuted = await this.getMuteById(author.id, channelId);
+		const isMuted = channel.mutedUsers.some((mute) => mute.userId === author.id)
 		if (isMuted) {
-			throw new UnauthorizedException('Unauthorized: User is muted');
+			throw new UnauthorizedException('Unauthorized: You are muted');
 		}
 
 		return (await this.messageService.createMessage(channel, author, message));

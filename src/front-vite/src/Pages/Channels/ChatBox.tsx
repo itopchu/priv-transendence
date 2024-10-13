@@ -20,8 +20,8 @@ import { LoadingBox } from './Components/Components';
 import { BACKEND_URL, formatErrorMessage, handleError,  trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import { ChatBoxHeader } from './Headers/ChatBoxHeader';
-import { ChannelMember, DataUpdateType } from '../../Providers/ChannelContext/Types';
-import { retryOperation, updateMap, } from '../../Providers/ChannelContext/utils';
+import { MemberClientBase, DataUpdateType } from '../../Providers/ChannelContext/Types';
+import { retryOperation, updatePropMap, } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
 import { ChatBoxMessages } from './ChatBoxMessages';
 import { StatusTypography } from './Components/ChatBoxComponents';
@@ -72,7 +72,7 @@ export function useScrollTo(
 }
 
 interface ChatBoxType {
-  membership: ChannelMember;
+  membership: MemberClientBase;
 }
 
 const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
@@ -119,7 +119,6 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
     const getMessageLog = async () => {
       try {
 				blockedUsers = await getBlockedUsers();
-				console.log(blockedUsers);
 
         const messages: Message[] = await retryOperation(async () => {
           const response = await axios.get(
@@ -153,10 +152,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 
     function handleMessageUpdate(data: DataUpdateType<Message>) {
 			const message = data.content;
-			const isBlockedUser = blockedUsers.some((blockedUser) => blockedUser.id === message?.author.id)
+			const isBlockedUser = blockedUsers.some((blockedUser) => blockedUser.id === message?.author?.id)
 			if (isBlockedUser) return;
 
-      setMessageLog((prev) => updateMap(prev, data))
+      setMessageLog((prev) => updatePropMap(prev, data))
     };
 
 		function handleMessageError(message: string) {
@@ -168,17 +167,17 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 					}
 					return (currentErrorMessage);
 				});
-			}, 60000); // 1 min delay
+			}, 30000); // 30 seconds delay
 		}
 
-    userSocket?.on(`newChannel${channel.id}MessageUpdate`, handleMessageUpdate);
+    userSocket?.on(`channel${channel.id}MessageUpdate`, handleMessageUpdate);
     userSocket?.on('channelMessageError', handleMessageError);
     getMessageLog();
     return () => {
 			controller.abort;
 			setLoading(true);
 			setMessageLog(new Map());
-      userSocket?.off(`newChannel${channel.id}MessageUpdate`);
+      userSocket?.off(`channel${channel.id}MessageUpdate`, handleMessageUpdate);
 			userSocket?.off('channelMessageError', handleMessageError);
     };
   }, [channel.id, userSocket]);

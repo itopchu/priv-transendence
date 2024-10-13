@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, Divider, InputBase, Menu, MenuItem, PopoverPosition, Stack, styled, SxProps, Theme, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Button, CircularProgress, InputBase, Menu, MenuItem, PopoverPosition, Stack, styled, SxProps, Theme, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { BACKEND_URL, handleError } from "../utils";
 import axios from "axios";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
@@ -9,6 +9,8 @@ import { getInvite } from "../../../Providers/ChannelContext/utils";
 
 const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
 	fontSize: '.9rem',
+	padding: theme.spacing(1),
+	paddingInline: theme.spacing(2),
 }))
 
 export const ChatBubble = styled(Box)(({ theme }) => ({
@@ -170,7 +172,12 @@ export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
 			onClose={onClose}
 			anchorReference="anchorPosition"
 			anchorPosition={anchorPosition}
-			MenuListProps={{ autoFocus: false }}
+			MenuListProps={{
+				autoFocus: false,
+				sx: {
+					p: 0,
+				}
+			}}
 		>
 			{selection && selection.length > 0 && (
 				<MessageMenuItem divider onClick={handleCopySelection} >
@@ -195,7 +202,7 @@ export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
 
 type InviteMessageType = {
 	link: string,
-	onJoin?: (invite: Invite) => Promise<void>,
+	onJoin: (invite: Invite) => Promise<void>,
 	bubbleSx?: SxProps<Theme>,
 	small?: boolean,
 }
@@ -209,24 +216,30 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 	const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
 	const [invite, setInvite] = useState<Invite | undefined>(undefined);
 
-	useEffect(() => {
-		async function getInviteInfo() {
-			await getInvite(link, setInvite, setErrorMsg);
-			setLoading(false);
-		}
+	async function getInviteInfo() {
+		await getInvite(link, setInvite, setErrorMsg);
+	}
 
-		setLoading(true);
+	useEffect(() => {
 		getInviteInfo();
 
 		return () => {
+			setLoading(true);
 			setInvite(undefined);
 		};
 	}, [link]);
 
+	useEffect(() => {
+		if (!invite && !errorMsg) return;
+
+		setLoading(false);
+	}, [invite, errorMsg]);
+
 	async function handleJoin() {
-		if (invite && onJoin) {
+		if (invite) {
 			setJoining(true);
 			await onJoin(invite);
+			await getInviteInfo();
 			setJoining(false);
 		}
 	}
