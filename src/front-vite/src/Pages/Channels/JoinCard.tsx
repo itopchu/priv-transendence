@@ -151,6 +151,7 @@ export const JoinCard: React.FC = () => {
 				<CustomCardContent sx={{ display: loading ? 'none' : 'flex' }}>
 					<Stack spacing={1.6} alignItems={'center'} >
 						<CustomAvatar
+							variant='channel'
 							sx={{ height: 170, width: 170 }}
 							src={channel?.image}
 						/>

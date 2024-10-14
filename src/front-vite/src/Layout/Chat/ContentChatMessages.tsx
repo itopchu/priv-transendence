@@ -85,9 +85,14 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages }) => {
 		}
 	}
 
-	const handleInviteJoin = async (invite: Invite) => {
-		await acceptInvite(invite, channelProps, setChannelProps);
-		navigate('/channels');
+	const handleInviteJoin = async (
+		invite: Invite,
+		setErrorMsg: React.Dispatch<React.SetStateAction<string | undefined>>
+	) => {
+		const exitStatus = await acceptInvite(invite, channelProps, setChannelProps, setErrorMsg);
+		if (exitStatus) {
+			navigate('/channels');
+		}
 	}
 
 	const handleClose = () => {

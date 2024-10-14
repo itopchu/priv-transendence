@@ -11,7 +11,6 @@ import {
 import {
 	Menu as ShowChannelLineIcon,
 	MenuOpen as HideChannelLineIcon,
-	PeopleRounded as DefaultChannelIcon,
 	Cancel as CloseIcon,
 } from "@mui/icons-material"
 import { ButtonAvatar, ClickTypography, CustomAvatar, HeaderIconButton, SearchBar } from "../Components/Components";
@@ -226,12 +225,12 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 
 			<Stack direction={'row'} alignItems={'center'} gap={0.7} >
 				<ButtonAvatar
+					variant="channel"
 					src={channel.image}
 					avatarSx={ isTinyScreen
 						? { height: '45px', width: '45px' }
 						: { height: '55px', width: '55px'} }
 					clickEvent={() => changeProps({ state: ChannelStates.details })}
-					defaultIcon={<DefaultChannelIcon sx={{ height: '35px', width: '35px' }} />}
 				>
 				</ButtonAvatar>
 				<Stack display={isTinyScreen || (isSmallScreen && !channelLineProps.hidden)

@@ -83,8 +83,11 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 		}
 	}
 
-	const handleInviteAccept = async (invite: Invite) => {
-		await acceptInvite(invite, channelProps, setChannelProps);
+	const handleInviteAccept = async (
+		invite: Invite,
+		setErrorMsg: React.Dispatch<React.SetStateAction<string | undefined>>
+	) => {
+		await acceptInvite(invite, channelProps, setChannelProps, setErrorMsg);
 	}
 
 	const handleClose = () => {

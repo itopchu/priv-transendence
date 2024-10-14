@@ -4,6 +4,7 @@ import {
 	Box,
 	Button,
 	IconButton,
+	IconProps,
 	InputAdornment,
 	InputBase,
 	Stack,
@@ -11,6 +12,7 @@ import {
 	SxProps,
 	TextField,
 	TextFieldVariants,
+	Theme,
 	Typography,
     useTheme
 } from "@mui/material";
@@ -22,7 +24,7 @@ import {
 	VisibilityOff as HidePasswordIcon,
 	PeopleRounded as DefaultChannelIcon,
 } from '@mui/icons-material'
-import React, { forwardRef, ReactElement, ReactNode, useState } from "react";
+import React, { forwardRef, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useChannelLine } from "../../../Providers/ChannelContext/ChannelLine";
 
 interface IHeaderIconButtonType {
@@ -37,23 +39,80 @@ interface IImageInput {
 	onFileInput?: (file: File) => void;
 }
 
-export const CustomAvatar = styled(Avatar)(({ theme }) => ({
-  border: '3px solid',
-  borderColor: theme.palette.primary.dark,
-}));
+type ChannelAvatarType = {
+	sx?: SxProps<Theme>,
+	iconSx?: SxProps<Theme>,
+	src?: string,
+	alt?: string,
+	className?: string,
+	variant?: 'default' | 'channel',
+	Icon?: React.FC<IconProps>;
+}
 
-export const CustomChannelAvatar: React.FC<{ sx?: SxProps, src?: string }> = ({ sx, src }) => (
-	<Avatar
-		alt=':C'
-		src={src}
-		sx={{
-			boxShadow: (theme) => theme.shadows[5],
-			...sx,
-		}}
-	>
-		<DefaultChannelIcon />
-	</Avatar>
-);
+export const CustomAvatar: React.FC<ChannelAvatarType> = ({
+	sx,
+	iconSx,
+	src,
+	alt,
+	className,
+	Icon,
+	variant = 'default'
+}) => {
+	const avatarRef = useRef<HTMLDivElement>(null);
+	const [avatarDimensions, setAvatarDimensions] = useState({ width: 24, height: 24 });
+
+	const updateDimensions = useCallback(() => {
+		if (avatarRef.current) {
+			const { width, height } = avatarRef.current.getBoundingClientRect();
+			setAvatarDimensions((prev) => {
+				if (prev.width !== width || prev.height !== height) {
+						return { width, height };
+				}
+				return prev;
+			});
+		}
+	}, []);
+
+	useEffect(() => {
+		if (src) return;
+
+		updateDimensions();
+
+		const resizeObserver = new ResizeObserver(updateDimensions);
+		if (avatarRef.current) {
+			resizeObserver.observe(avatarRef.current);
+		}
+
+		return () => {
+			if (avatarRef.current) {
+				resizeObserver.unobserve(avatarRef.current);
+			}
+		};
+	}, [updateDimensions, src]);
+
+	const { width, height } = avatarDimensions;
+	const defaultIconSx = { fontSize: Math.min(width, height) * 0.7, ...iconSx }
+	const defaultIcon = Icon ? (
+			<Icon sx={defaultIconSx} />
+		) : (
+			variant === 'default' ? undefined : <DefaultChannelIcon sx={defaultIconSx} />
+		);
+
+	return (
+		<Avatar
+			ref={avatarRef}
+			className={className}
+			alt={alt}
+			src={src}
+			sx={{
+				border: (theme) => `3px solid ${theme.palette.primary.dark}`,
+				...sx, 
+			}}
+		>
+			{defaultIcon}
+		</Avatar>
+	);
+};
 
 export const CustomScrollBox = styled(Box)(({ theme }) => ({
 	overflowY: 'auto',
@@ -149,14 +208,25 @@ export const LoadingBox = styled(Box)(() => ({
 
 interface IAvatarButton {
 	src?: string;
+	variant?: 'default' | 'channel';
 	clickEvent?: (event: React.MouseEvent<HTMLElement>) => void;
 	children?: ReactNode;
-	avatarSx?: object;
-	defaultIcon?: ReactElement;
-	sx?: object;
+	avatarSx?: SxProps<Theme>;
+	avatarIconSx?: SxProps<Theme>;
+	defaultIcon?: React.FC<IconProps>;
+	sx?: SxProps<Theme>;
 }
 
-export const ButtonAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx, defaultIcon}) => {
+export const ButtonAvatar: React.FC<IAvatarButton> = ({
+	children,
+	variant = 'default',
+	defaultIcon,
+	clickEvent,
+	avatarIconSx,
+	avatarSx,
+	src,
+	sx,
+}) => {
 	return (
 		<Button
 			aria-label="Avatar Button"
@@ -176,19 +246,35 @@ export const ButtonAvatar: React.FC<IAvatarButton> = ({ children, src, clickEven
 				...sx
 			}}
 		>
-		  <CustomAvatar className="image-profile" src={src} sx={{ ...avatarSx }} >
-				{!src && defaultIcon}
-			</CustomAvatar>
+			<CustomAvatar
+				variant={variant}
+				className="image-profile"
+				src={src}
+				Icon={defaultIcon}
+				iconSx={avatarIconSx}
+				sx={avatarSx}
+			/>
 		  {children}
 		</Button>
 	);
 }
 
-export const UploadAvatar: React.FC<IAvatarButton> = ({ children, src, clickEvent, avatarSx, sx, defaultIcon }) => (
+export const UploadAvatar: React.FC<IAvatarButton> = ({
+	variant = 'default',
+	children,
+	avatarIconSx,
+	defaultIcon,
+	clickEvent,
+	avatarSx, 
+	src,
+	sx,
+}) => (
 	<ButtonAvatar
+		variant={variant}
 		src={src}
 		clickEvent={clickEvent}
 		avatarSx={avatarSx}
+		avatarIconSx={avatarIconSx}
 		defaultIcon={defaultIcon}
 		sx={{
 			'&:hover .image-profile': {

@@ -1,17 +1,14 @@
-import { forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Invite } from "../../entities/chat.entity";
 import { User } from "../../entities/user.entity";
 import { Repository } from "typeorm";
-import { ChannelService } from "../channel/channel.service";
 
 @Injectable()
 export class InviteService {
 	constructor(
 		@InjectRepository(Invite)
 		private inviteRepository: Repository<Invite>,
-		@Inject(forwardRef(() => ChannelService))
-		private readonly channelService: ChannelService,
 	) {}
 	
 	async getInviteById(inviteId: string, relations?: string[]) {

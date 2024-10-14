@@ -1,7 +1,5 @@
 import {
 	BadRequestException,
-	forwardRef,
-	Inject,
 	Injectable,
 	InternalServerErrorException,
 	NotFoundException,
@@ -50,7 +48,6 @@ export class ChannelService {
 		private readonly messageService: MessageService,
 		private readonly memberService: MemberService,
 		private readonly userService: UserService,
-		@Inject(forwardRef(() => InviteService))
 		private readonly inviteService: InviteService,
 	) {}
 

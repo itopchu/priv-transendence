@@ -38,6 +38,7 @@ interface IChannelDetailsHeaderType {
 }
 
 interface PanelType {
+	variant?: 'user' | 'channel'
 	isSelected?: boolean;
 	defaultIcon?: ReactElement;
 	avatarSrc?: string;
@@ -209,12 +210,12 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 		}
 
 		const Panel: React.FC<PanelType> = ({
+			variant = 'user',
 			isSelected,
 			onClick,
 			avatarSrc,
 			secondaryText,
 			primaryText,
-			defaultIcon,
 			statusColor,
 		}) => {
 			return (
@@ -243,14 +244,13 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 						gap={theme.spacing(1)}
 					>
 						<CustomAvatar
+							variant={variant === 'user' ? 'default' : 'channel'}
 							alt={primaryText}
 							src={avatarSrc}
 							sx={{
 								border: `2px solid ${getStatusColor(statusColor, theme)}`
 							}}
-						>
-							{!avatarSrc && defaultIcon}
-						</CustomAvatar>
+						/>
 						<Typography fontSize={'large'} maxWidth={'60%'} noWrap >
 							{primaryText}
 						</Typography>

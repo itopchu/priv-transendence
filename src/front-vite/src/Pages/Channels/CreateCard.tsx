@@ -17,10 +17,9 @@ import {
   CircularProgress,
   Stack,
 } from '@mui/material';
-import { PeopleRounded as DefaultChannelIcon } from '@mui/icons-material';
 import { AvatarUploadIcon, ImageInput, PasswordTextField, UploadAvatar } from './Components/Components';
 import { BACKEND_URL, handleError, onFileUpload } from './utils';
-import { MemberClientBase, ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
+import { MemberClient, ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
 
 interface CreateCardType {
@@ -101,7 +100,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 		}
 
     try {
-			const { data: { membership } } = await axios.post<{ membership: MemberClientBase }>(
+			const { data: { membership } } = await axios.post<{ membership: MemberClient }>(
 				`${BACKEND_URL}/channel/create`, payload,
 				{ 
 					withCredentials: true,
@@ -131,9 +130,9 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
 				<CustomCardContent>
 					<Stack spacing={2} justifyContent={'center'} alignItems={'center'}>
 						<UploadAvatar
+							variant='channel'
 							src={avatarSrc}
 							avatarSx={{ width: 170, height: 170 }}
-							defaultIcon={<DefaultChannelIcon sx={{ width: 120, height: 120 }} />}
 						>
 							<AvatarUploadIcon className="hidden-icon" sx={{ zIndex: 10 }} />
 							<ImageInput onFileInput={(file: File) => onFileUpload(file, changeChannelData, setAvatarSrc)} />

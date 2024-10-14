@@ -15,7 +15,7 @@ import {
 import React from "react";
 
 export const FRONTEND_URL: string = import.meta.env.ORIGIN_URL_FRONT || 'http://localhost.codam.nl:3000';
-export const INVITE_DOMAIN = `${FRONTEND_URL}/channels?inviteId=`;
+export const INVITE_DOMAIN = `${FRONTEND_URL}/channels/invite/`;
 
 export function getChannelTypeFromFilter(filter: ChannelFilters) {
 	return (filter === ChannelFilters.protected ? ChannelType.protected : ChannelType.public);
@@ -44,7 +44,7 @@ export function updatePropMap<Type extends { id: number }>(
 }
 
 export function updatePropArray<Type extends { id: number }>(prevArray: Type[], newData: DataUpdateType<Type>): Type[] {
-	const index = prevArray.findIndex((prevArray) => prevArray.id === newData.content?.id)
+	const index = prevArray.findIndex((prevItem) => prevItem.id === newData.content?.id)
 	if (index === -1) {
 		if (newData.updateType === UpdateType.created) {
 			return ([...prevArray, newData.content as Type]);
@@ -159,9 +159,16 @@ export async function getInvite(
 	setFunc: React.Dispatch<React.SetStateAction<Invite | undefined>>,
 	setErrorMsg?: React.Dispatch<React.SetStateAction<string | undefined>>,
 ) {
-	const inviteId = new URL(link).searchParams.get('inviteId');
+	const match = link.match(/\/invite\/([^/]+)/);
+	const inviteId = match ? match[1] : undefined;
+
 	console.log(link, inviteId);
-	if (!inviteId) return;
+
+	if (!inviteId) {
+		if (setErrorMsg)
+			setErrorMsg('Invalid invite id');
+		return;
+	}
 
 	try {
 		const response = await axios.get(`${BACKEND_URL}/channel/invite/${inviteId}`, { withCredentials: true });
@@ -200,8 +207,9 @@ export async function acceptInvite(
 	invite: PartialWithId<string, Invite>,
 	channelProps: ChannelPropsType,
 	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
-	setErrMsg?: React.Dispatch<React.SetStateAction<string>>,
+	setErrMsg?: React.Dispatch<React.SetStateAction<string | undefined>>,
 ) {
+	let exitStatus: boolean = true;
 	const membership = channelProps.memberships.find((membership => {
 		return (membership.channel.id === invite?.destination?.id);
 	}));
@@ -224,12 +232,18 @@ export async function acceptInvite(
 					selected: newMembership,
 					state: ChannelStates.chat,
 				}));
+			} else {
+				if (setErrMsg)
+					setErrMsg('No data received from server');
+				exitStatus = false;
 			}
 		} catch (error) {
 			console.warn(formatErrorMessage('Failed to accept invite:', error));
 			if (setErrMsg) {
 				setErrMsg(formatErrorMessage('', error));
 			}
+			exitStatus = false;
 		}
 	}
+	return (exitStatus);
 }

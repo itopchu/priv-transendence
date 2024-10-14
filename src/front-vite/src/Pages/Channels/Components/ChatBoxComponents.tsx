@@ -202,14 +202,31 @@ export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
 
 type InviteMessageType = {
 	link: string,
-	onJoin: (invite: Invite) => Promise<void>,
+	onJoin: (
+		invite: Invite,
+		setErrorMsg: React.Dispatch<React.SetStateAction<string | undefined>>
+	) => Promise<void>,
 	bubbleSx?: SxProps<Theme>,
+	avatarSx?: SxProps<Theme>,
+	variant?: 'default' | 'underButton',
+	showInvitation?: boolean,
+	neverSmall?: boolean,
 	small?: boolean,
 }
 
-export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbleSx, small }) => {
+export const InviteMessage: React.FC<InviteMessageType> = ({
+	link,
+	onJoin,
+	bubbleSx,
+	avatarSx,
+	neverSmall,
+	small,
+	variant = 'default',
+	showInvitation = true,
+}) => {
 	const theme = useTheme();
 	const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')) || small;
+	const screenIsSmall = !neverSmall && (isSmallScreen || small);
 
 	const [joining, setJoining] = useState<boolean>(false);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -238,23 +255,50 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 	async function handleJoin() {
 		if (invite) {
 			setJoining(true);
-			await onJoin(invite);
+			await onJoin(invite, setErrorMsg);
 			await getInviteInfo();
 			setJoining(false);
 		}
 	}
 
+	const JoinButton = () => {
+		const fullWidth = screenIsSmall || variant === 'underButton';
+
+		return (
+			<Button
+				onClick={handleJoin}
+				disabled={!invite}
+				variant='contained'
+				color={'success'}
+				fullWidth={fullWidth}
+				sx={{
+					width: fullWidth ? undefined : '5em',
+					height: fullWidth ? undefined : '3em',
+					whiteSpace: 'nowrap',
+				}}
+			>
+				{joining ? (
+					<CircularProgress size={20} />
+				) : (
+					invite?.isJoined ? 'Joined' : 'Join'
+				)}
+			</Button>
+		);
+	};
+
 	return (
 		<ChatBubble 
 			sx={{
+				alignItems: 'center',
+				justifyContent: 'center',
 				width: 'fit-content',
-				minWidth: isSmallScreen || loading ? '200px' : '350px',
+				minWidth: screenIsSmall || loading ? '200px' : '275px',
 				...bubbleSx
 			}}
 		>
 			<Stack
-				padding={theme.spacing(.5)}
-				spacing={theme.spacing(1)}
+				padding={!showInvitation || screenIsSmall ? theme.spacing(1) : theme.spacing(.5)}
+				spacing={theme.spacing(variant === 'default' ? 1 : 1.5)}
 			>
 				<Typography
 					noWrap
@@ -262,6 +306,7 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 					fontSize={"large"}
 					color={'textSecondary'}
 					sx={{
+						display: showInvitation ? 'block' : 'none',
 						cursor: 'default',
 						fontWeight: 'bold',
 					}}
@@ -269,10 +314,10 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 					{invite || loading ? 'You have been invite to...' : 'You have been invited, but...'}
 				</Typography>
 				<Stack
-					flexDirection={isSmallScreen ? 'column' : 'row'}
+					flexDirection={screenIsSmall ? 'column' : 'row'}
 					justifyContent={'space-between'}
 					alignItems={'center'}
-					gap={theme.spacing(isSmallScreen ? 1 : 2)}
+					gap={theme.spacing(screenIsSmall ? 1 : 2)}
 					textOverflow={'ellipsis'}
 				>
 					{loading ? (
@@ -282,16 +327,20 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 					) : (
 						<>
 							<Stack
-								flexDirection={isSmallScreen ? 'column' : 'row'}
+								flexDirection={screenIsSmall ? 'column' : 'row'}
 								alignItems={'center'}
 								gap={theme.spacing(1)}
 							>
 								<CustomAvatar
-									alt=":C"
+									variant="channel"
+									alt={invite?.destination.name}
 									src={invite?.destination.image}
-									sx={{ height: '3em', width: '3em' }}
-								>
-								</CustomAvatar>
+									sx={{
+										height: isSmallScreen ? '5em' : '3.5em',
+										width:	isSmallScreen ? '5em' : '3.5em', 
+										...avatarSx
+									}}
+								/>
 								<Stack
 									flexGrow={1} 
 									spacing={theme.spacing(-.5)}
@@ -306,7 +355,7 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 											fontWeight: 'bold',
 											fontSize: 'large',
 											textOverflow: 'ellipsis',
-											textAlign: isSmallScreen ? 'center' : 'left',
+											textAlign: screenIsSmall ? 'center' : 'left',
 										}}
 									>
 										{invite?.destination.name || 'Invalid Invite'}
@@ -319,7 +368,7 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 											overflow: 'hidden',
 											textOverflow: 'ellipsis',
 											WebkitBoxOrient: 'vertical',
-											textAlign: isSmallScreen ? 'center' : 'left',
+											textAlign: screenIsSmall ? 'center' : 'left',
 											WebkitLineClamp: 2,
 											lineClamp: 2,
 										}}
@@ -329,27 +378,11 @@ export const InviteMessage: React.FC<InviteMessageType> = ({ link, onJoin, bubbl
 								</Stack>
 							</Stack>
 
-							<Button
-								onClick={handleJoin}
-								disabled={!invite}
-								variant='contained'
-								color={'success'}
-								fullWidth={isSmallScreen}
-								sx={{
-									width: isSmallScreen ? undefined : '5em',
-									height: isSmallScreen ? undefined : '3em',
-									whiteSpace: 'nowrap',
-								}}
-							>
-								{joining ? (
-									<CircularProgress size={20} />
-								) : (
-									invite?.isJoined ? 'Joined' : 'Join'
-								)}
-							</Button>
+							{variant === 'default' && <JoinButton />}
 						</>
 					)}
 				</Stack>
+				{variant === 'underButton' && <JoinButton />}
 			</Stack>
 		</ChatBubble>
 	);

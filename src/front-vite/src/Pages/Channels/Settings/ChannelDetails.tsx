@@ -18,11 +18,10 @@ import {
   UploadAvatar,
   DescriptionBox,
   lonelyBox,
-  CustomAvatar,
   PasswordTextField,
   LoadingBox,
+  CustomAvatar,
 } from '../Components/Components';
-import { PeopleRounded as DefaultChannelIcon, } from '@mui/icons-material'
 import { BACKEND_URL, formatErrorMessage, getUsername, handleError, onFileUpload } from '../utils';
 import { SettingsDivider, SettingsTextFieldSx } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
@@ -101,8 +100,6 @@ export const ChannelDetails: React.FC = () => {
 				if (!axios.isCancel(error)) {
 					setErrorMsg(formatErrorMessage('', error));
 				}
-			} finally {
-				setMembersLoading(false);
 			}
 		}
 
@@ -184,6 +181,12 @@ export const ChannelDetails: React.FC = () => {
       reset();
     }
   }, [channelProps.selected?.id, isMod]);
+
+	useEffect(() => {
+		if (!members.length && !errorMsg) return;
+
+		setMembersLoading(false);
+	}, [members]);
 
   function toggleEditMode() {
     setEditMode(!editMode);
@@ -285,12 +288,10 @@ export const ChannelDetails: React.FC = () => {
         alignItems={'center'}
       >
         <CustomAvatar
+					variant='channel'
           src={channel.image}
           sx={{ height: '7em', width: '7em' }}
-        >
-					{!channel.image && <DefaultChannelIcon sx={{ height: '4em', width: '4em' }} />}
-				</CustomAvatar>
-
+        />
         <Stack>
           <Typography
 						variant="h5"
@@ -302,7 +303,6 @@ export const ChannelDetails: React.FC = () => {
           <ChannelStatus />
         </Stack>
       </Stack>
-
       <DescriptionBox 
 				sx={{
 					width: '65%',
@@ -363,8 +363,8 @@ export const ChannelDetails: React.FC = () => {
       >
         <UploadAvatar
           src={avatarSrc}
-					defaultIcon={<DefaultChannelIcon sx={{ height: '4em', width: '4em' }} />}
           avatarSx={{ height: '7em', width: '7em' }}
+					variant='channel'
         >
           <AvatarUploadIcon className="hidden-icon" />
           <ImageInput onFileInput={(file: File) => onFileUpload(file, changeChannelData, setAvatarSrc)} />
@@ -433,7 +433,12 @@ export const ChannelDetails: React.FC = () => {
 				onEditClick={() => toggleEditMode()}
 				onApplyClick={() => onApply()}
 			/>
-			<Stack direction={'row'}>
+			{membersLoading && (
+				<LoadingBox>
+					<CircularProgress size={80} />
+				</LoadingBox>
+			)}
+			<Stack display={membersLoading ? 'none' : 'flex'} >
 				<Stack
 					flexGrow={1}
 					paddingY={5}

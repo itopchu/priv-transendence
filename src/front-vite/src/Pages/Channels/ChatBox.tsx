@@ -20,7 +20,7 @@ import { LoadingBox } from './Components/Components';
 import { BACKEND_URL, formatErrorMessage, handleError,  trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import { ChatBoxHeader } from './Headers/ChatBoxHeader';
-import { MemberClientBase, DataUpdateType } from '../../Providers/ChannelContext/Types';
+import { MemberClient, DataUpdateType } from '../../Providers/ChannelContext/Types';
 import { retryOperation, updatePropMap, } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
 import { ChatBoxMessages } from './ChatBoxMessages';
@@ -72,7 +72,7 @@ export function useScrollTo(
 }
 
 interface ChatBoxType {
-  membership: MemberClientBase;
+  membership: MemberClient;
 }
 
 const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {

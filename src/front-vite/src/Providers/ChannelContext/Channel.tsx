@@ -60,7 +60,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			setChannelProps((prevProps) => {
 				const updatedMemberships = updatePropArray(prevProps.memberships, data);
 				const updatedSelected = data.updateType !== UpdateType.deleted
-					? updatedMemberships.find((membership) => membership.id === data.content.id)
+					? prevProps.memberships.find((membership) => membership.id === data.content.id)
 					: null;
 
 				return ({
@@ -83,13 +83,13 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 				}
 
 				const updatedMemberships = [...prevProps.memberships];
+				const updatedSelected = updatedMemberships[targetIndex];
 				if (data.updateType ===  UpdateType.deleted) {
 					updatedMemberships.splice(targetIndex, 1);
 				} else {
 					const targetChannel = updatedMemberships[targetIndex].channel;
 					updatedMemberships[targetIndex].channel = { ...targetChannel, ...data.content };
 				}
-				const updatedSelected = updatedMemberships[targetIndex];
 
 				return ({
 					...prevProps,

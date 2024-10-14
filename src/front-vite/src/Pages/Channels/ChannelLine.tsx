@@ -1,14 +1,13 @@
-import { Avatar, CircularProgress, Divider, Fab, IconButton, Stack, Typography, useTheme } from "@mui/material";
-import { LoadingBox, SearchBar } from "./Components/Components";
+import { CircularProgress, Divider, Fab, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import { CustomAvatar, LoadingBox, SearchBar } from "./Components/Components";
 import { useChannel } from "../../Providers/ChannelContext/Channel";
 import React, { useRef, useState } from "react";
 import {
   Add as AddIcon,
   Login as LoginIcon,
 	InfoOutlined as MiscIcon,
-	People as DefaultChannelIcon,
 } from '@mui/icons-material';
-import { ChannelBase, ChannelFilters, ChannelFilterValues, MemberClientBase, ChannelPublic, ChannelStates, ChannelType } from "../../Providers/ChannelContext/Types";
+import { ChannelBase, ChannelFilters, ChannelFilterValues, MemberClient, ChannelPublic, ChannelStates, ChannelType } from "../../Providers/ChannelContext/Types";
 import { StatusTypography } from "./Components/ChatBoxComponents";
 import { retryOperation } from "../../Providers/ChannelContext/utils";
 import { BACKEND_URL, formatErrorMessage } from "./utils";
@@ -49,7 +48,7 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 		setFilteredChannels(channels.filter((channel) => channel.name.match(regex)));
 	}
 
-	function	channelCardClick(membership: MemberClientBase | undefined, state: ChannelStates) {
+	function	channelCardClick(membership: MemberClient | undefined, state: ChannelStates) {
 		changeProps({ selected: membership, state });
 	}
 
@@ -187,9 +186,16 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 				},
 			}}
 		>
-			<Avatar src={channelImage} sx={{ width: '1.5em', height: '1.5em' }} >
-				{!channelImage && <DefaultChannelIcon />}
-			</Avatar>
+			<CustomAvatar
+				variant='channel' 
+				src={channelImage}
+				sx={{
+					width: '1.5em',
+					height: '1.5em',
+					border: 0,
+					boxShadow: theme.shadows[3]
+				}}
+			/>
 			<Typography noWrap sx={{
 				maxWidth: '78%',
 				overflow: 'hidden',

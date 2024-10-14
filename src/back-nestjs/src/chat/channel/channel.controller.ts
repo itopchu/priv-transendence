@@ -32,7 +32,7 @@ import {
 	UpdateChannelDto,
 	UpdateMemberDto
 } from '../../dto/chat.dto';
-import { Channel, ChannelMember, ChannelRoles, ChannelType } from '../../entities/chat.entity';
+import { Channel, ChannelRoles, ChannelType } from '../../entities/chat.entity';
 import { ChannelService } from './channel.service';
 import { AuthGuard } from '../../auth/auth.guard';
 import { multerOptions } from '../../user/user.controller';
@@ -150,7 +150,9 @@ export class ChannelController {
 	@UseGuards(AuthGuard)
 	async getInvite(
 		@Req() req: Request,
-		@Param('inviteId', new ParseUUIDPipe()) inviteId: string,
+		@Param('inviteId', new ParseUUIDPipe({
+			exceptionFactory: () => new BadRequestException('Invalid invite id')
+		})) inviteId: string,
 	) {
 		const user = req.authUser;
 		const invite = await this.inviteService.validateJoin(user, inviteId);
@@ -232,11 +234,7 @@ export class ChannelController {
 				'user'
 			]);
 			const clientMembership = new MemberClientDTO(newMembership, user.id);
-			this.chatGateway.emitToClientMembershipUpdate(
-				user.id,
-				clientMembership,
-				UpdateType.created
-			);
+			this.chatGateway.emitToUserUpdate('membership', user.id, clientMembership, UpdateType.created);
 			return ({ membership: clientMembership });
 		} catch(error) {
 			throw new InternalServerErrorException(`Channel creation failed: ${error.message}`);
@@ -347,7 +345,7 @@ export class ChannelController {
 		}
 		const emitUpdateDTO = { id: victimMembership.id, isMuted: !isMuted };
 		this.chatGateway.emitMemberUpdate(channelId, emitUpdateDTO, UpdateType.updated);
-		this.chatGateway.emitToClientMembershipUpdate(victimId, emitUpdateDTO, UpdateType.updated);
+		this.chatGateway.emitToUserUpdate('membership', victimId, emitUpdateDTO, UpdateType.updated);
 	}
 
 	@Patch('ban/:id')
@@ -430,7 +428,7 @@ export class ChannelController {
 				role: member.role
 			}
 			this.chatGateway.emitMemberUpdate(channelId, emitDTO, UpdateType.updated);
-			this.chatGateway.emitToClientMembershipUpdate(userId, emitDTO, UpdateType.updated);
+			this.chatGateway.emitToUserUpdate('membership', userId, emitDTO, UpdateType.updated);
 		});
 	}
 
@@ -537,7 +535,7 @@ export class ChannelController {
 		if (result.affected > 0) {
 			const emitDTO = { id: member.id, ...updateMemberDto };
 			this.chatGateway.emitMemberUpdate(member.channel.id, emitDTO, UpdateType.updated);
-			this.chatGateway.emitToClientMembershipUpdate(member.userId, emitDTO, UpdateType.updated);
+			this.chatGateway.emitToUserUpdate('membership', member.userId, emitDTO, UpdateType.updated);
 		}
 	}
 	
@@ -587,7 +585,7 @@ export class ChannelController {
 				await this.memberService.updateMember(candidate.id, { role: ChannelRoles.admin });
 				const emitDTO = { id: candidate.id, role: ChannelRoles.admin };
 				this.chatGateway.emitMemberUpdate(channel.id, emitDTO, UpdateType.updated);
-				this.chatGateway.emitToClientMembershipUpdate(candidate.id, emitDTO, UpdateType.updated);
+				this.chatGateway.emitToUserUpdate('membership', candidate.id, emitDTO, UpdateType.updated);
 			}
 		}
 		await this.memberService.deleteMember(membership.id);

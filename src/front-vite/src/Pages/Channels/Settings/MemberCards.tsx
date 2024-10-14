@@ -1,6 +1,6 @@
 import axios from 'axios';
 import {
-    ChannelBase,
+	ChannelBase,
   MemberPublic,
   ChannelRole,
   ChannelRoleValues,
