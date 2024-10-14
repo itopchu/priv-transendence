@@ -168,6 +168,7 @@ export class InvitePublicDTO {
 	@IsNotEmpty()
 	id: string;
 
+	@IsNotEmpty()
 	@ValidateNested()
 	@Type(() => UserPublicDTO)
 	destination: ChannelPublicDTO;

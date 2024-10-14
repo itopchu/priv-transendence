@@ -273,6 +273,7 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 										<InviteMessage
 											link={inviteLink}
 											onJoin={handleInviteAccept}
+											msgAuthor={msg.author}
 											bubbleSx={
 												createBubbleSx(isLocalUser, false, isMsgBlockEnd)
 											}

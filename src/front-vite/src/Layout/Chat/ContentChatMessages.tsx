@@ -30,9 +30,10 @@ const oneHour = 60 * 60 *  1000;
 export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages }) => {
 	const { user: localUser, userSocket } = useUser();
 	const { channelProps, setChannelProps } = useChannel();
-	const navigate = useNavigate();
+
 	const theme = useTheme();
 	const editMsgRef = useRef<HTMLInputElement>();
+	const navigate = useNavigate();
 
 	const [mousePosition, setMousePosition] = useState<{ x: number, y: number } | null >(null);
 	const [selectedMessage, setSelectedMessage] = useState<Message | undefined>(undefined);
@@ -283,6 +284,7 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages }) => {
 								>
 									<InviteMessage
 										link={inviteLink}
+										msgAuthor={msg.author}
 										onJoin={handleInviteJoin}
 										bubbleSx={ createBubbleSx(isLocalUser, false, isMsgBlockEnd) }
 										small

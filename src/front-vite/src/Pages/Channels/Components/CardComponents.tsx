@@ -1,5 +1,4 @@
-import { styled, Card, FormLabel, CardContent } from "@mui/material";
-import { Box } from "@mui/system";
+import { styled, Card, FormLabel, CardContent, Box } from "@mui/material";
 
 export const CustomCardContent = styled(CardContent)(() => ({
 	display: 'flex',

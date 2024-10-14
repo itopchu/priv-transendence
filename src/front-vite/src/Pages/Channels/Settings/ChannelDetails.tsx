@@ -21,11 +21,11 @@ import {
   PasswordTextField,
   LoadingBox,
   CustomAvatar,
+  scrollStyleSx,
 } from '../Components/Components';
 import { BACKEND_URL, formatErrorMessage, getUsername, handleError, onFileUpload } from '../utils';
-import { SettingsDivider, SettingsTextFieldSx } from '../Components/SettingsComponents';
+import { SettingsDivider, SettingsTextFieldSx, SettingsUserCardBox } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
-import { SettingsUserCardBox } from '../Components/SettingsComponents';
 import { BannedUserCards } from './BannedUserCards';
 import { MemberPublic, ChannelRole, ChannelType, ChannelTypeValues, DataUpdateType } from '../../../Providers/ChannelContext/Types';
 import { ChannelDetailsHeader } from '../Headers/ChannelDetailsHeader';
@@ -37,6 +37,16 @@ export type ChannelDataType = {
   image: File | undefined;
   type: ChannelType | undefined;
 };
+
+const testMember: MemberPublic = {
+	id: 1,
+	user: {
+		id: 1,
+		nameFirst: 'john',
+		nameLast: 'doe',
+	},
+	role: ChannelRole.member,
+}
 
 export const ChannelDetails: React.FC = () => {
 	const	theme = useTheme()
@@ -93,7 +103,7 @@ export const ChannelDetails: React.FC = () => {
 						}
 						return (roleDiff);
 					});
-					setMembers(members);
+					setMembers(new Array(10).fill(testMember));
 				}
 				setErrorMsg(null);
 			} catch (error) {
@@ -324,9 +334,14 @@ export const ChannelDetails: React.FC = () => {
 							width: '4px',
 						},
 						'&::-webkit-scrollbar-thumb': {
-							backgroundColor: theme.palette.primary.dark,
+							backgroundColor: 'transparent',
 							borderRadius: '1em',
 						},
+						'&:hover': {
+							'&::-webkit-scrollbar-thumb': {
+								backgroundColor: theme.palette.primary.dark,
+							},
+						}
 					}}
 				>
           {channel.description}
@@ -403,6 +418,18 @@ export const ChannelDetails: React.FC = () => {
           maxRows={4}
 					sx={{
 						flexGrow: 1,
+						'& .MuiInputBase-input': {
+							'&::-webkit-scrollbar-track': {
+								display: 'none',
+							},
+							'&::-webkit-scrollbar': {
+								width: '4px',
+							},
+							'&::-webkit-scrollbar-thumb': {
+								backgroundColor: theme.palette.primary.dark,
+								borderRadius: '1em',
+							},
+						},
 						'& textarea': {
 							textAlign: 'center',
 						},
@@ -449,7 +476,16 @@ export const ChannelDetails: React.FC = () => {
 
 					<SettingsDivider>Members</SettingsDivider>
 
-					<SettingsUserCardBox>
+					<SettingsUserCardBox
+						sx={{
+							...scrollStyleSx,
+							'&:hover': {
+								'&::-webkit-scrollbar-thumb': {
+									backgroundColor: theme.palette.primary.dark,
+								},
+							}
+						}}
+					>
 						{membersLoading && (
 							<LoadingBox>
 								<CircularProgress />
@@ -477,7 +513,16 @@ export const ChannelDetails: React.FC = () => {
 					{editMode && banList.length !== 0 && (
 						<>
 							<SettingsDivider>Banned Users</SettingsDivider>
-							<SettingsUserCardBox>
+							<SettingsUserCardBox
+								sx={{
+									...scrollStyleSx,
+									'&:hover': {
+										'&::-webkit-scrollbar-thumb': {
+											backgroundColor: theme.palette.primary.dark,
+										},
+									}
+								}}
+							>
 								<Stack spacing={1}>
 									<BannedUserCards
 										users={banList}

@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { Invite } from "../../../Providers/ChannelContext/Types";
 import { ClickTypography, CustomAvatar, LoadingBox } from "./Components";
 import { getInvite } from "../../../Providers/ChannelContext/utils";
+import { UserPublic, useUser } from "../../../Providers/UserContext/User";
 
 const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
 	fontSize: '.9rem',
@@ -212,19 +213,22 @@ type InviteMessageType = {
 	showInvitation?: boolean,
 	neverSmall?: boolean,
 	small?: boolean,
+	msgAuthor?: UserPublic,
 }
 
 export const InviteMessage: React.FC<InviteMessageType> = ({
 	link,
+	small,
 	onJoin,
 	bubbleSx,
 	avatarSx,
 	neverSmall,
-	small,
+	msgAuthor,
 	variant = 'default',
 	showInvitation = true,
 }) => {
 	const theme = useTheme();
+	const { user } = useUser();
 	const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')) || small;
 	const screenIsSmall = !neverSmall && (isSmallScreen || small);
 
@@ -311,7 +315,7 @@ export const InviteMessage: React.FC<InviteMessageType> = ({
 						fontWeight: 'bold',
 					}}
 				>
-					{invite || loading ? 'You have been invite to...' : 'You have been invited, but...'}
+					{`You have ${user.id === msgAuthor?.id ? 'sent an invite' : 'been invited'}${invite || loading ? '  to...' : ', but...'}`}
 				</Typography>
 				<Stack
 					flexDirection={screenIsSmall ? 'column' : 'row'}

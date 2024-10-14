@@ -37,5 +37,4 @@ export const SettingsUserCardBox = styled(Box)(() => ({
 	maxHeight: '30em',
 	minWidth: '65%',
 	overflowY: 'auto',
-	'&::-webkit-scrollbar': { width: '0px' },
 }));

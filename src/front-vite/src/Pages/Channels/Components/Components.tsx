@@ -80,10 +80,12 @@ export const CustomAvatar: React.FC<ChannelAvatarType> = ({
 
 		const resizeObserver = new ResizeObserver(updateDimensions);
 		if (avatarRef.current) {
+			console.log('mounted');
 			resizeObserver.observe(avatarRef.current);
 		}
 
 		return () => {
+			console.log('unmounted\n');
 			if (avatarRef.current) {
 				resizeObserver.unobserve(avatarRef.current);
 			}
@@ -114,9 +116,36 @@ export const CustomAvatar: React.FC<ChannelAvatarType> = ({
 	);
 };
 
+export const scrollStyleSx: SxProps<Theme> = {
+	overflowY: 'auto',
+	paddingInline: (theme: Theme) => theme.spacing(.5),
+
+	'&::-webkit-scrollbar-track': {
+		backgroundColor: 'transparent',
+	},
+	'&::-webkit-scrollbar': {
+		width: '4px',
+	},
+	'&::-webkit-scrollbar-thumb': {
+		backgroundColor: 'transparent',
+		borderRadius: '1em',
+	},
+	'&:hover': {
+		'&::-webkit-scrollbar-thumb': {
+			backgroundColor: (theme: Theme) => theme.palette.primary.main,
+		},
+	},
+
+	msOverflowStyle: 'none',
+	'&:not(:hover)': {
+		'&::-webkit-scrollbar-thumb': {
+			backgroundColor: 'transparent',
+		},
+	}
+};
+
 export const CustomScrollBox = styled(Box)(({ theme }) => ({
 	overflowY: 'auto',
-	padding: theme.spacing(.5),
 
 	'&::-webkit-scrollbar-track': {
 		backgroundColor: theme.palette.secondary.dark,

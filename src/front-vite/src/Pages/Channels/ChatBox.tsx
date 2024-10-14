@@ -284,7 +284,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 									width: '4px',
 								},
 								'&::-webkit-scrollbar-thumb': {
-									backgroundColor: theme.palette.primary.main,
+									backgroundColor: 'transparent',
 									borderRadius: '1em',
 								},
 							},

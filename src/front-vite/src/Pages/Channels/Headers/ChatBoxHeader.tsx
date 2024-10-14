@@ -13,7 +13,7 @@ import {
 	MenuOpen as HideChannelLineIcon,
 	Cancel as CloseIcon,
 } from "@mui/icons-material"
-import { ButtonAvatar, ClickTypography, CustomAvatar, HeaderIconButton, SearchBar } from "../Components/Components";
+import { ButtonAvatar, ClickTypography, CustomAvatar, HeaderIconButton, scrollStyleSx, SearchBar } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
 import { ChannelStates, DataUpdateType } from "../../../Providers/ChannelContext/Types";
 import React, { SetStateAction, useEffect, useRef, useState } from "react";
@@ -121,7 +121,7 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 					>
 						<CloseIcon />
 					</IconButton>
-					<Stack overflow={'auto'} spacing={theme.spacing(1)}>
+					<Stack overflow={'auto'} spacing={theme.spacing(1)} sx={scrollStyleSx}>
 						{searchResults.map((message) => {
 							const user = message.author;
 							const timestamp = formatDate(message.timestamp);

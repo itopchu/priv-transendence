@@ -1,5 +1,5 @@
 import { CircularProgress, Divider, Fab, IconButton, Stack, Typography, useTheme } from "@mui/material";
-import { CustomAvatar, LoadingBox, SearchBar } from "./Components/Components";
+import { CustomAvatar, LoadingBox, scrollStyleSx, SearchBar } from "./Components/Components";
 import { useChannel } from "../../Providers/ChannelContext/Channel";
 import React, { useRef, useState } from "react";
 import {
@@ -177,7 +177,7 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 				transition: 'padding-left ease-in-out 0.3s, padding-right ease-in-out 0.3s, border-radius ease-in-out 0.3s, background-color ease-in-out 0.3s',
 				paddingLeft: isSelected ? '.7em' : '0.5em',
 				paddingRight: isSelected ? '0.02em' : '0em',
-				borderRadius: isSelected ? '1em' : '0em',
+				borderRadius: isSelected ? '1em' : '0.2em',
 				'&:hover': {
 					bgcolor: theme.palette.primary.dark,
 					borderRadius: '1em',
@@ -271,8 +271,13 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 			<ChannelLineHeader />
 			<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
 			<Stack
-				padding='1em'
-				sx={{ overflowY: 'auto', maxHeight: '100%' }}
+				sx={{
+					...scrollStyleSx,
+					padding: '1em',
+					overflowX: 'hidden',
+					overflowY: 'auto',
+					maxHeight: '100%',
+				}}
 				divider={<Divider orientation='horizontal' flexItem />}
 				gap={1}
 			>
@@ -280,6 +285,7 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 					<SearchBar
 						ref={searchRef}
 						inputChange={onLineInputChange}
+						sx={{ minWidth: '218px', maxWidth: '218px' }}
 					/>
 					<StatusTypography
 						hidden={!Boolean(errorMessage)}

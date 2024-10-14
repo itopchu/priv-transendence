@@ -12,7 +12,7 @@ import {
 	Typography,
 	useTheme
 } from "@mui/material";
-import { CustomAvatar, LoadingBox, SearchBar } from "../../Pages/Channels/Components/Components";
+import { CustomAvatar, LoadingBox, scrollStyleSx, SearchBar } from "../../Pages/Channels/Components/Components";
 import { UserPublic, useUser } from "../../Providers/UserContext/User";
 import { useEffect, useRef, useState } from "react";
 import { BACKEND_URL, getFullname, getUsername } from "../../Pages/Channels/utils";
@@ -109,7 +109,7 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 					},
 				}}
 			>
-				<CustomAvatar src={user.image} sx={{ border: `2px solid ${getStatusColor(user.status)}` }} />
+				<CustomAvatar src={user.image} sx={{ border: `2px solid ${getStatusColor(user.status, theme)}` }} />
 				<Typography fontSize={'large'} >
 					{getUsername(user)}
 				</Typography>
@@ -157,7 +157,6 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 					{!loading && (friends.length > 0 ? (
 						<>
 							<Stack
-								flexGrow={1}
 								spacing={theme.spacing(1)} 
 								padding={theme.spacing(1)}
 							>
@@ -172,9 +171,24 @@ const CreateChatCard: React.FC<CreateChatCard> = ({ anchorEl, handleClose }) => 
 								{(!searchRef.current?.value || searchedFriends.length !== 0) &&
 									<Divider sx={{ marginX: `-${theme.spacing(1)} !important` }} />
 								}
-								<Box sx={{ overflowY: 'auto', }} >
-									{userSelection()}
-								</Box>
+								<Stack
+									sx={{
+										...scrollStyleSx,
+										marginTop: `-${theme.spacing(.05)} !important`,
+										marginBottom: `-${theme.spacing(1)} !important`,
+										height: '169px',
+									}}
+								>
+									<Stack
+										spacing={theme.spacing(.8)}
+										sx={{
+											paddingTop: theme.spacing(1),
+											paddingBottom: theme.spacing(1),
+										}}
+									>
+										{userSelection()}
+									</Stack>
+								</Stack>
 							</Stack>
 							<Divider />
 							<CardActions>

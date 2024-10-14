@@ -1,5 +1,5 @@
 import { Box, Button, Card, CardActions, CardContent, CardHeader, CircularProgress, Divider, IconButton, Popover, Stack, styled, Typography, useTheme } from "@mui/material";
-import { CustomAvatar, HeaderIconButton, SearchBar } from "../Components/Components";
+import { CustomAvatar, HeaderIconButton, scrollStyleSx, SearchBar } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
 import {
 	ModeEdit as EditIcon,
@@ -220,14 +220,15 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 		}) => {
 			return (
 				<Stack
-					direction={'row'}
+					flexDirection={'row'}
 					alignItems={'center'}
 					gap={theme.spacing(1)}
 					onClick={onClick}
 					sx={{
+						minHeight: '40px',
 						padding: theme.spacing(.4),
 						paddingInline: theme.spacing(.8),
-						overflowX: 'hidden',
+						overflow: 'hidden',
 						borderRadius: '8px',
 						cursor: 'default',
 						textAlign: 'center',
@@ -318,6 +319,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 
 						return (
 							<Panel
+								variant="channel"
 								key={channel.id}
 								avatarSrc={channel?.image}
 								primaryText={channel.name}
@@ -369,7 +371,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 						horizontal: 'right',
 					}}
 				>
-					<Card sx={{ height: '350px', width: '380px', display: 'flex', flexDirection: 'column' }}>
+					<Card sx={{ height: '400px', width: '380px', display: 'flex', flexDirection: 'column' }}>
 						<CardHeader sx={{ textAlign: 'center', }} title={`Select ${section}`} />
 						<Stack
 							flexDirection={'row'}
@@ -408,11 +410,26 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 									{(!searchRef.current?.value || searchedItems.length !== 0) &&
 										<Divider sx={{ marginX: `-${theme.spacing(1)} !important` }} />
 									}
-									<Stack spacing={theme.spacing(1)} sx={{ overflowY: 'auto' }} >
-										{section === SectionType.friends
-											? userSelection()
-											: channelSelection()
-										}
+									<Stack
+										sx={{
+											...scrollStyleSx,
+											marginTop: `-${theme.spacing(.05)} !important`,
+											marginBottom: `-${theme.spacing(1)} !important`,
+											height: '170px',
+										}}
+									>
+										<Stack
+											spacing={theme.spacing(.8)}
+											sx={{
+												paddingTop: theme.spacing(1),
+												paddingBottom: theme.spacing(1),
+											}}
+										>
+											{section === SectionType.friends
+												? userSelection()
+												: channelSelection()
+											}
+										</Stack>
 									</Stack>
 								</Stack>
 							</>
@@ -449,6 +466,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 							sx={{
 								paddingBottom: 0,
 								paddingTop: theme.spacing(1),
+								paddingInline: theme.spacing(1),
 							}}
 						>
 							<Box 
@@ -470,11 +488,11 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 										whiteSpace: 'nowrap',
 										textOverflow: 'clip',
 										overflowX: 'auto',
+										msOverflowStyle: 'none',
+										scrollbarwidth: 'none',
 										'&::-webkit-scrollbar': {
 											display: 'none',
 										},
-										'msoverflowstyle': 'none',
-										'scrollbarwidth': 'none',
 									}}
 								>
 									{inviteLink || 'Create an invite link'}
