@@ -24,7 +24,7 @@ import {
 	VisibilityOff as HidePasswordIcon,
 	PeopleRounded as DefaultChannelIcon,
 } from '@mui/icons-material'
-import React, { forwardRef, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import React, { forwardRef, ReactNode, useState } from "react";
 import { useChannelLine } from "../../../Providers/ChannelContext/ChannelLine";
 
 interface IHeaderIconButtonType {
@@ -58,42 +58,7 @@ export const CustomAvatar: React.FC<ChannelAvatarType> = ({
 	Icon,
 	variant = 'default'
 }) => {
-	const avatarRef = useRef<HTMLDivElement>(null);
-	const [avatarDimensions, setAvatarDimensions] = useState({ width: 24, height: 24 });
-
-	const updateDimensions = useCallback(() => {
-		if (avatarRef.current) {
-			const { width, height } = avatarRef.current.getBoundingClientRect();
-			setAvatarDimensions((prev) => {
-				if (prev.width !== width || prev.height !== height) {
-						return { width, height };
-				}
-				return prev;
-			});
-		}
-	}, []);
-
-	useEffect(() => {
-		if (src) return;
-
-		updateDimensions();
-
-		const resizeObserver = new ResizeObserver(updateDimensions);
-		if (avatarRef.current) {
-			console.log('mounted');
-			resizeObserver.observe(avatarRef.current);
-		}
-
-		return () => {
-			console.log('unmounted\n');
-			if (avatarRef.current) {
-				resizeObserver.unobserve(avatarRef.current);
-			}
-		};
-	}, [updateDimensions, src]);
-
-	const { width, height } = avatarDimensions;
-	const defaultIconSx = { fontSize: Math.min(width, height) * 0.7, ...iconSx }
+	const defaultIconSx = { width: '70%', height: '70%', ...iconSx }
 	const defaultIcon = Icon ? (
 			<Icon sx={defaultIconSx} />
 		) : (
@@ -102,7 +67,6 @@ export const CustomAvatar: React.FC<ChannelAvatarType> = ({
 
 	return (
 		<Avatar
-			ref={avatarRef}
 			className={className}
 			alt={alt}
 			src={src}

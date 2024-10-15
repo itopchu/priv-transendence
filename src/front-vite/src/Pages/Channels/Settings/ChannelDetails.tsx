@@ -28,7 +28,7 @@ import { SettingsDivider, SettingsTextFieldSx, SettingsUserCardBox } from '../Co
 import { MemberCards } from './MemberCards';
 import { BannedUserCards } from './BannedUserCards';
 import { MemberPublic, ChannelRole, ChannelType, ChannelTypeValues, DataUpdateType } from '../../../Providers/ChannelContext/Types';
-import { ChannelDetailsHeader } from '../Headers/ChannelDetailsHeader';
+import ChannelDetailsHeader from '../Headers/ChannelDetailsHeader';
 import { UserPublic, useUser } from '../../../Providers/UserContext/User';
 import { updatePropArray } from '../../../Providers/ChannelContext/utils';
 import { StatusTypography } from '../Components/ChatBoxComponents';
@@ -37,16 +37,6 @@ export type ChannelDataType = {
   image: File | undefined;
   type: ChannelType | undefined;
 };
-
-const testMember: MemberPublic = {
-	id: 1,
-	user: {
-		id: 1,
-		nameFirst: 'john',
-		nameLast: 'doe',
-	},
-	role: ChannelRole.member,
-}
 
 export const ChannelDetails: React.FC = () => {
 	const	theme = useTheme()
@@ -103,9 +93,11 @@ export const ChannelDetails: React.FC = () => {
 						}
 						return (roleDiff);
 					});
-					setMembers(new Array(10).fill(testMember));
+					setMembers(members);
+					setErrorMsg(null);
+				} else {
+					setErrorMsg('No members received');
 				}
-				setErrorMsg(null);
 			} catch (error) {
 				if (!axios.isCancel(error)) {
 					setErrorMsg(formatErrorMessage('', error));
@@ -116,6 +108,7 @@ export const ChannelDetails: React.FC = () => {
 		getMembers();
 		return () => {
 			controller.abort();
+			setErrorMsg(null);
 			setMembersLoading(true);
 			setMembers([]);
 		};

@@ -17,6 +17,33 @@ import React from "react";
 export const FRONTEND_URL: string = import.meta.env.ORIGIN_URL_FRONT || 'http://localhost.codam.nl:3000';
 export const INVITE_DOMAIN = `${FRONTEND_URL}/channels/invite/`;
 
+export async function handleCopy(text: string): Promise<boolean> {
+	let copySuccess = false;
+
+	if (navigator.clipboard) {
+		try {
+			await navigator.clipboard.writeText(text);
+			copySuccess = true;
+		} catch (error) {
+			console.error('Failed to copy: ', error);
+		}
+	} else {
+		const textarea = document.createElement('textarea');
+		textarea.value = text;
+		document.body.appendChild(textarea);
+		textarea.select();
+		try {
+			document.execCommand('copy');
+			copySuccess = true;
+		} catch (error) {
+			console.error('Fallback: Failed to copy: ', error);
+		} finally {
+			document.body.removeChild(textarea);
+		}
+	}
+	return (copySuccess);
+}
+
 export function getChannelTypeFromFilter(filter: ChannelFilters) {
 	return (filter === ChannelFilters.protected ? ChannelType.protected : ChannelType.public);
 }

@@ -1,6 +1,6 @@
 import React, { forwardRef, useRef, useState } from "react";
 import { Message } from "../../Layout/Chat/InterfaceChat";
-import { acceptInvite, formatDate, getLink, getTimeDiff, INVITE_DOMAIN, isDiffDate } from "../../Providers/ChannelContext/utils";
+import { acceptInvite, formatDate, getLink, getTimeDiff, handleCopy, INVITE_DOMAIN, isDiffDate } from "../../Providers/ChannelContext/utils";
 import { getUsername, } from "./utils";
 import { Box, Divider, Stack, SxProps, Theme, Typography, useTheme } from "@mui/material";
 import { ButtonAvatar, ClickTypography } from "./Components/Components";
@@ -27,7 +27,7 @@ interface ChannelMessagesType {
 }
 
 const timeSeparation = 2 * 60 * 1000; // 2 min in milisecondes
-export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>(({ messages, searchedMsgId }, searchedMsgRef) => {
+const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>(({ messages, searchedMsgId }, searchedMsgRef) => {
 	const theme = useTheme(); const navigate = useNavigate();
 	const editMsgRef = useRef<HTMLInputElement>();
 
@@ -59,8 +59,10 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 	}
 
 	const copyMessage = async (msg: Message) => {
-		await navigator.clipboard.writeText(msg.content);
-		handleClose();
+		const copied = await handleCopy(msg.content);
+		if (copied) {
+			handleClose();
+		}
 	}
 
 	const openContextMenu = (event: React.MouseEvent<HTMLElement>, msg: Message) => {
@@ -288,3 +290,5 @@ export const ChatBoxMessages = forwardRef<HTMLDivElement, ChannelMessagesType>((
 		</>
 	);
 })
+
+export default ChatBoxMessages

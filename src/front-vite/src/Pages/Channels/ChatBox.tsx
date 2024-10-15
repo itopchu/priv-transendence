@@ -23,7 +23,7 @@ import { ChatBoxHeader } from './Headers/ChatBoxHeader';
 import { MemberClient, DataUpdateType } from '../../Providers/ChannelContext/Types';
 import { retryOperation, updatePropMap, } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
-import { ChatBoxMessages } from './ChatBoxMessages';
+import ChatBoxMessages from './ChatBoxMessages';
 import { StatusTypography } from './Components/ChatBoxComponents';
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({

@@ -1,11 +1,11 @@
-import { CircularProgress, Divider, Fab, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import { CircularProgress, Divider, Fab, IconButton, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { CustomAvatar, LoadingBox, scrollStyleSx, SearchBar } from "./Components/Components";
 import { useChannel } from "../../Providers/ChannelContext/Channel";
 import React, { useRef, useState } from "react";
 import {
   Add as AddIcon,
   Login as LoginIcon,
-	InfoOutlined as MiscIcon,
+  InfoOutlined as MiscIcon,
 } from '@mui/icons-material';
 import { ChannelBase, ChannelFilters, ChannelFilterValues, MemberClient, ChannelPublic, ChannelStates, ChannelType } from "../../Providers/ChannelContext/Types";
 import { StatusTypography } from "./Components/ChatBoxComponents";
@@ -30,8 +30,9 @@ interface ChannelLineType {
 
 export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 	const theme = useTheme();
+	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 	const { channelProps, changeProps } = useChannel();
-	const { channelLineProps: lineProps, changeLineProps } = useChannelLine();
+	const { channelLineProps: lineProps, changeLineProps, setChannelLineProps } = useChannelLine();
 
 	const searchRef = useRef<HTMLInputElement>(null);
 	const [filteredChannels, setFilteredChannels] = useState<ChannelBase[]>([]);
@@ -50,6 +51,9 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 
 	function	channelCardClick(membership: MemberClient | undefined, state: ChannelStates) {
 		changeProps({ selected: membership, state });
+		setChannelLineProps((prevProps) => (
+			{ ...prevProps, hidden: isSmallScreen ? true : prevProps.hidden }
+		));
 	}
 
 	const ChannelLineHeader = () => {
@@ -205,15 +209,17 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 				{name}
 			</Typography>
 			<IconButton
-			onClick={(event) => { event.stopPropagation(); iconClickEvent(); }}
-			sx={{
-				minWidth: '10%',
-				width: '40px',
-				height: '40px', 
-				'&:hover': {
-					color: newColor,
-				},
-			}}>
+				onClick={(event) => { event.stopPropagation(); iconClickEvent(); }}
+				sx={{
+					borderRadius: '.7em',
+					minWidth: '10%',
+					width: '40px',
+					height: '40px', 
+					'&:hover': {
+						color: newColor,
+					},
+				}}
+			>
 				{component}
 			</IconButton>
 		</Stack>

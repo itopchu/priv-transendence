@@ -11,13 +11,12 @@ import {
 	PersonAddRounded as CreateInviteIcon,
 	CheckBoxOutlineBlankOutlined as BlankCheckBoxIcon,
 	CheckBoxOutlined as CheckBoxIcon,
-	PeopleRounded as DefaultChannelIcon,
 	ContentCopy as CopyIcon,
 } from '@mui/icons-material';
 import { ChannelBase, ChannelRole, ChannelStates, ChannelType, UpdateType } from "../../../Providers/ChannelContext/Types";
 import React, { ReactElement, useEffect, useRef, useState } from "react";
 import { UserPublic, UserStatusType, useUser } from "../../../Providers/UserContext/User";
-import { createInvite, updatePropArray } from "../../../Providers/ChannelContext/utils";
+import { createInvite, handleCopy, updatePropArray } from "../../../Providers/ChannelContext/utils";
 import axios from "axios";
 import { BACKEND_URL, getFullname, getUsername } from "../utils";
 import { getStatusColor } from "../../Profile/ownerInfo";
@@ -59,7 +58,7 @@ const DetailHeaderPart = styled(Stack)(({ theme }) => ({
 	padding: theme.spacing(2),
 }));
 
-export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
+const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 	isMod,
 	editMode,
 	membersCount,
@@ -168,14 +167,6 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 					return (newArray);
 				}
 			});
-		}
-
-		async function handleCopy(textToCopy: string) {
-			try {
-				await navigator.clipboard.writeText(textToCopy);
-			} catch (error) {
-				console.warn('Failed to copy:', error);
-			}
 		}
 
 		const handleSendInvite = async () => {
@@ -325,7 +316,6 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 								primaryText={channel.name}
 								secondaryText={secondaryText}
 								isSelected={isSelected}
-								defaultIcon={<DefaultChannelIcon sx={{ height: '1.2em', width: '1.2em' }} />}
 								onClick={() => handlePanelClick(channel, setSelectedChannels)}
 							/>
 						);
@@ -481,6 +471,7 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 									textAlign: 'center',
 									alignItems: 'center',
 									justifyContent: inviteLink ? 'space-between' : 'center',
+									height: '32px',
 								}}
 							>
 								<Typography
@@ -588,3 +579,5 @@ export const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 		</>
 	);
 }
+
+export default ChannelDetailsHeader

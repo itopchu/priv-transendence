@@ -4,7 +4,7 @@ import { Box, Divider, Stack, SxProps, Theme, Typography, useTheme } from "@mui/
 import { ButtonAvatar } from "../../Pages/Channels/Components/Components";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
-import { acceptInvite, formatDate, getLink, getTimeDiff, INVITE_DOMAIN } from "../../Providers/ChannelContext/utils";
+import { acceptInvite, formatDate, getLink, getTimeDiff, handleCopy, INVITE_DOMAIN } from "../../Providers/ChannelContext/utils";
 import {
 	MsgContextMenu,
 	ChatBubble,
@@ -62,8 +62,10 @@ export const ContentChatMessages: React.FC<ChatBoxType> = ({ messages }) => {
 	}
 
 	const copyMessage = async (msg: Message) => {
-		await navigator.clipboard.writeText(msg.content);
-		handleClose();
+		const copied = await handleCopy(msg.content);
+		if (copied) {
+			handleClose();
+		}
 	}
 
 	const openContextMenu = (event: React.MouseEvent<HTMLElement>, msg: Message) => {
