@@ -1,5 +1,5 @@
 DOCKER_CMP := docker compose
-PROJECT_NAME := your_project_name
+PROJECT_NAME := transendence-codam
 
 all:
 	@$(DOCKER_CMP) -p $(PROJECT_NAME) up --build
