@@ -11,7 +11,7 @@ async function bootstrap() {
 
     // Required for using same host for the services
     app.enableCors({
-        origin: configService.get('ORIGIN_URL_FRONT') || 'http://localhost:3000',
+        origin: configService.get('ORIGIN_URL_FRONT') || 'http://localhost.codam.nl:3000',
         credentials: true,
     });
     // Enables req.cookies

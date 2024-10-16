@@ -51,7 +51,7 @@ export enum FriendshipAttitudeBehaviour {
 }
 
 const BACKEND_URL: string =
-  import.meta.env.ORIGIN_URL_BACK || "http://localhost:4000";
+  import.meta.env.ORIGIN_URL_BACK || "http://localhost.codam.nl:4000";
 
 export function getStatusColor(status: UserStatusType | undefined, theme: Theme) {
 	if (!status || !theme) {
