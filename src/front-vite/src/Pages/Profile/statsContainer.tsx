@@ -26,7 +26,7 @@ interface GameHistory {
 }
 
 const BACKEND_URL: string =
-  import.meta.env.ORIGIN_URL_BACK || "http://localhost:4000";
+  import.meta.env.ORIGIN_URL_BACK || "http://localhost.codam.nl:4000";
 
 export const StatsContainer: React.FC<StatsContainerProps> = ({
   visitedUser,
