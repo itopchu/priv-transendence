@@ -58,16 +58,19 @@ export function onFileUpload(
 	reader.readAsDataURL(file);
 };
 
-export function formatErrorMessage(message: string, error: any) {
+export function formatErrorMessage(error: any, prefix?: string, suffix?: string) {
 	if (!error) {
-		return (message);
+		if (prefix || suffix)
+			return (`${prefix}${suffix}`);
+		else
+			return  ('Unknown error :C');
 	} else {
 		const errorMessage = error?.response?.data ? error.response.data.message : error
 
-		return (`${message} ${errorMessage}`);
+		return (`${prefix || ''} ${errorMessage}${suffix || ''}`);
 	}
 }
 
 export function handleError(message: string, error?: any) {
-	alert(formatErrorMessage(message, error));
+	alert(formatErrorMessage(error, message));
 }

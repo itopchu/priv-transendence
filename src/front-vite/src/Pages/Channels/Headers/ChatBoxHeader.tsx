@@ -39,7 +39,7 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 	const searchRef = useRef<HTMLInputElement>(null);
 
-	const [activeMembersCount, setActiveMemberCount] = useState<number | undefined>(undefined);
+	const [onlineMembers, setOnlineMembers] = useState<number | undefined>(undefined);
 	const [searchResults, setSearchResults] = useState<Message[]>([]);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -49,17 +49,17 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 	useEffect(() => {
 		if (!channelProps.selected || !userSocket) return;
 
-		const onActiveCountUpdate = (data: DataUpdateType<number>) => {
+		const onOnlineMembersUpdate = (data: {id: number, count: number}) => {
 			if (data.id === channel.id) {
-				setActiveMemberCount(data.content);
+				setOnlineMembers(data?.count);
 			}
 		}
 
-		userSocket.emit('getActiveMemberCount', onActiveCountUpdate)
-		userSocket.on('activeMemberCount', onActiveCountUpdate);
+		userSocket?.emit('onlineMembers', channel.id, onOnlineMembersUpdate);
+		userSocket?.on('onlineMembers', onOnlineMembersUpdate);
 		return () => {
 			if (userSocket) {
-				userSocket.off('activeMemberCount', onActiveCountUpdate);
+				userSocket.off('onlineMembers', onOnlineMembersUpdate);
 			}
 		};
 	}, [channelProps.selected?.id, userSocket]);
@@ -252,7 +252,7 @@ export const ChatBoxHeader: React.FC<ChatBoxHeaderType> = ({ setSelectedMsgId, m
 						color={'textSecondary'}
 						sx={{ fontSize: 'small', cursor: 'default', }}
 					> 
-						{`${activeMembersCount || '0'} ${(activeMembersCount || 1) > 1 ? 'members' : 'member'} active`}
+						{`${onlineMembers || '1'} ${(onlineMembers || 1) > 1 ? 'members' : 'member'} online`}
 					</Typography>
 				</Stack>
 			</Stack>

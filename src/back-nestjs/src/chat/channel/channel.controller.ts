@@ -279,6 +279,7 @@ export class ChannelController {
 			'channel.mutedUsers'
 		]);
 		this.chatGateway.emitMemberJoined(newMembershipWithRel);
+		return ({ membership: new MemberClientDTO(newMembershipWithRel, user.id) });
 	}
 
 	@Patch('kick/:id')

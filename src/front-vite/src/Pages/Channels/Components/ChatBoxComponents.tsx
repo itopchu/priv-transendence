@@ -1,12 +1,13 @@
 import { Box, Button, CircularProgress, InputBase, Menu, MenuItem, PopoverPosition, Stack, styled, SxProps, Theme, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { BACKEND_URL, handleError } from "../utils";
+import { BACKEND_URL, formatErrorMessage, handleError } from "../utils";
 import axios from "axios";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
 import React, { useEffect, useState } from "react";
-import { Invite } from "../../../Providers/ChannelContext/Types";
+import { ChannelStates, Invite } from "../../../Providers/ChannelContext/Types";
 import { ClickTypography, CustomAvatar, LoadingBox } from "./Components";
-import { getInvite } from "../../../Providers/ChannelContext/utils";
+import { acceptInvite, getInvite } from "../../../Providers/ChannelContext/utils";
 import { UserPublic, useUser } from "../../../Providers/UserContext/User";
+import { useChannel } from "../../../Providers/ChannelContext/Channel";
 
 const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
 	fontSize: '.9rem',
@@ -65,6 +66,7 @@ type HiddenTimestampType = {
 }
 export const HiddenTimestamp: React.FC<HiddenTimestampType> = ({ timestamp, sx }) => (
 	<Typography
+		noWrap
 		className="hidden-timestamp"
 		variant="caption"
 		sx={{
@@ -203,10 +205,7 @@ export const MsgContextMenu: React.FC<MsgContextMenuType> = ({
 
 type InviteMessageType = {
 	link: string,
-	onJoin: (
-		invite: Invite,
-		setErrorMsg: React.Dispatch<React.SetStateAction<string | undefined>>
-	) => Promise<void>,
+	onJoin?: () => void,
 	bubbleSx?: SxProps<Theme>,
 	avatarSx?: SxProps<Theme>,
 	variant?: 'default' | 'underButton',
@@ -229,6 +228,7 @@ export const InviteMessage: React.FC<InviteMessageType> = ({
 }) => {
 	const theme = useTheme();
 	const { user } = useUser();
+	const { channelProps, changeProps } = useChannel();
 	const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')) || small;
 	const screenIsSmall = !neverSmall && (isSmallScreen || small);
 
@@ -237,14 +237,22 @@ export const InviteMessage: React.FC<InviteMessageType> = ({
 	const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
 	const [invite, setInvite] = useState<Invite | undefined>(undefined);
 
-	async function getInviteInfo() {
-		await getInvite(link, setInvite, setErrorMsg);
+	async function getInviteInfo(controller?: AbortController) {
+		try {
+			await getInvite(link, setInvite, controller);
+		} catch (error) {
+			if (!axios.isCancel(error)) {
+				setErrorMsg(formatErrorMessage(error));
+			}
+		}
 	}
 
 	useEffect(() => {
-		getInviteInfo();
+		const controller = new AbortController();
+		getInviteInfo(controller);
 
 		return () => {
+			controller.abort();
 			setLoading(true);
 			setInvite(undefined);
 		};
@@ -259,19 +267,37 @@ export const InviteMessage: React.FC<InviteMessageType> = ({
 	async function handleJoin() {
 		if (invite) {
 			setJoining(true);
-			await onJoin(invite, setErrorMsg);
-			await getInviteInfo();
-			setJoining(false);
+			try {
+				const membership = await acceptInvite(invite, channelProps);
+				if (membership) {
+					changeProps({
+						selected: membership,
+						state: ChannelStates.chat,
+					});
+					onJoin?.();
+				}
+				await getInviteInfo();
+			} catch (error: any) {
+				if (error?.response?.status === 400) {
+					setErrorMsg(formatErrorMessage(error, '', ', try refreshing the page!'));
+				} else {
+					setErrorMsg(formatErrorMessage(error));
+				}
+				setInvite(undefined);
+			} finally {
+				setJoining(false);
+			}
 		}
 	}
 
 	const JoinButton = () => {
+		if (!invite && !joining) return;
+
 		const fullWidth = screenIsSmall || variant === 'underButton';
 
 		return (
 			<Button
 				onClick={handleJoin}
-				disabled={!invite}
 				variant='contained'
 				color={'success'}
 				fullWidth={fullWidth}
@@ -282,7 +308,7 @@ export const InviteMessage: React.FC<InviteMessageType> = ({
 				}}
 			>
 				{joining ? (
-					<CircularProgress size={20} />
+					<CircularProgress size={'12.4%'} />
 				) : (
 					invite?.isJoined ? 'Joined' : 'Join'
 				)}
@@ -296,7 +322,9 @@ export const InviteMessage: React.FC<InviteMessageType> = ({
 				alignItems: 'center',
 				justifyContent: 'center',
 				width: 'fit-content',
-				minWidth: screenIsSmall || loading ? '200px' : '275px',
+				minWidth: screenIsSmall ? '200px' : '275px',
+				height: screenIsSmall ? '100%' : '7.9em',
+				overflow: 'hidden',
 				...bubbleSx
 			}}
 		>

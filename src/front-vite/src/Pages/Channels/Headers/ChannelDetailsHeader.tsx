@@ -187,6 +187,14 @@ const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 			handleClose();
 		}
 
+		const handleCopyInvite = async () => {
+			try {
+				handleCopy(inviteLink || '')
+			} catch (error) {
+				console.warn('Copy invite link failed');
+			}
+		}
+
 		const handleCreateInvite = async () => {
 			if (!userSocket || creatingLink) return;
 
@@ -490,7 +498,7 @@ const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 								</Typography>
 								{inviteLink && (
 									<IconButton
-										onClick={() => handleCopy(inviteLink || '')}
+										onClick={handleCopyInvite}
 										sx={{ 
 											width: '30px',
 											height: '30px',

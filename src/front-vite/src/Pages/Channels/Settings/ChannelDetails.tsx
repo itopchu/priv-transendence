@@ -17,7 +17,7 @@ import {
   ImageInput,
   UploadAvatar,
   DescriptionBox,
-  lonelyBox,
+  LonelyBox,
   PasswordTextField,
   LoadingBox,
   CustomAvatar,
@@ -64,7 +64,7 @@ export const ChannelDetails: React.FC = () => {
   const [avatarSrc, setAvatarSrc] = useState(initialAvatarSrc);
   const [channelData, setChannelData] = useState(initialChannelData);
 
-	if (!channelProps.selected) return (lonelyBox());
+	if (!channelProps.selected) return (<LonelyBox />);
 
 	const membership = channelProps.selected;
   const channel = membership.channel;
@@ -100,7 +100,7 @@ export const ChannelDetails: React.FC = () => {
 				}
 			} catch (error) {
 				if (!axios.isCancel(error)) {
-					setErrorMsg(formatErrorMessage('', error));
+					setErrorMsg(formatErrorMessage(error));
 				}
 			}
 		}

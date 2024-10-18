@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Divider,
@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
-import { CustomScrollBox, lonelyBox } from './Components/Components';
+import { CustomScrollBox, LonelyBox } from './Components/Components';
 import { LoadingBox } from './Components/Components';
 import { BACKEND_URL, formatErrorMessage, handleError,  trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
@@ -23,18 +23,15 @@ import { ChatBoxHeader } from './Headers/ChatBoxHeader';
 import { MemberClient, DataUpdateType } from '../../Providers/ChannelContext/Types';
 import { retryOperation, updatePropMap, } from '../../Providers/ChannelContext/utils';
 import axios from 'axios';
-import ChatBoxMessages from './ChatBoxMessages';
 import { StatusTypography } from './Components/ChatBoxComponents';
+import MessagesBox from './MessagesBox';
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
-  position: 'relative',
   height: '100%',
   backgroundColor: theme.palette.primary.light,
   display: 'flex',
-  flexDirection: 'column-reverse',
-  padding: theme.spacing(2),
-	overflowY: 'auto',
-	overflowX: 'hidden',
+  flexDirection: 'column',
+  overflow: 'hidden'
 }));
 
 const InputBar = styled(Box)(({ theme }) => ({
@@ -44,7 +41,7 @@ const InputBar = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
-  borderRadius: '2em',
+  borderRadius: '1em',
   backgroundColor: theme.palette.primary.dark,
   boxShadow: theme.shadows[5],
 	overflowY: 'auto',
@@ -76,8 +73,6 @@ interface ChatBoxType {
 }
 
 const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
-	if (!membership) return (lonelyBox());
-
 	const theme = useTheme();
 	const { userSocket } = useUser();
 
@@ -89,6 +84,10 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	const searchedMsgRef = useRef<HTMLDivElement>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	const messagesArray = useMemo(() => Array.from(messageLog.values()), [messageLog]);
+
+	if (!membership) return (<LonelyBox />);
 
 	const channel = membership.channel;
 	let blockedUsers: User[] = [];
@@ -144,7 +143,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
         setMessageLog(messageMap);
       } catch (error) {
 				if (!axios.isCancel(error)) {
-					setErrorMessage(formatErrorMessage('Failed to get message log: ', error))
+					setErrorMessage(formatErrorMessage(error, 'Failed to get message log:'))
 				}
       }
 			setLoading(false);
@@ -167,7 +166,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 					}
 					return (currentErrorMessage);
 				});
-			}, 30000); // 30 seconds delay
+			}, 10000); // 10 seconds delay
 		}
 
     userSocket?.on(`channel${channel.id}MessageUpdate`, handleMessageUpdate);
@@ -176,6 +175,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
     return () => {
 			controller.abort;
 			setLoading(true);
+			setErrorMessage(undefined);
 			setMessageLog(new Map());
       userSocket?.off(`channel${channel.id}MessageUpdate`, handleMessageUpdate);
 			userSocket?.off('channelMessageError', handleMessageError);
@@ -208,19 +208,6 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 		inputRef.current.value = '';
   };
 
-  const renderMessages = () => {
-    if (!messageLog.size) return (null);
-
-		const messages = Array.from(messageLog.values());
-    return (
-			<ChatBoxMessages
-				ref={searchedMsgRef}
-				searchedMsgId={searchedMsgId}
-				messages={messages}
-			/>
-		);
-  };
-
   return (
 		<>
 			<ChatBoxHeader
@@ -229,18 +216,21 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			/>
 			<Divider sx={{ bgcolor: theme.palette.secondary.dark }} />
 			<ChatContainer>
-				{loading ? (
-					<LoadingBox>
-						<CircularProgress size={100} />
-					</LoadingBox>
-				) : (
-					<Stack
-						sx={{ paddingInline: theme.spacing(2) }}
-						ref={messagesEndRef}
-					>
-						{renderMessages()}
-					</Stack>
-				)}
+			{loading ? (
+				<LoadingBox>
+					<CircularProgress size={100} />
+				</LoadingBox>
+			) : (
+				<MessagesBox
+					messageStyle='channel'
+					ref={searchedMsgRef}
+					searchedMsgId={searchedMsgId}
+					messages={messagesArray}
+					virtuosoStyle={{
+						scrollbarColor: `${theme.palette.primary.main} ${theme.palette.secondary.dark}`
+					}}
+				/>
+			)}
 			</ChatContainer>
 			<Stack
 				sx={{

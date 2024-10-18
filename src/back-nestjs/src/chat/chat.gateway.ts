@@ -19,7 +19,7 @@ export enum UpdateType {
 	created = 'created',
 }
 
-export enum RoomInitials {
+export enum RoomPrefix {
 	channelMessage = 'channel#',
 	channelUpdate = 'channelUpdate#',
 	publicUpdate = 'channelPublicUpdate',
@@ -48,6 +48,7 @@ export class ChatGateway {
 	server: Server;
 
 	private connectedUsers: Map<number, Set<UserSocket>> = new Map();
+	private onlineMembers: Map<number, Set<number>> = new Map();
 	
 	@Cron(CronExpression.EVERY_HOUR)
 	async checkInvites() {
@@ -90,21 +91,39 @@ export class ChatGateway {
 
 	handleDisconnect(client: UserSocket) {
 		const user = client.authUser;
+		if (!user) return;
 
-		if (user) {
-			const userSockets = this.connectedUsers.get(user.id) || undefined;
-			if (userSockets) {
-				userSockets.delete(client);
-			}
-			const rooms = Array.from(client.rooms);
-			rooms.forEach(room => {
-				client.leave(room);
-				if (room.slice(0, RoomInitials.channelUpdate.length) === RoomInitials.channelUpdate) {
-					this.emitOnlineMembers(room);
+		const userSockets = this.connectedUsers.get(user.id);
+		if (!userSockets) return;
+
+		userSockets.delete(client);
+		if (!userSockets.size) {
+			this.connectedUsers.delete(user.id);
+			for (const [channelId, userIdSet] of this.onlineMembers.entries()) {
+				if (userIdSet.has(user.id)) {
+					this.removeOnlineMember(user.id, channelId, true);
 				}
-			});
+			}
 		}
-		console.log('Client disconnected from channels:', user?.nameFirst, client.id);
+	}
+
+	@SubscribeMessage('onlineMembers')
+	async onOnlineMembers(
+		@ConnectedSocket() client: UserSocket,
+		@MessageBody(ParseIntPipe) channelId: number
+	) {
+		const user = client.authUser;
+		if (!user) {
+			throw new UnauthorizedException('Unauthorized: User not found');
+		}
+
+		const isUserInChannel = this.channelService.isUserInChannel(channelId, user.id);
+		if (!isUserInChannel) {
+			throw new UnauthorizedException('Unauthorized: User is not in channel');
+		}
+
+		const onlineMembers = this.onlineMembers.get(channelId)?.size || 0;
+		client.emit('onlineMembers', { id: channelId, count: onlineMembers });
 	}
 
 	@SubscribeMessage('subscribePublicChannel')
@@ -114,7 +133,7 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 		
-		client.join(RoomInitials.publicUpdate);
+		client.join(RoomPrefix.publicUpdate);
 	}
 
 	@SubscribeMessage('unsubscribePublicChannel')
@@ -124,7 +143,7 @@ export class ChatGateway {
 			throw new UnauthorizedException('Unauthorized: User not found');
 		}
 		
-		client.leave(RoomInitials.publicUpdate);
+		client.leave(RoomPrefix.publicUpdate);
 	}
 
 	@SubscribeMessage('subscribeChannel')
@@ -154,11 +173,9 @@ export class ChatGateway {
 			console.log('leave all');
 
 			rooms.forEach(room => {
-				if (room.slice(0, RoomInitials.channelUpdate.length) === RoomInitials.channelUpdate) {
-					client.leave(room);
-					this.emitOnlineMembers(room);
-				} else if (room.slice(0, RoomInitials.channelMessage.length) === RoomInitials.channelMessage) {
-					client.leave(room);
+				if (room.slice(0, RoomPrefix.channelUpdate.length) === RoomPrefix.channelUpdate) {
+					const roomChannelId = this.getChannelIdByRoom(room);
+					this.handleChannelJoinLeave(roomChannelId, client, 'leave');
 				}
 			});
 		} else {
@@ -204,18 +221,48 @@ export class ChatGateway {
 		}
   }
 	
+	removeOnlineMember(userId: number, channelId: number, force?: boolean) {
+		if (!this.onlineMembers.has(channelId)) return;
+
+		if (!force) {
+			const socketCount = this.connectedUsers.get(userId).size;
+			console.log('socket count', socketCount);
+			if (socketCount === undefined || socketCount > 1) return;
+		}
+
+		const userIdSet = this.onlineMembers.get(channelId);
+		if (userIdSet.size > 1) {
+			userIdSet.delete(userId);
+			this.emitOnlineMembers(`${RoomPrefix.channelUpdate}${channelId}`, channelId);
+		} else {
+			this.onlineMembers.delete(channelId);
+		}
+	}
+
+	addOnlineMember(userId: number, channelId: number) {
+		if (!this.onlineMembers.has(channelId)) {
+			this.onlineMembers.set(channelId, new Set());
+		}
+		const userIdSet = this.onlineMembers.get(channelId);
+		if (!userIdSet.has(userId)) {
+			userIdSet.add(userId);
+			this.emitOnlineMembers(`${RoomPrefix.channelUpdate}${channelId}`, channelId);
+		}
+	}
+	
 	handleChannelJoinLeave(channelId: number, client: UserSocket, action: 'join' | 'leave') {
-		const channelUpdateRoom = `${RoomInitials.channelUpdate}${channelId}`; 
-		const messageUpdateRoom = `${RoomInitials.channelMessage}${channelId}`; 
+		const channelUpdateRoom = `${RoomPrefix.channelUpdate}${channelId}`; 
+		const messageUpdateRoom = `${RoomPrefix.channelMessage}${channelId}`; 
 
 		if (action === 'join') {
+			this.addOnlineMember(client.authUser.id, channelId);
 			client.join(channelUpdateRoom);
 			client.join(messageUpdateRoom);
 		} else {
+			this.removeOnlineMember(client.authUser.id, channelId);
 			client.leave(channelUpdateRoom);
 			client.leave(messageUpdateRoom);
 		}
-		//this.emitOnlineMembers(channelUpdateRoom, channelId);
 	}
 
 	emitToClient<Type>(event: string, socket: UserSocket, payload: Type) {
@@ -231,17 +278,18 @@ export class ChatGateway {
 		}
 	}
 
+	getChannelIdByRoom(room: string) {
+		return (Number(room.slice(RoomPrefix.channelUpdate.length)));
+	}
+
 	emitOnlineMembers(room: string, channelId?: number) {
-		const onlineMembersCount = this.server.sockets.adapter.rooms.get(room)?.size || 0
-
 		if (!channelId) {
-			channelId = Number(room.slice(RoomInitials.channelUpdate.length));
+			channelId = this.getChannelIdByRoom(room); 
 		}
-
-		this.server.to(room).emit('onlineMembersCount', {
+		const onlineMembers = this.onlineMembers.get(channelId)?.size || 0;
+		this.server.to(room).emit('onlineMembers', {
 			id: channelId,
-			content: onlineMembersCount,
-			updateType: UpdateType.updated
+			content: { id: channelId, count: onlineMembers },
 		});
 	}
 
@@ -251,7 +299,7 @@ export class ChatGateway {
 	}
 
 	emitChannelMessageUpdate(channelId: number, content: MessagePublicDTO, updateType: UpdateType) {
-		this.server.to(`${RoomInitials.channelMessage}${channelId}`)
+		this.server.to(`${RoomPrefix.channelMessage}${channelId}`)
 			.emit(`channel${channelId}MessageUpdate`, { id: channelId, content, updateType });
 	}
 
@@ -276,7 +324,7 @@ export class ChatGateway {
 		content: PartialWithId<MemberPublicDTO>,
 		updateType: UpdateType,
 	) {
-		this.server.to(`${RoomInitials.channelUpdate}${channelId}`)
+		this.server.to(`${RoomPrefix.channelUpdate}${channelId}`)
 			.emit(`channel${channelId}MemberUpdate`, { id: channelId, content, updateType });
 	}
 
@@ -285,14 +333,14 @@ export class ChatGateway {
 		content: PartialWithId<UserPublicDTO>,
 		updateType: UpdateType,
 	) {
-		this.server.to(`${RoomInitials.channelUpdate}${channelId}`)
+		this.server.to(`${RoomPrefix.channelUpdate}${channelId}`)
 			.emit(`channel${channelId}BanListUpdate`, { id: channelId, content, updateType });
 		const emitUpdateDTO = { id: channelId, isBanned: updateType === UpdateType.created, isJoined: false };
 		this.emitToUserUpdate('public', content.id, emitUpdateDTO, UpdateType.updated);
 	}
 
 	emitMembershipUpdate(channelId: number, content: PartialWithId<MemberClientDTO>, updateType: UpdateType) {
-		this.server.to(`${RoomInitials.channelUpdate}${channelId}`)
+		this.server.to(`${RoomPrefix.channelUpdate}${channelId}`)
 			.emit('membershipUpdate', { id: content.id, content, updateType });
 	}
 
@@ -302,7 +350,7 @@ export class ChatGateway {
 		updateType: UpdateType
 	) {
 		this.server
-			.to(eventType === 'public' ? RoomInitials.publicUpdate : `${RoomInitials.channelUpdate}${content.id}`)
+			.to(eventType === 'public' ? RoomPrefix.publicUpdate : `${RoomPrefix.channelUpdate}${content.id}`)
 			.emit(
 				eventType === 'public' ? 'publicChannelUpdate' : 'channelUpdate',
 				{ id: content.id, content, updateType }
@@ -322,11 +370,9 @@ export class ChatGateway {
 
 	emitChannelDeleted(channelId: number) {
 		this.emitChannelUpdate('client', { id: channelId }, UpdateType.deleted);
-		this.server.socketsLeave(`${RoomInitials.channelUpdate}${channelId}`);
-		this.server.socketsLeave(`${RoomInitials.channelMessage}${channelId}`);
+		this.server.socketsLeave(`${RoomPrefix.channelUpdate}${channelId}`);
+		this.server.socketsLeave(`${RoomPrefix.channelMessage}${channelId}`);
 	}
-
-
 
 	emitMemberJoined(membership: ChannelMember) {
 		const userSockets = this.connectedUsers.get(membership.user.id);
@@ -359,6 +405,10 @@ export class ChatGateway {
 		};
 
 		if (userSockets && userSockets.size) {
+			if (userSockets.size > 1) {
+				this.removeOnlineMember(userId, channelId, true);
+			}
+
 			for (const socket of userSockets)  {
 				this.handleChannelJoinLeave(channelId, socket, 'leave');
 				this.emitToClient('membershipUpdate', socket, emitMembershipUpdateDTO);

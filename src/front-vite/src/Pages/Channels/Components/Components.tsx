@@ -283,7 +283,7 @@ export const UploadAvatar: React.FC<IAvatarButton> = ({
 	</ButtonAvatar>
 );
 
-export const lonelyBox = () => {
+export const LonelyBox: React.FC = () => {
 	const theme = useTheme();
 	const { channelLineProps, changeLineProps } = useChannelLine();
 

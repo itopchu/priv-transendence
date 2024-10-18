@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BACKEND_URL, formatErrorMessage, handleError } from "../../Pages/Channels/utils";
+import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
 import {
 	ChannelFilters,
 	ChannelType,
@@ -8,7 +8,6 @@ import {
 	UpdateType,
 	Invite,
 	ChannelPropsType,
-	ChannelStates,
 	PartialWithId,
 	MemberClient
 } from "./Types";
@@ -17,31 +16,17 @@ import React from "react";
 export const FRONTEND_URL: string = import.meta.env.ORIGIN_URL_FRONT || 'http://localhost.codam.nl:3000';
 export const INVITE_DOMAIN = `${FRONTEND_URL}/channels/invite/`;
 
-export async function handleCopy(text: string): Promise<boolean> {
-	let copySuccess = false;
-
+export async function handleCopy(text: string) {
 	if (navigator.clipboard) {
-		try {
-			await navigator.clipboard.writeText(text);
-			copySuccess = true;
-		} catch (error) {
-			console.error('Failed to copy: ', error);
-		}
+		await navigator.clipboard.writeText(text);
 	} else {
 		const textarea = document.createElement('textarea');
 		textarea.value = text;
 		document.body.appendChild(textarea);
 		textarea.select();
-		try {
-			document.execCommand('copy');
-			copySuccess = true;
-		} catch (error) {
-			console.error('Fallback: Failed to copy: ', error);
-		} finally {
-			document.body.removeChild(textarea);
-		}
+		document.execCommand('copy');
+		document.body.removeChild(textarea);
 	}
-	return (copySuccess);
 }
 
 export function getChannelTypeFromFilter(filter: ChannelFilters) {
@@ -184,27 +169,21 @@ export function getLink(domain: string, content: string) {
 export async function getInvite(
 	link: string,
 	setFunc: React.Dispatch<React.SetStateAction<Invite | undefined>>,
-	setErrorMsg?: React.Dispatch<React.SetStateAction<string | undefined>>,
+	controller?: AbortController,
 ) {
 	const match = link.match(/\/invite\/([^/]+)/);
 	const inviteId = match ? match[1] : undefined;
 
-	console.log(link, inviteId);
-
 	if (!inviteId) {
-		if (setErrorMsg)
-			setErrorMsg('Invalid invite id');
-		return;
+		throw new Error('Invalid invite id');
 	}
 
-	try {
-		const response = await axios.get(`${BACKEND_URL}/channel/invite/${inviteId}`, { withCredentials: true });
-		if (response?.data.invite) {
-			setFunc(response.data.invite);
-		}
-	} catch (error) {
-		if (setErrorMsg)
-			setErrorMsg(formatErrorMessage('', error));
+	const response = await axios.get(
+		`${BACKEND_URL}/channel/invite/${inviteId}`,
+		{ withCredentials: true, signal: controller?.signal }
+	);
+	if (response?.data.invite) {
+		setFunc(response.data.invite);
 	}
 }
 
@@ -233,44 +212,17 @@ export async function createInvite(
 export async function acceptInvite(
 	invite: PartialWithId<string, Invite>,
 	channelProps: ChannelPropsType,
-	setChannelProps: React.Dispatch<React.SetStateAction<ChannelPropsType>>,
-	setErrMsg?: React.Dispatch<React.SetStateAction<string | undefined>>,
 ) {
-	let exitStatus: boolean = true;
 	const membership = channelProps.memberships.find((membership => {
 		return (membership.channel.id === invite?.destination?.id);
 	}));
 
 	if (membership) {
-		setChannelProps((prevProps) => ({
-			...prevProps,
-			selected: membership,
-			state: ChannelStates.chat,
-		}));
+		return (membership);
 	} else {
-		try {
-			const { data: { membership: newMembership } } = await axios.patch<{ membership: MemberClient }>(
-				`${BACKEND_URL}/channel/invite/${invite.id}`, {}, { withCredentials: true }
-			);
-			if (newMembership) {
-				setChannelProps((prevProps) => ({
-					...prevProps,
-					memberships: [...prevProps.memberships, newMembership],
-					selected: newMembership,
-					state: ChannelStates.chat,
-				}));
-			} else {
-				if (setErrMsg)
-					setErrMsg('No data received from server');
-				exitStatus = false;
-			}
-		} catch (error) {
-			console.warn(formatErrorMessage('Failed to accept invite:', error));
-			if (setErrMsg) {
-				setErrMsg(formatErrorMessage('', error));
-			}
-			exitStatus = false;
-		}
+		const { data: { membership: newMembership } } = await axios.patch<{ membership: MemberClient }>(
+			`${BACKEND_URL}/channel/invite/${invite.id}`, {}, { withCredentials: true }
+		);
+		return (newMembership);
 	}
-	return (exitStatus);
 }

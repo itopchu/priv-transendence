@@ -43,13 +43,11 @@ export const ChannelLineContextProvider: React.FC<{ children: React.ReactNode }>
 		if (channelLineProps.filter === ChannelFilters.myChannels) return;
 
 		const onPublicChannelUpdate = (data: DataUpdateType<ChannelBase>) => {
-			console.log(data, channelLineProps.channels);
 			if (data.content?.type !== getChannelTypeFromFilter(channelLineProps.filter)
 					&& !channelLineProps.channels.some((channel) => channel.id === data.content.id)) {
 				return;
 			}
 
-			console.log('OK');
 			if (data.content.id === channelProps.selectedJoin?.id
 					&& data.updateType === UpdateType.deleted) {
 					changeProps({ selectedJoin: null });
@@ -96,6 +94,6 @@ export const ChannelLineContextProvider: React.FC<{ children: React.ReactNode }>
 export const useChannelLine = () => {
 	const context = useContext(ChannelLineContext);
 	if (!context)
-		throw new Error('useChannel must be used within a ChannelProvider');
+		throw new Error('useChannelLine must be used within a ChannelLineProvider');
 	return (context);
 }

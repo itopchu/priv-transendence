@@ -4,7 +4,7 @@ import CreateCard from './CreateCard';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
 import ChatBox from './ChatBox';
 import { JoinCard } from './JoinCard';
-import { lonelyBox, Overlay } from './Components/Components';
+import { LonelyBox, Overlay } from './Components/Components';
 import { ChannelDetails } from './Settings/ChannelDetails';
 import { ChannelLine } from './ChannelLine';
 import { ChannelStates } from '../../Providers/ChannelContext/Types';
@@ -19,7 +19,7 @@ const ChannelsPage: React.FC = () => {
   const [showCreateCard, setShowCreateCard] = useState(false);
 	
 	const renderChannelState = () => {
-		if (!channelProps.selected) return (lonelyBox());
+		if (!channelProps.selected) return (<LonelyBox />);
 
 		switch (channelProps.state) {
 			case ChannelStates.chat:
@@ -27,7 +27,7 @@ const ChannelsPage: React.FC = () => {
 			case ChannelStates.details:
 				return (<ChannelDetails />);
 			default:
-				return (lonelyBox());
+				return (<LonelyBox />);
 		}
 	}
 

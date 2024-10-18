@@ -106,7 +106,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			changeProps({ loading: true });
 			if (userSocket) {
 				userSocket.emit('unsubscribeChannel', -1);
-				userSocket.off('membershipUpdate', onChannelUpdate);
+				userSocket.off('membershipUpdate', onMembershipUpdate);
 				userSocket.off('channelUpdate', onChannelUpdate);
 			}
 		}

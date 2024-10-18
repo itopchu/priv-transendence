@@ -57,7 +57,7 @@ export const JoinCard: React.FC = () => {
 				}
 			} catch (error) {
 				if (!axios.isCancel(error)) {
-					setErrorMsg(formatErrorMessage('Failed to get channel info:', error));
+					setErrorMsg(formatErrorMessage(error, 'Failed to get channel info:'));
 				}
 			}	
 		}

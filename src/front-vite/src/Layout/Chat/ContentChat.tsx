@@ -8,6 +8,8 @@ import {
   Typography,
   CircularProgress,
   Theme,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
 	Send as SendIcon,
@@ -17,11 +19,10 @@ import {
 } from '@mui/icons-material';
 import { ButtonAvatar, ClickTypography, LoadingBox } from '../../Pages/Channels/Components/Components';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
 import { BACKEND_URL, formatErrorMessage, getFullname, getUsername, trimMessage } from '../../Pages/Channels/utils';
-import { ContentChatMessages } from './ContentChatMessages';
 import { getStatusColor } from '../../Pages/Profile/ownerInfo';
 import axios from 'axios';
 import { DataUpdateType } from '../../Providers/ChannelContext/Types';
@@ -29,11 +30,14 @@ import { updatePropMap } from '../../Providers/ChannelContext/utils';
 import { StatusTypography } from '../../Pages/Channels/Components/ChatBoxComponents';
 import { sendGameInvite } from "../../Providers/ChatContext/utils";
 import { visitedUserId } from "../../Pages/Profile/index";
+import MessagesBox from "../../Pages/Channels/MessagesBox";
 
 const ContentChat = () => {
   const { chatProps, changeChatProps } = useChat();
   const { userSocket } = useUser();
+	const theme = useTheme();
 
+	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -42,6 +46,7 @@ const ContentChat = () => {
   const [user, setUser] = useState<UserPublic | undefined>(chatProps.selected?.user);
   const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
 
+	const messagesArray = useMemo(() => Array.from(messageLog.values()), [messageLog]);
   const isDisabled = chatProps.loading;
 
   useEffect(() => {
@@ -163,13 +168,6 @@ const ContentChat = () => {
     inputRef.current.value = "";
   };
 
-  const renderMessages = () => {
-    if (!messageLog.size) return null;
-    const messages = Array.from(messageLog.values());
-
-    return <ContentChatMessages messages={messages} />;
-  };
-
   return (
     <Box
       sx={{
@@ -177,7 +175,7 @@ const ContentChat = () => {
         border: "1px solid #abc",
         bottom: 16,
         right: 16,
-        width: "50ch",
+        width: isSmallScreen ? "40ch" : "50ch",
         bgcolor: (theme) => theme.palette.primary.dark,
         borderRadius: "1em",
         maxHeight: "70vh",
@@ -198,12 +196,10 @@ const ContentChat = () => {
             zIndex: 1,
             borderTopLeftRadius: "1em",
             borderTopRightRadius: "1em",
-            color: (theme) => theme.palette.secondary.main,
+            color: theme.palette.secondary.main,
             justifyContent: "flex-start",
             alignItems: "center",
-            paddingX: "0.5em",
-            paddingY: "0.1em",
-            bgcolor: (theme) => theme.palette.primary.dark,
+            bgcolor: theme.palette.primary.dark,
             height: "48px",
           }}
         >
@@ -223,12 +219,13 @@ const ContentChat = () => {
 						clickEvent={() => (navigate(`/profile/${user?.id}`))}
 						src={user?.image}
 						avatarSx={{
-							border: (theme: Theme) => `2px solid ${getStatusColor(user?.status, theme)}`,
+							border: `2px solid ${getStatusColor(user?.status, theme)}`,
 						}}
 					/>
 					<Stack spacing={-1} >
 						<ClickTypography
-							color={(theme) => theme.palette.text.primary}
+							noWrap
+							color={theme.palette.text.primary}
 							onClick={() => (navigate(`/profile/${user?.id}`))}
 							sx={{
 								overflow: 'hidden',
@@ -256,7 +253,7 @@ const ContentChat = () => {
 							sx={{
 								width: "40px",
 								height: "40px",
-								color: (theme) => theme.palette.secondary.main,
+								color: theme.palette.secondary.main,
 								"&:hover": {
 									color: "#BF77F6",
 								},
@@ -285,8 +282,6 @@ const ContentChat = () => {
             ref={messagesEndRef}
             flexGrow={1}
             direction="column-reverse"
-            padding="0.5em"
-            paddingBottom={"1em"}
             bgcolor={(theme) => theme.palette.background.default}
             border={2}
             borderColor={(theme) => theme.palette.primary.light}
@@ -299,17 +294,17 @@ const ContentChat = () => {
                   `${theme.palette.primary.dark} transparent`,
               },
               "&:hover": {
-                scrollbarColor: (theme) =>
-                  `${theme.palette.secondary.dark} transparent`,
+                scrollbarColor: `${theme.palette.secondary.dark} transparent`,
               },
             }}
           >
-						<Stack>
-							<LoadingBox sx={{ display: chatProps.loading ? "flex" : "none" }}>
-								<CircularProgress size={70} />
-							</LoadingBox>
-							{renderMessages()}
-						</Stack>
+						<MessagesBox
+							messageStyle='dm'
+							messages={messagesArray}
+						/>
+						<LoadingBox sx={{ display: chatProps.loading ? "flex" : "none" }}>
+							<CircularProgress size={70} />
+						</LoadingBox>
           </Stack>
           <StatusTypography
             hidden={!Boolean(errorMessage)}

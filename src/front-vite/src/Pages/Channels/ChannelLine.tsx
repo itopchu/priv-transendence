@@ -75,7 +75,7 @@ export const ChannelLine: React.FC<ChannelLineType> = ({ onPlusIconClick }) => {
 				changeLineProps({ channels });
 			} catch(error) {
 				if (!axios.isCancel(error)) {
-					setErrorMessage(formatErrorMessage(`Unable to get ${type} channels:`, error));
+					setErrorMessage(formatErrorMessage(error, `Unable to get ${type} channels:`));
 				}
 			}
 			changeLineProps({ loading: false });

@@ -16,6 +16,8 @@ import {
   FormControl,
   CircularProgress,
   Stack,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { AvatarUploadIcon, ImageInput, PasswordTextField, UploadAvatar } from './Components/Components';
 import { BACKEND_URL, handleError, onFileUpload } from './utils';
@@ -37,8 +39,10 @@ const initialChannelData: ChannelDataType = {
 };
 
 const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
+	const theme = useTheme();
   const { user } = useUser();
 	const { setChannelProps } = useChannel();
+	const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const passwordRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -126,7 +130,7 @@ const CreateCard: React.FC<CreateCardType> = ({ setIsVisible }) => {
   return (
     <>
       <CardOverlay onClick={onCancel} />
-      <CenteredCard>
+      <CenteredCard sx={{ width: isSmallScreen ? '25em' : '30em' }} >
 				<CustomCardContent>
 					<Stack spacing={2} justifyContent={'center'} alignItems={'center'}>
 						<UploadAvatar

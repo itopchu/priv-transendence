@@ -1,25 +1,15 @@
 import { alpha, Box, Stack, Typography, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { InviteMessage } from "../Channels/Components/ChatBoxComponents";
-import { Invite } from "../../Providers/ChannelContext/Types";
 import React from "react";
-import { acceptInvite } from "../../Providers/ChannelContext/utils";
-import { useChannel } from "../../Providers/ChannelContext/Channel";
 
 const InvitePage: React.FC = () => {
   const theme = useTheme();
 	const navigate = useNavigate();
-	const { channelProps, setChannelProps } = useChannel();
   const inviteLink = useLocation().pathname;
 
-	async function handleJoin(
-		invite: Invite,
-		setErrorMsg: React.Dispatch<React.SetStateAction<string | undefined>>
-	) {
-		const exitStatus = await acceptInvite(invite, channelProps, setChannelProps, setErrorMsg);
-		if (exitStatus) {
-			navigate('/channels');
-		}
+	function handleJoin() {
+		navigate('/channels');
 	}
 
   return (
