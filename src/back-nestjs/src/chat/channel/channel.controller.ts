@@ -37,7 +37,7 @@ import { ChannelService } from './channel.service';
 import { AuthGuard } from '../../auth/auth.guard';
 import { multerOptions } from '../../user/user.controller';
 import { ChatGateway, UpdateType } from '../chat.gateway';
-import { MemberService } from './member.service';
+import { memberClientRelations, MemberService } from './member.service';
 import { InviteService } from '../invite/invite.service';
 import { UserPublicDTO } from '../../dto/user.dto';
 
@@ -122,11 +122,7 @@ export class ChannelController {
 	async getMembershipByChannel(@Req() req: Request, @Param('id', ParseIntPipe) channelId: number) {
 		const user = req.authUser;
 
-		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, [
-			'channel',
-			'user',
-			'channel.mutedUsers'
-		]);
+		const membership = await this.memberService.getMembershipByChannel(channelId, user.id, memberClientRelations);
 		if (!membership) {
 			throw new NotFoundException("Membership not found");
 		}
@@ -140,9 +136,7 @@ export class ChannelController {
 
 		const memberships = await this.memberService.getMemberships(user);
 
-		const clientMemberships = (memberships ?? []).map((membership) => {
-			return (new MemberClientDTO(membership, user.id));
-		});
+		const clientMemberships = (memberships ?? []).map((membership) => new MemberClientDTO(membership, user.id));
 		return ({ memberships: clientMemberships });
 	}
 
@@ -201,10 +195,7 @@ export class ChannelController {
 		const user = req.authUser;
 
 		const newMembership = await this.channelService.joinChannel(user, channelId, password);
-		const newMembershipWithRel = await this.memberService.getMembershipById(newMembership.id, [
-			'user',
-			'channel.mutedUsers'
-		]);
+		const newMembershipWithRel = await this.memberService.getMembershipById(newMembership.id, memberClientRelations);
 		this.chatGateway.emitMemberJoined(newMembershipWithRel);
 		return ({ membership: new MemberClientDTO(newMembershipWithRel, user.id) });
 	}
@@ -229,10 +220,7 @@ export class ChannelController {
 				const publicChannel = new ChannelPublicDTO(newChannel);
 				this.chatGateway.emitChannelUpdate('public', publicChannel, UpdateType.created);
 			}
-			const newMembership = await this.memberService.getMembershipByChannel(newChannel.id, user.id, [
-				'channel.mutedUsers',
-				'user'
-			]);
+			const newMembership = await this.memberService.getMembershipByChannel(newChannel.id, user.id, memberClientRelations);
 			const clientMembership = new MemberClientDTO(newMembership, user.id);
 			this.chatGateway.emitToUserUpdate('membership', user.id, clientMembership, UpdateType.created);
 			return ({ membership: clientMembership });
@@ -274,10 +262,7 @@ export class ChannelController {
 		}
 
 		const newMembership = await this.memberService.createMember(invite.destination, user);
-		const newMembershipWithRel = await this.memberService.getMembershipById(newMembership.id, [
-			'user',
-			'channel.mutedUsers'
-		]);
+		const newMembershipWithRel = await this.memberService.getMembershipById(newMembership.id, memberClientRelations);
 		this.chatGateway.emitMemberJoined(newMembershipWithRel);
 		return ({ membership: new MemberClientDTO(newMembershipWithRel, user.id) });
 	}
@@ -307,7 +292,12 @@ export class ChannelController {
 		if (kickerMembership.role > victimMembership.role)
 			throw new UnauthorizedException('Unauthorized user')
 		await this.memberService.deleteMember(victimMembership.id);
-		this.chatGateway.emitMemberLeft(victimId, victimMembership.id, channelId);
+		this.chatGateway.emitMemberLeft(
+			user.id,
+			victimMembership.id, 
+			channel.id,
+			channel.members.length - 1
+		);
 	}
 
 	@Patch('mute/:id')
@@ -361,7 +351,7 @@ export class ChannelController {
 			throw new BadRequestException("Banning yourself..? Now that's going to far");
 		}
 
-		const channel = await this.channelService.getChannelById(channelId, ['members.user', 'bannedUsers']);
+		const channel = await this.channelService.getChannelById(channelId, ['members', 'bannedUsers']);
 		if (!channel) {
 			throw new NotFoundException('Channel not found');
 		}
@@ -387,10 +377,15 @@ export class ChannelController {
 				throw new UnauthorizedException('Unauthorized: Insufficient privileges');
 			}
 
-			const victimMemberId = victimMembership.id
-			await this.channelService.banUser(victimMembership, channel);
+			const memberToDelete = { ...victimMembership }
+			await this.channelService.banUser(memberToDelete, channel);
 			this.chatGateway.emitBanListUpdate(channelId, new UserPublicDTO(victimMembership.user, null), UpdateType.created);
-			this.chatGateway.emitMemberLeft(victimId, victimMemberId, channelId);
+			this.chatGateway.emitMemberLeft(
+				victimMembership.userId,
+				victimMembership.id, 
+				channel.id,
+				channel.members.length - 1
+			);
 		}
 	}
 
@@ -499,7 +494,7 @@ export class ChannelController {
 		this.chatGateway.emitChannelUpdate('client', publicChannel, UpdateType.updated);
 	}
 
-	@Patch('/member/:id')
+	@Patch('member/:id')
 	@UseGuards(AuthGuard)
 	@UsePipes(new ValidationPipe({ whitelist: true }))
 	async updateMember(
@@ -508,7 +503,6 @@ export class ChannelController {
 		@Body() updateMemberDto: UpdateMemberDto
 	) {
 		const user = req.authUser;
-
 		if (!Object.keys(updateMemberDto).length) {
 			return;
 		}
@@ -565,7 +559,7 @@ export class ChannelController {
 	@UseGuards(AuthGuard)
 	async leaveChannel(@Req() req: Request, @Param('id', ParseIntPipe) membershipId: number) {
 		const user = req.authUser;
-		const membership = await this.memberService.getMembershipById(membershipId, ['channel.members']);
+		const membership = await this.memberService.getMembershipById(membershipId, ['channel.members.user']);
 		if (!membership) {
 			throw new NotFoundException('Member not found');
 		}
@@ -586,10 +580,15 @@ export class ChannelController {
 				await this.memberService.updateMember(candidate.id, { role: ChannelRoles.admin });
 				const emitDTO = { id: candidate.id, role: ChannelRoles.admin };
 				this.chatGateway.emitMemberUpdate(channel.id, emitDTO, UpdateType.updated);
-				this.chatGateway.emitToUserUpdate('membership', candidate.id, emitDTO, UpdateType.updated);
+				this.chatGateway.emitToUserUpdate('membership', candidate.user.id, emitDTO, UpdateType.updated);
 			}
 		}
 		await this.memberService.deleteMember(membership.id);
-		this.chatGateway.emitMemberLeft(user.id, membership.id, membership.channel.id);
+		this.chatGateway.emitMemberLeft(
+			user.id,
+			membership.id, 
+			membership.channel.id,
+			membership.channel.members.length - 1
+		);
 	}
 }

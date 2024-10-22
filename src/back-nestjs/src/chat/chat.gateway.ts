@@ -287,10 +287,7 @@ export class ChatGateway {
 			channelId = this.getChannelIdByRoom(room); 
 		}
 		const onlineMembers = this.onlineMembers.get(channelId)?.size || 0;
-		this.server.to(room).emit('onlineMembers', {
-			id: channelId,
-			content: { id: channelId, count: onlineMembers },
-		});
+		this.server.to(room).emit('onlineMembers', { id: channelId, count: onlineMembers });
 	}
 
 	emitNewChat(chat: Chat) {
@@ -325,7 +322,7 @@ export class ChatGateway {
 		updateType: UpdateType,
 	) {
 		this.server.to(`${RoomPrefix.channelUpdate}${channelId}`)
-			.emit(`channel${channelId}MemberUpdate`, { id: channelId, content, updateType });
+			.emit('channelMemberUpdate', { id: channelId, content, updateType });
 	}
 
 	emitBanListUpdate(
@@ -376,6 +373,7 @@ export class ChatGateway {
 
 	emitMemberJoined(membership: ChannelMember) {
 		const userSockets = this.connectedUsers.get(membership.user.id);
+		const channel = membership.channel;
 		const emitUpdateDTO: emitUpdateDTO<MemberClientDTO> = {
 			id: membership.user.id,
 			content: new MemberClientDTO(membership, membership.user.id),
@@ -384,14 +382,17 @@ export class ChatGateway {
 
 		if (userSockets) {
 			for (const socket of userSockets)  {
-				this.handleChannelJoinLeave(membership.channel.id, socket, 'join');
+				this.handleChannelJoinLeave(channel.id, socket, 'join');
 				this.emitToClient('membershipUpdate', socket, emitUpdateDTO);
 			}
 		}
-		this.emitMemberUpdate(membership.channel.id, new MemberPublicDTO(membership), UpdateType.created);
+		this.emitMemberUpdate(channel.id, new MemberPublicDTO(membership), UpdateType.created);
+		this.emitChannelUpdate(
+			'client', { id: channel.id, memberCount: channel.members.length }, UpdateType.updated
+		);
 	}
 
-	emitMemberLeft(userId: number, membershipId: number, channelId: number) {
+	emitMemberLeft(userId: number, membershipId: number, channelId: number, memberCount: number) {
 		const userSockets = this.connectedUsers.get(userId);
 		const emitMembershipUpdateDTO: emitUpdateDTO<MemberClientDTO> = {
 			id: membershipId,
@@ -416,5 +417,6 @@ export class ChatGateway {
 			}
 		}
 		this.emitMemberUpdate(channelId, { id: membershipId }, UpdateType.deleted);
+		this.emitChannelUpdate('client', { id: channelId, memberCount }, UpdateType.updated);
 	}
 }

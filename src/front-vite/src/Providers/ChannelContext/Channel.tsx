@@ -7,7 +7,7 @@ import {
 	ChannelPropsType,
 	ChannelPublic,
 	DataUpdateType,
-    UpdateType,
+	UpdateType,
 } from "./Types";
 import {  retryOperation, updatePropArray } from "./utils";
 
@@ -18,6 +18,28 @@ export type ChannelContextType = {
 }
 
 const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
+
+function updateMembershipChannel(
+	memberships: MemberClient[],
+	data: DataUpdateType<ChannelPublic>
+) {
+	const targetIndex = memberships.findIndex((member) =>
+		member.channel.id === data.id
+	);
+	if (targetIndex === -1) {
+		return ({ memberships, target: null });
+	}
+	
+	const updatedMemberships = [...memberships];
+	if (data.updateType ===  UpdateType.deleted) {
+		updatedMemberships.splice(targetIndex, 1);
+	} else {
+		const targetChannel = updatedMemberships[targetIndex].channel;
+		updatedMemberships[targetIndex].channel = { ...targetChannel, ...data.content };
+	}
+
+	return ({ memberships: updatedMemberships, target: updatedMemberships[targetIndex] });
+}
 
 export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const { user, userSocket } = useUser();
@@ -59,14 +81,19 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 		const onMembershipUpdate = (data: DataUpdateType<MemberClient>) => {
 			setChannelProps((prevProps) => {
 				const updatedMemberships = updatePropArray(prevProps.memberships, data);
-				const updatedSelected = data.updateType !== UpdateType.deleted
-					? prevProps.memberships.find((membership) => membership.id === data.content.id)
-					: null;
+				const updatedTarget = updatedMemberships.find((membership) => membership.id === data.content.id);
+
+				const isTargetSelected = updatedTarget?.id === prevProps.selected?.id;
+				const isDeleted = data.updateType === UpdateType.deleted;
+
+				const updatedSelected = isTargetSelected
+				  ? (isDeleted || !updatedTarget ? null : updatedTarget)
+				  : prevProps.selected;
 
 				return ({
 					...prevProps,
 					memberships: updatedMemberships,
-					selected: updatedSelected !== undefined ? updatedSelected : prevProps.selected,
+					selected: updatedSelected,
 				});
 			});
 		}
@@ -75,26 +102,19 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 			if (data.updateType === UpdateType.created) return;
 
 			setChannelProps((prevProps) => {
-				const targetIndex = prevProps.memberships.findIndex((member) =>
-					member.channel.id === data.id
-				);
-				if (targetIndex === -1) {
-					return (prevProps);
-				}
+				const updatedProps = updateMembershipChannel(prevProps.memberships, data);
 
-				const updatedMemberships = [...prevProps.memberships];
-				const updatedSelected = updatedMemberships[targetIndex];
-				if (data.updateType ===  UpdateType.deleted) {
-					updatedMemberships.splice(targetIndex, 1);
-				} else {
-					const targetChannel = updatedMemberships[targetIndex].channel;
-					updatedMemberships[targetIndex].channel = { ...targetChannel, ...data.content };
-				}
+				const isTargetSelected = updatedProps.target?.id === prevProps.selected?.id;
+				const isDeleted = data.updateType === UpdateType.deleted;
+
+				const updatedSelected = isTargetSelected
+				  ? (isDeleted ? null : updatedProps.target)
+				  : prevProps.selected;
 
 				return ({
 					...prevProps,
-					memberships: updatedMemberships,
-					selected: updatedSelected?.id === prevProps.selected?.id ? updatedSelected : prevProps.selected,
+					memberships: updatedProps.memberships,
+					selected: updatedSelected,
 				});
 			});
 		}

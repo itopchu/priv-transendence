@@ -31,7 +31,6 @@ const SectionTypeValues = [SectionType.friends, SectionType.channels];
 interface IChannelDetailsHeaderType {
 	isMod: boolean;
 	editMode: boolean;
-	membersCount: number;
 	onApplyClick: () => void;
 	onEditClick: () => void;
 }
@@ -61,7 +60,6 @@ const DetailHeaderPart = styled(Stack)(({ theme }) => ({
 const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 	isMod,
 	editMode,
-	membersCount,
 	onApplyClick,
 	onEditClick,
 }) => {
@@ -314,7 +312,7 @@ const ChannelDetailsHeader: React.FC<IChannelDetailsHeaderType> = ({
 						const isSelected = selectedChannels.some((selectedChannel) =>
 							selectedChannel.id === channel.id
 						);
-						const secondaryText = `${membersCount} ${membersCount > 1 ? 'members' : 'member'}`
+						const secondaryText = `${channel.memberCount} ${(channel.memberCount || 0) > 1 ? 'members' : 'member'}`
 
 						return (
 							<Panel

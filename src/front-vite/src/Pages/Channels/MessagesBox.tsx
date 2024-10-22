@@ -1,8 +1,8 @@
-import React, { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Message } from "../../Layout/Chat/InterfaceChat";
 import { formatDate, getLink, getTimeDiff, handleCopy, INVITE_DOMAIN, isDiffDate } from "../../Providers/ChannelContext/utils";
 import { getUsername, handleError, } from "./utils";
-import { Box, Divider, Stack, SxProps, Theme, Typography, useTheme } from "@mui/material";
+import { Box, darken, Divider, Grid, IconButton, Stack, SxProps, Theme, Typography, useTheme } from "@mui/material";
 import { ButtonAvatar, ClickTypography } from "./Components/Components";
 import { UserPublic, useUser } from "../../Providers/UserContext/User";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ import {
 	InviteMessage
 } from "./Components/ChatBoxComponents";
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
+import { EditRounded as EditIcon } from "@mui/icons-material"
 
 interface MessagesBoxProps {
 	messages: Message[];
@@ -30,7 +31,7 @@ interface MessageBubbeProps {
 	nextMsg: Message | undefined;
 	prevMsg: Message | undefined;
 	variant: 'channel' | 'dm';
-	searchedMsgId?: number;
+	isSearched: boolean;
 	onAuthorClick?: (user: UserPublic) => void;
 	onInputChange?: (event: React.KeyboardEvent<HTMLElement>) => void;
 	onInviteJoin?: () => void;
@@ -100,7 +101,7 @@ const createBubbleSx = (
 const oneHour = 60 * 60 * 1000;
 const timeSeparation = 2 * 60 * 1000; // 2 min in milisecondes
 const MessageBubble = React.memo<MessageBubbeProps>(
-	({ prevMsg, nextMsg, msg, searchedMsgId, variant, onAuthorClick, onInputChange, onInviteJoin }
+	({ prevMsg, nextMsg, msg, isSearched, variant, onAuthorClick, onInputChange, onInviteJoin }
 ) => {
 	const theme = useTheme();
 	const { user: localUser } = useUser();
@@ -127,7 +128,7 @@ const MessageBubble = React.memo<MessageBubbeProps>(
 	const fullTime = `${timestamp.date} ${timestamp.particle} ${timestamp.time}`;
 
 	return (
-		<React.Fragment key={msg.id}>
+		<React.Fragment>
 			{isDiffTimeBlock && (
 				<Box
 					flexGrow={1}
@@ -146,7 +147,7 @@ const MessageBubble = React.memo<MessageBubbeProps>(
 						? theme.spacing(isLocalUser ? 0 : 1)
 						: theme.spacing(2.8)}
 					sx={{
-						backgroundColor: isEditing || searchedMsgId === msg.id
+						backgroundColor: isEditing || isSearched
 							? isDmStyle
 								? 'rgba(255, 255, 255, .05)'
 								: 'rgba(0, 0, 0, .05)'
@@ -296,32 +297,35 @@ const MessageBubble = React.memo<MessageBubbeProps>(
 		return (
 			prevProps.msg.content === nextProps.msg.content &&
 			prevProps.prevMsg?.id === nextProps.prevMsg?.id &&
-			prevProps.nextMsg?.id === nextProps.nextMsg?.id
+			prevProps.nextMsg?.id === nextProps.nextMsg?.id &&
+			prevProps.isSearched === nextProps.isSearched
 		);
 	}
 )
 
-const MessagesBox = forwardRef<HTMLDivElement, MessagesBoxProps>((
-	{ messageStyle, messages, searchedMsgId, virtuosoStyle }, searchedMsgRef
+const MessagesBox: React.FC<MessagesBoxProps> = ((
+	{ messageStyle, messages, searchedMsgId, virtuosoStyle }
 ) => {
 	const virtuosoRef = useRef<VirtuosoHandle>(null);
 	const theme = useTheme(); const navigate = useNavigate();
 
 	const [isAtBottom, setIsAtBottom] = useState(true);
 
-	useEffect(() => {
-		const timeout = setTimeout(() => {
-			if (isAtBottom) {
+  useEffect(() => {
+		if (!searchedMsgId) return;
+
+		const scrollToItemKey = () => {
+			const index = messages.findIndex(msg => msg.id === searchedMsgId);
+			if (index !== -1) {
 				virtuosoRef.current?.scrollToIndex({
-					index: messages.length - 1,
+					index,
 					behavior: 'smooth',
 				});
 			}
-		}, 50);
+		}
 
-		return () => clearTimeout(timeout);
-	}, [messages.length]);
-
+		scrollToItemKey();
+	}, [searchedMsgId]);
 //	const deleteMessage = () => {
 //		if (!selectedMessage) return;
 //	
@@ -354,20 +358,22 @@ const MessagesBox = forwardRef<HTMLDivElement, MessagesBoxProps>((
 			onInviteJoin={handleInviteJoin}
 			nextMsg={messages[index + 1]}
 			prevMsg={messages[index - 1]}
+			isSearched={msg.id === searchedMsgId}
 			msg={msg}
 		/>
-	), [messages]);
+	), [messages, searchedMsgId]);
 
 	return (
 		<Virtuoso
 			ref={virtuosoRef}
 			style={{ overflowX: 'hidden', scrollbarWidth: 'thin', ...virtuosoStyle }}
-			atBottomStateChange={(atBottom) => setIsAtBottom(atBottom)}
-			initialTopMostItemIndex={(messages.length || 1) - 1}
+			atBottomStateChange={setIsAtBottom}
+			initialTopMostItemIndex={Math.max(0, messages.length - 1)}
 			followOutput={isAtBottom}
 			increaseViewportBy={200}
 			data={messages}
 			itemContent={memoizedItemContent}
+			computeItemKey={(_, message) => message.id}
 			components={{
 				Footer: () => (
 					<div style={{ paddingBottom: theme.spacing(2) }} />

@@ -234,6 +234,7 @@ export class MemberClientDTO {
 		this.user = new UserClient(member.user);
 		this.channel = new ChannelPublicDTO(member.channel);
 		this.role = member.role;
+		this.membersCount = member.channel.members.length;
 
 		if (member.channel?.mutedUsers) {
 			this.isMuted = member.channel.mutedUsers.some((mute) =>
@@ -259,4 +260,7 @@ export class MemberClientDTO {
 	@IsNotEmpty()
 	@IsBoolean()
 	isMuted: Boolean
+
+	@IsNumber()
+	membersCount: number;
 }

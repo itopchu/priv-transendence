@@ -7,7 +7,6 @@ import {
   Button,
   Typography,
   CircularProgress,
-  Theme,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
@@ -88,7 +87,7 @@ const ContentChat = () => {
         }
       } catch (error) {
         if (!axios.isCancel(error)) {
-          setErrorMessage(formatErrorMessage("Failed to get messages:", error));
+          setErrorMessage(formatErrorMessage(error, "Failed to get messages:"));
         }
       }
       changeChatProps({ loading: false });
@@ -183,7 +182,7 @@ const ContentChat = () => {
         display: "flex",
         flexDirection: "column",
         boxSizing: "border-box",
-        zIndex: 2,
+        zIndex: 4,
       }}
     >
       <Stack direction={"column"} sx={{ flexGrow: 1, maxHeight: "100%" }}>

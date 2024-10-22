@@ -17,7 +17,6 @@ import {
   ImageInput,
   UploadAvatar,
   DescriptionBox,
-  LonelyBox,
   PasswordTextField,
   LoadingBox,
   CustomAvatar,
@@ -27,7 +26,7 @@ import { BACKEND_URL, formatErrorMessage, getUsername, handleError, onFileUpload
 import { SettingsDivider, SettingsTextFieldSx, SettingsUserCardBox } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
 import { BannedUserCards } from './BannedUserCards';
-import { MemberPublic, ChannelRole, ChannelType, ChannelTypeValues, DataUpdateType } from '../../../Providers/ChannelContext/Types';
+import { MemberPublic, ChannelRole, ChannelType, ChannelTypeValues, DataUpdateType, MemberClient } from '../../../Providers/ChannelContext/Types';
 import ChannelDetailsHeader from '../Headers/ChannelDetailsHeader';
 import { UserPublic, useUser } from '../../../Providers/UserContext/User';
 import { updatePropArray } from '../../../Providers/ChannelContext/utils';
@@ -38,19 +37,24 @@ export type ChannelDataType = {
   type: ChannelType | undefined;
 };
 
-export const ChannelDetails: React.FC = () => {
+export const ChannelDetails: React.FC<{membership: MemberClient}> = (
+	{ membership }
+) => {
 	const	theme = useTheme()
 	const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
 	const { userSocket } =  useUser();
-	const { channelProps, changeProps } = useChannel();
+	const { changeProps } = useChannel();
 	const [editMode, setEditMode] = useState(false);
 
   const passwordRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const initialAvatarSrc = channelProps.selected?.channel?.image;
+  const channel = membership.channel;
+  const isAdmin = membership.role === ChannelRole.admin;
+  const isMod = membership.role <= ChannelRole.moderator;
+  const initialAvatarSrc = channel?.image;
   const initialChannelData: ChannelDataType = {
     type: undefined,
     image: undefined,
@@ -64,22 +68,13 @@ export const ChannelDetails: React.FC = () => {
   const [avatarSrc, setAvatarSrc] = useState(initialAvatarSrc);
   const [channelData, setChannelData] = useState(initialChannelData);
 
-	if (!channelProps.selected) return (<LonelyBox />);
-
-	const membership = channelProps.selected;
-  const channel = membership.channel;
-  const isAdmin = membership.role === ChannelRole.admin;
-  const isMod = membership.role <= ChannelRole.moderator;
-
 	useEffect(() => {
-		if (!channelProps.selected) return;
-
 		const controller = new AbortController();
 
 		const getMembers = async () => {
 			try {
 				const { data: { members } } = await axios.get<{ members: MemberPublic[] }>(
-					`${BACKEND_URL}/channel/${channelProps.selected?.channel.id}/members`,
+					`${BACKEND_URL}/channel/${channel.id}/members`,
 					{
 						withCredentials: true,
 						signal: controller.signal,
@@ -112,21 +107,21 @@ export const ChannelDetails: React.FC = () => {
 			setMembersLoading(true);
 			setMembers([]);
 		};
-	}, [channelProps.selected?.channel.id]);
+	}, [channel.id]);
 
 	useEffect(() => {
     if (editMode && nameRef.current && descriptionRef.current) {
 			reset();
 		};
 
-		if (!editMode || !channelProps.selected) return;
+		if (!editMode || !membership) return;
 
 		const controller = new AbortController();
 
 		const getBanList = async () => {
 			try {
 				const { data: { users } } = await axios.get<{ users: UserPublic[] }>(
-					`${BACKEND_URL}/channel/${channelProps.selected?.channel.id}/banned`,
+					`${BACKEND_URL}/channel/${channel.id}/banned`,
 					{
 						withCredentials: true,
 						signal: controller.signal,
@@ -151,7 +146,7 @@ export const ChannelDetails: React.FC = () => {
 			getBanList();
 		}
 
-		const event = `channel${channelProps.selected?.channel.id}BanListUpdate`;
+		const event = `channel${channel.id}BanListUpdate`;
 		userSocket?.on(event, handleBanListUpdate);
 		return () => {
 			controller.abort();
@@ -159,21 +154,23 @@ export const ChannelDetails: React.FC = () => {
 			setBanListLoading(true);
 			setBanList([]);
 		};
-	}, [channelProps.selected?.channel.id, editMode, userSocket]);
+	}, [channel.id, editMode, userSocket]);
 
 	useEffect(() => {
-		if (!channelProps.selected || !userSocket) return;
+		if (!userSocket) return;
 
 		const handleMemberUpdate = (data: DataUpdateType<MemberPublic>) => {
-			setMembers((prevMembers) => updatePropArray(prevMembers, data));
+			if (data.id === channel.id) {
+				setMembers((prevMembers) => updatePropArray(prevMembers, data));
+			}
 		}
 
-		const event = `channel${channelProps.selected?.channel.id}MemberUpdate`;
+		const event = 'channelMemberUpdate';
 		userSocket?.on(event, handleMemberUpdate);
 		return () => {
 			userSocket?.off(event, handleMemberUpdate);
 		};
-	}, [channelProps.selected?.channel.id, userSocket]);
+	}, [channel.id, userSocket]);
 
   useEffect(() => {
 		if (editMode && !isMod) {
@@ -183,7 +180,7 @@ export const ChannelDetails: React.FC = () => {
     if (channelData !== initialChannelData || avatarSrc !== initialAvatarSrc) {
       reset();
     }
-  }, [channelProps.selected?.id, isMod]);
+  }, [membership.id, isMod]);
 
 	useEffect(() => {
 		if (!members.length && !errorMsg) return;
@@ -276,9 +273,10 @@ export const ChannelDetails: React.FC = () => {
 			alignSelf={isSmallScreen ? 'center' : undefined}
 			variant="body1"
 			color={'textSecondary'}
+			sx={{ cursor: 'default' }}
 		>
-			{`${channel.type} • ${members.length || '1'}\
-				${members.length > 1 ? 'members' : 'member'}`}
+			{`${channel.type} • ${channel.memberCount || '1'}\
+				${(channel.memberCount || 1) > 1 ? 'members' : 'member'}`}
 		</Typography>
 	);
 
@@ -449,7 +447,6 @@ export const ChannelDetails: React.FC = () => {
 			<ChannelDetailsHeader
 				isMod={isMod}
 				editMode={editMode}
-				membersCount={members.length}
 				onEditClick={() => toggleEditMode()}
 				onApplyClick={() => onApply()}
 			/>

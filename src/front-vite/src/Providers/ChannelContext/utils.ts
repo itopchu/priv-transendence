@@ -55,8 +55,17 @@ export function updatePropMap<Type extends { id: number }>(
 	return (updatedMap);
 }
 
-export function updatePropArray<Type extends { id: number }>(prevArray: Type[], newData: DataUpdateType<Type>): Type[] {
-	const index = prevArray.findIndex((prevItem) => prevItem.id === newData.content?.id)
+export function updatePropArray<Type extends { id: number }>(
+	prevArray: Type[],
+	newData: DataUpdateType<Type>,
+	predicate?: (value: Type, index: number, array: Type[]) => boolean,
+): Type[] {
+	let index: number;
+	if (predicate) {
+		index = prevArray.findIndex(predicate);
+	} else {
+		index = prevArray.findIndex((prevItem) => prevItem.id === newData.content?.id);
+	}
 	if (index === -1) {
 		if (newData.updateType === UpdateType.created) {
 			return ([...prevArray, newData.content as Type]);

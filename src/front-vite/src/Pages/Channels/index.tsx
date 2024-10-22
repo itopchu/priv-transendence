@@ -25,7 +25,7 @@ const ChannelsPage: React.FC = () => {
 			case ChannelStates.chat:
 				return (<ChatBox membership={channelProps.selected} />);
 			case ChannelStates.details:
-				return (<ChannelDetails />);
+				return (<ChannelDetails membership={channelProps.selected} />);
 			default:
 				return (<LonelyBox />);
 		}

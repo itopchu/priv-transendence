@@ -90,12 +90,12 @@ export interface ChannelBase {
 	name: string;
 	type: ChannelType;
 	description: string;
+	memberCount?: number;
 }
 
 export interface ChannelPublic extends ChannelBase {
 	isBanned?: boolean;
 	isJoined?: boolean;
-	membersCount?: number;
 }
 
 export interface Invite {

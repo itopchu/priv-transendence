@@ -15,7 +15,7 @@ import {
 } from "@mui/icons-material"
 import { ButtonAvatar, ClickTypography, CustomAvatar, HeaderIconButton, scrollStyleSx, SearchBar } from "../Components/Components";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
-import { ChannelStates, DataUpdateType } from "../../../Providers/ChannelContext/Types";
+import { ChannelStates } from "../../../Providers/ChannelContext/Types";
 import React, { SetStateAction, useEffect, useRef, useState } from "react";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
 import { ChatBubble } from "../Components/ChatBoxComponents";

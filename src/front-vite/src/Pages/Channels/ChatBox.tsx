@@ -81,7 +81,6 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 	const [messageLog, setMessageLog] = useState<Map<number, Message>>(new Map());
 	const [loading, setLoading] = useState(true);
 
-	const searchedMsgRef = useRef<HTMLDivElement>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 
@@ -182,17 +181,16 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
     };
   }, [channel.id, userSocket]);
 
-	useScrollTo(messagesEndRef, scrollToElement, [messageLog]);
-	useScrollTo(searchedMsgRef, (ref: React.RefObject<HTMLDivElement>) => {
-		const element = ref.current;
+	useEffect(() => {
+		if (!membership.isMuted) return;
 
+		const element = inputRef.current;
 		if (element) {
-      element.scrollIntoView({
-				behavior: 'smooth',
-				block: 'center',
-			});
+			element.value = '';
 		}
-	}, [searchedMsgRef.current]);
+	}, [membership.isMuted])
+
+	useScrollTo(messagesEndRef, scrollToElement, [messageLog]);
 
   const handleSend = () => {
     if (!inputRef.current) return;
@@ -223,7 +221,6 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 			) : (
 				<MessagesBox
 					messageStyle='channel'
-					ref={searchedMsgRef}
 					searchedMsgId={searchedMsgId}
 					messages={messagesArray}
 					virtuosoStyle={{

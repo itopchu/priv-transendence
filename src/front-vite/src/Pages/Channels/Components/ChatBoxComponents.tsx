@@ -322,8 +322,8 @@ export const InviteMessage: React.FC<InviteMessageType> = ({
 				alignItems: 'center',
 				justifyContent: 'center',
 				width: 'fit-content',
-				minWidth: screenIsSmall ? '200px' : '275px',
-				height: screenIsSmall ? '100%' : '7.9em',
+				minWidth: '275px',
+				height: '100%',
 				overflow: 'hidden',
 				...bubbleSx
 			}}

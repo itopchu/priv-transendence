@@ -5,6 +5,9 @@ import { ChannelMember, Channel, ChannelRoles } from "../../entities/chat.entity
 import { User } from "../../entities/user.entity";
 import { Repository } from "typeorm";
 
+export const memberClientRelations = [ 'user', 'channel.mutedUsers', 'channel.members' ];
+
+
 @Injectable()
 export class MemberService {
 	constructor(
@@ -38,6 +41,7 @@ export class MemberService {
 		.leftJoinAndSelect('membership.user', 'user')
 		.where('user.id = :id', { id: user.id })
 		.leftJoinAndSelect('membership.channel', 'channel')
+		.leftJoinAndSelect('channel.members', 'members')
 		.leftJoinAndSelect('channel.mutedUsers', 'mute')
 		.getMany();
 		
