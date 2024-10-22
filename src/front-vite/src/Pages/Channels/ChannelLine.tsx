@@ -10,9 +10,10 @@ import {
 import { ChannelBase, ChannelFilters, ChannelFilterValues, MemberClient, ChannelPublic, ChannelStates, ChannelType } from "../../Providers/ChannelContext/Types";
 import { StatusTypography } from "./Components/ChatBoxComponents";
 import { retryOperation } from "../../Providers/ChannelContext/utils";
-import { BACKEND_URL, formatErrorMessage } from "./utils";
+import { formatErrorMessage } from "./utils";
 import axios from "axios";
 import { useChannelLine } from "../../Providers/ChannelContext/ChannelLine";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 interface ChannelCardType {
   component: React.ReactNode;

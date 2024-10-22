@@ -26,11 +26,12 @@ import { BarCard } from '../Components/CardComponents';
 import { ButtonAvatar, ClickTypography } from '../Components/Components';
 import { FriendshipAttitude, getStatusColor } from '../../Profile/ownerInfo';
 import { User, UserPublic, useUser } from '../../../Providers/UserContext/User';
-import { BACKEND_URL, getUsername, handleError } from '../utils';
+import { getUsername, handleError } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { useFriendshipAttitude, userRelationMenuItems } from './UserCardsUtils';
 import { useChat } from '../../../Providers/ChatContext/Chat';
 import { handleChatInvite, sendGameInvite } from '../../../Providers/ChatContext/utils';
+import { BACKEND_URL } from '../../../Providers/UserContext/User';
 
 type MuteOptionsType = { key: string; value: number | null };
 

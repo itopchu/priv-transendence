@@ -22,7 +22,7 @@ import {
   CustomAvatar,
   scrollStyleSx,
 } from '../Components/Components';
-import { BACKEND_URL, formatErrorMessage, getUsername, handleError, onFileUpload } from '../utils';
+import { formatErrorMessage, getUsername, handleError, onFileUpload } from '../utils';
 import { SettingsDivider, SettingsTextFieldSx, SettingsUserCardBox } from '../Components/SettingsComponents';
 import { MemberCards } from './MemberCards';
 import { BannedUserCards } from './BannedUserCards';
@@ -31,6 +31,7 @@ import ChannelDetailsHeader from '../Headers/ChannelDetailsHeader';
 import { UserPublic, useUser } from '../../../Providers/UserContext/User';
 import { updatePropArray } from '../../../Providers/ChannelContext/utils';
 import { StatusTypography } from '../Components/ChatBoxComponents';
+import { BACKEND_URL } from '../../../Providers/UserContext/User';
 
 export type ChannelDataType = {
   image: File | undefined;

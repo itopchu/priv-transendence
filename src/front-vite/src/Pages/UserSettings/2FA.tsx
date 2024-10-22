@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Box, Switch, Stack, useTheme, Button, TextField } from '@mui/material';
 import { useUser } from '../../Providers/UserContext/User';
 import axios from 'axios';
+import { BACKEND_URL } from '../../Providers/UserContext/User';
 
 export const Auth2F: React.FC = () => {
   const theme = useTheme();
@@ -11,7 +12,6 @@ export const Auth2F: React.FC = () => {
   const [isScanned, setIsScanned] = useState<boolean>(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [hasError, setHasError] = useState<boolean>(false);
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
   useEffect(() => {
     setAuth2FEnabled(user?.auth2F);

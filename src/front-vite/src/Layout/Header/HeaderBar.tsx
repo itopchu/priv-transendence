@@ -6,9 +6,7 @@ import { AccountCircle, WidthFull } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { alpha, darken, useTheme } from "@mui/material/styles";
 import axios from "axios";
-
-const BACKEND_URL: string =
-  import.meta.env.ORIGIN_URL_BACK || "http://localhost.codam.nl:4000";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 export const HeaderBar: React.FC = () => {
   const { user } = useUser();

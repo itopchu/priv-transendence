@@ -1,7 +1,5 @@
 import { User } from "../../Providers/UserContext/User";
 
-export const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
-
 export function validateFile(file: File): boolean {
   if (!file) return false;
 

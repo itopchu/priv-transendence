@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
+import { handleError } from "../../Pages/Channels/utils";
 import {
 	ChannelFilters,
 	ChannelType,
@@ -12,6 +12,7 @@ import {
 	MemberClient
 } from "./Types";
 import React from "react";
+import { BACKEND_URL } from "../UserContext/User";
 
 export const FRONTEND_URL: string = import.meta.env.ORIGIN_URL_FRONT || 'http://localhost.codam.nl:3000';
 export const INVITE_DOMAIN = `${FRONTEND_URL}/channels/invite/`;

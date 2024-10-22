@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useState, createContext } from "react";
 import { ChatProps, ChatStatus, IChat } from "../../Layout/Chat/InterfaceChat";
 import axios from "axios";
-import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
+import { handleError } from "../../Pages/Channels/utils";
 import { useUser } from "../UserContext/User";
+import { BACKEND_URL } from "../UserContext/User";
 
 type ChatContextType = {
 	chatProps: ChatProps,

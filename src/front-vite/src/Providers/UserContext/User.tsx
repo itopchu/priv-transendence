@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { socket } from '../../socket'
 import { Socket } from 'socket.io-client';
 
+export const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
+
 export interface User {
   id: number;
   nameNick?: string;
@@ -32,7 +34,6 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 const userConnection = socket;
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

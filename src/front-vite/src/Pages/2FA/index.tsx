@@ -3,6 +3,7 @@ import { UserClient, useUser } from "../../Providers/UserContext/User";
 import { TextField, Button, Typography, Box, Stack, useTheme } from "@mui/material";
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 export const AuthPage: React.FC = () => {
   const theme = useTheme();
@@ -10,7 +11,6 @@ export const AuthPage: React.FC = () => {
   const [ TOTPcode, setCode ] = useState("");
   const [ hasError, setHasError ] = useState<boolean>(false);
   const navigate = useNavigate();
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
   const handleSubmit = async () => {
     try {

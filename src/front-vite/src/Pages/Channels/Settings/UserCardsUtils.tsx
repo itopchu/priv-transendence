@@ -1,9 +1,10 @@
 import axios from "axios";
 import { FriendshipAttitude, FriendshipAttitudeBehaviour } from "../../Profile/ownerInfo";
-import { handleError, BACKEND_URL, getUsername } from "../utils";
+import { handleError, getUsername } from "../utils";
 import { User } from "../../../Providers/UserContext/User";
 import { MenuItem } from "@mui/material";
 import { useEffect } from "react";
+import { BACKEND_URL } from "../../../Providers/UserContext/User";
 
 export async function getFriendshipAttitude(
 	id: number,

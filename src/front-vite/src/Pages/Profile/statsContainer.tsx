@@ -11,6 +11,7 @@ import {
 import { EmojiEvents as Cup } from "@mui/icons-material";
 import { useMediaQuery } from "@mui/material";
 import axios from "axios";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 interface StatsContainerProps {
   visitedUser: UserPublic;
@@ -24,9 +25,6 @@ interface GameHistory {
   player1: UserPublic;
   player2: UserPublic;
 }
-
-const BACKEND_URL: string =
-  import.meta.env.ORIGIN_URL_BACK || "http://localhost.codam.nl:4000";
 
 export const StatsContainer: React.FC<StatsContainerProps> = ({
   visitedUser,

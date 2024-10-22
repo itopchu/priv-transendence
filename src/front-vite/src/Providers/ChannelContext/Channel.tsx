@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useContext, useEffect, useState, createContext } from "react";
 import { useUser } from "../../Providers/UserContext/User";
-import { BACKEND_URL, handleError } from "../../Pages/Channels/utils";
+import { handleError } from "../../Pages/Channels/utils";
 import {
 	MemberClient,
 	ChannelPropsType,
@@ -10,6 +10,7 @@ import {
 	UpdateType,
 } from "./Types";
 import {  retryOperation, updatePropArray } from "./utils";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 export type ChannelContextType = {
 	channelProps: ChannelPropsType,

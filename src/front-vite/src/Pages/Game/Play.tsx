@@ -5,6 +5,7 @@ import axios from "axios";
 import { CustomScrollBox } from "../Channels/Components/Components";
 import { sendGameInvite } from "../../Providers/ChatContext/utils";
 import { useChat } from "../../Providers/ChatContext/Chat";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 enum PlayerStates {
   notInGame = 0,
@@ -193,7 +194,7 @@ const Play = () => {
 
     const getOnlineUsers = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/user/getUsers/online", {withCredentials: true});
+        const res = await axios.get(`${BACKEND_URL}/user/getUsers/online`, {withCredentials: true});
         setOnlineUsers(res.data.publicUsers);
       } catch (err) {
         console.error(err);

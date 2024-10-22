@@ -1,5 +1,5 @@
 import { Box, Button, CircularProgress, InputBase, Menu, MenuItem, PopoverPosition, Stack, styled, SxProps, Theme, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { BACKEND_URL, formatErrorMessage, handleError } from "../utils";
+import { formatErrorMessage, handleError } from "../utils";
 import axios from "axios";
 import { Message } from "../../../Layout/Chat/InterfaceChat";
 import React, { useEffect, useState } from "react";
@@ -8,6 +8,7 @@ import { ClickTypography, CustomAvatar, LoadingBox } from "./Components";
 import { acceptInvite, getInvite } from "../../../Providers/ChannelContext/utils";
 import { UserPublic, useUser } from "../../../Providers/UserContext/User";
 import { useChannel } from "../../../Providers/ChannelContext/Channel";
+import { BACKEND_URL } from "../../../Providers/UserContext/User";
 
 const MessageMenuItem = styled(MenuItem)(({ theme }) => ({
 	fontSize: '.9rem',

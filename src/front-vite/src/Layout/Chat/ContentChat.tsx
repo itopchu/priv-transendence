@@ -21,7 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { UserPublic, useUser } from '../../Providers/UserContext/User';
 import { useChat } from '../../Providers/ChatContext/Chat';
-import { BACKEND_URL, formatErrorMessage, getFullname, getUsername, trimMessage } from '../../Pages/Channels/utils';
+import { formatErrorMessage, getFullname, getUsername, trimMessage } from '../../Pages/Channels/utils';
 import { getStatusColor } from '../../Pages/Profile/ownerInfo';
 import axios from 'axios';
 import { DataUpdateType } from '../../Providers/ChannelContext/Types';
@@ -30,6 +30,7 @@ import { StatusTypography } from '../../Pages/Channels/Components/ChatBoxCompone
 import { sendGameInvite } from "../../Providers/ChatContext/utils";
 import { visitedUserId } from "../../Pages/Profile/index";
 import MessagesBox from "../../Pages/Channels/MessagesBox";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 const ContentChat = () => {
   const { chatProps, changeChatProps } = useChat();

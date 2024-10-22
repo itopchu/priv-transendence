@@ -15,13 +15,14 @@ import {
 import { CustomAvatar, LoadingBox, scrollStyleSx, SearchBar } from "../../Pages/Channels/Components/Components";
 import { UserPublic, useUser } from "../../Providers/UserContext/User";
 import { useEffect, useRef, useState } from "react";
-import { BACKEND_URL, getFullname, getUsername } from "../../Pages/Channels/utils";
+import { getFullname, getUsername } from "../../Pages/Channels/utils";
 import { handleChatInvite } from "../../Providers/ChatContext/utils";
 import { useChat } from "../../Providers/ChatContext/Chat";
 import axios from "axios";
 import { getStatusColor } from "../../Pages/Profile/ownerInfo";
 import { updatePropArray } from "../../Providers/ChannelContext/utils";
 import { UpdateType } from "../../Providers/ChannelContext/Types";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 interface CreateChatCard {
 	anchorEl: HTMLElement | null;

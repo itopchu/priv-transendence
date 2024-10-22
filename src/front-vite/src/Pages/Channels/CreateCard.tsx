@@ -20,9 +20,10 @@ import {
   useTheme,
 } from '@mui/material';
 import { AvatarUploadIcon, ImageInput, PasswordTextField, UploadAvatar } from './Components/Components';
-import { BACKEND_URL, handleError, onFileUpload } from './utils';
+import { handleError, onFileUpload } from './utils';
 import { MemberClient, ChannelStates, ChannelType, ChannelTypeValues } from '../../Providers/ChannelContext/Types';
 import { useChannel } from '../../Providers/ChannelContext/Channel';
+import { BACKEND_URL } from '../../Providers/UserContext/User';
 
 interface CreateCardType {
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;

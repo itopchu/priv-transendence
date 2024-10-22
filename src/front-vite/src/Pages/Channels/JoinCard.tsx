@@ -19,10 +19,11 @@ import {
   Typography,
 } from '@mui/material';
 import { CustomAvatar, DescriptionBox } from './Components/Components';
-import { BACKEND_URL, formatErrorMessage, handleError } from './utils';
+import { formatErrorMessage, handleError } from './utils';
 import { MemberClient, ChannelPublic, ChannelStates, ChannelType, DataUpdateType, UpdateType } from '../../Providers/ChannelContext/Types';
 import { retryOperation } from '../../Providers/ChannelContext/utils';
 import { useUser } from '../../Providers/UserContext/User';
+import { BACKEND_URL } from '../../Providers/UserContext/User';
 
 export const JoinCard: React.FC = () => {
   const { channelProps, changeProps, setChannelProps } = useChannel();

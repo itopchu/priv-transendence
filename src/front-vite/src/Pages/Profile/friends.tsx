@@ -10,12 +10,12 @@ import { useMediaQuery } from '@mui/material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { FriendshipAttitudeBehaviour, FriendshipAttitude } from './ownerInfo';
+import { BACKEND_URL } from '../../Providers/UserContext/User';
 
 interface FriendsBoxProps {
   visitedUser: UserPublic | undefined;
 }
 
-const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
 export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
   const theme = useTheme();
@@ -119,6 +119,7 @@ export const FriendsBox: React.FC<FriendsBoxProps> = ({ visitedUser }) => {
         borderColor={theme.palette.divider}
       >
         <Typography
+          height={'2em'}
           variant="h5"
           component="h2"
           align={'center'}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TextField, Button, Stack, useTheme } from '@mui/material';
 import { useUser } from '../../Providers/UserContext/User';
 import axios from 'axios'; // Import axios
+import { BACKEND_URL } from '../../Providers/UserContext/User';
 
 export const SocialSettings: React.FC = () => {
   const theme = useTheme();
@@ -16,7 +17,6 @@ export const SocialSettings: React.FC = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     const payload = { nickname, email, greeting };
-    const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
     try {
       const response = await axios.post(BACKEND_URL + '/user/update', payload, {
         headers: {

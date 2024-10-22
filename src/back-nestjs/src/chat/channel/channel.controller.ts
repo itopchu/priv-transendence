@@ -351,7 +351,7 @@ export class ChannelController {
 			throw new BadRequestException("Banning yourself..? Now that's going to far");
 		}
 
-		const channel = await this.channelService.getChannelById(channelId, ['members', 'bannedUsers']);
+		const channel = await this.channelService.getChannelById(channelId, ['members.user', 'bannedUsers']);
 		if (!channel) {
 			throw new NotFoundException('Channel not found');
 		}

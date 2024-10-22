@@ -18,9 +18,10 @@ import React, { ReactElement, useEffect, useRef, useState } from "react";
 import { UserPublic, UserStatusType, useUser } from "../../../Providers/UserContext/User";
 import { createInvite, handleCopy, updatePropArray } from "../../../Providers/ChannelContext/utils";
 import axios from "axios";
-import { BACKEND_URL, getFullname, getUsername } from "../utils";
+import { getFullname, getUsername } from "../utils";
 import { getStatusColor } from "../../Profile/ownerInfo";
 import { useChannelLine } from "../../../Providers/ChannelContext/ChannelLine";
+import { BACKEND_URL } from "../../../Providers/UserContext/User";
 
 const enum SectionType {
 	friends = 'Friends',

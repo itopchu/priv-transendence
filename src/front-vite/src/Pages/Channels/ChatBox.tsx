@@ -17,7 +17,7 @@ import { useTheme } from '@mui/material/styles';
 import { User, useUser } from '../../Providers/UserContext/User';
 import { CustomScrollBox, LonelyBox } from './Components/Components';
 import { LoadingBox } from './Components/Components';
-import { BACKEND_URL, formatErrorMessage, handleError,  trimMessage } from './utils';
+import { formatErrorMessage, handleError,  trimMessage } from './utils';
 import { Message } from '../../Layout/Chat/InterfaceChat';
 import { ChatBoxHeader } from './Headers/ChatBoxHeader';
 import { MemberClient, DataUpdateType } from '../../Providers/ChannelContext/Types';
@@ -25,6 +25,7 @@ import { retryOperation, updatePropMap, } from '../../Providers/ChannelContext/u
 import axios from 'axios';
 import { StatusTypography } from './Components/ChatBoxComponents';
 import MessagesBox from './MessagesBox';
+import { BACKEND_URL } from '../../Providers/UserContext/User';
 
 const ChatContainer = styled(CustomScrollBox)(({ theme }) => ({
   height: '100%',

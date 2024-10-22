@@ -1,8 +1,9 @@
 import axios from "axios";
 import { ChatProps, ChatStatus } from "../../Layout/Chat/InterfaceChat";
 import { User } from "../UserContext/User";
-import { BACKEND_URL, formatErrorMessage, handleError } from "../../Pages/Channels/utils";
+import { formatErrorMessage, handleError } from "../../Pages/Channels/utils";
 import { Socket } from "socket.io-client";
+import { BACKEND_URL } from "../UserContext/User";
 
 export function findChat(receiverId: number, chatProps: ChatProps) {
 	const chat = chatProps.chats.find((chat) => chat.user.id === receiverId);
@@ -68,7 +69,7 @@ export async function sendGameInvite(
 			}
 		} catch (error) {
 			if (setErrorMessage)
-				setErrorMessage(formatErrorMessage('Could not send game invite:', error));
+				setErrorMessage(formatErrorMessage(error, 'Could not send game invite:'));
 			else
 				handleError('Could not send game invite:', error);
 		}

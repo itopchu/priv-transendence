@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../Providers/UserContext/User";
 import axios from "axios";
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 const LogoutPage: React.FC = () => {
   const { setUser } = useUser();
   const navigate = useNavigate();
-  const BACKEND_URL: string = import.meta.env.ORIGIN_URL_BACK || 'http://localhost.codam.nl:4000';
 
   useEffect(() => {
     const logout = async () => {

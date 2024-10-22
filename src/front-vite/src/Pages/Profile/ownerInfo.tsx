@@ -26,7 +26,7 @@ import { useChat } from '../../Providers/ChatContext/Chat';
 import axios from "axios";
 import { handleChatInvite, sendGameInvite } from "../../Providers/ChatContext/utils";
 import { useNavigate } from "react-router-dom";
-
+import { BACKEND_URL } from "../../Providers/UserContext/User";
 
 interface VisitedInfoProps {
   visitedUser: UserPublic | undefined;
@@ -49,9 +49,6 @@ export enum FriendshipAttitudeBehaviour {
   approve = "approve",
   decline = "decline",
 }
-
-const BACKEND_URL: string =
-  import.meta.env.ORIGIN_URL_BACK || "http://localhost.codam.nl:4000";
 
 export function getStatusColor(status: UserStatusType | undefined, theme: Theme) {
 	if (!status || !theme) {
