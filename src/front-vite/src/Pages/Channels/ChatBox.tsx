@@ -96,22 +96,15 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 		const controller = new AbortController;
 
 		const getBlockedUsers = async (): Promise<User[]> => {
-      try {
-        const response = await axios.get(
-					`${BACKEND_URL}/user/friendship/restricted`, { 
-						withCredentials: true,
-						signal: controller.signal,
-					}
-				);
-				if (response.data.blockedUsers) {
-					return (response.data.blockedUsers);
+			const response = await axios.get(
+				`${BACKEND_URL}/user/friendship/restricted`, { 
+					withCredentials: true,
+					signal: controller.signal,
 				}
-      } catch (error) {
-				if (!axios.isCancel(error)) {
-					console.error(`Failed to retrieve blocked users: ${error}`);
-					handleError('Failed to retrieve blocked users:', error);
-				}
-      }
+			);
+			if (response.data.blockedUsers) {
+				return (response.data.blockedUsers);
+			}
 			return ([]);
 		}
 
@@ -255,6 +248,7 @@ const ChatBox: React.FC<ChatBoxType> = ({ membership }) => {
 						maxRows={8}
 						disabled={membership.isMuted || loading}
 						inputRef={inputRef}
+						inputProps={{ maxLength: 1024 }}
 						placeholder={membership.isMuted ? 'You are muted...' : 'Type a message...'}
 						onKeyDown={(e) => {
 							if (e.key === 'Enter' && !e.shiftKey) {

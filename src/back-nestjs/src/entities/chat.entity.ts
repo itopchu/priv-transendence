@@ -12,6 +12,12 @@ import {
     Unique
 } from 'typeorm';
 import { User } from './user.entity';
+import { MaxLength, MinLength, validateOrReject } from 'class-validator';
+
+export const MSG_LIMIT = 1024;
+export const CHANNEL_NAME_LIMIT = 30;
+export const CHANNEL_DESC_LIMIT = 100;
+export const CHANNEL_PASS_LIMIT = 24;
 
 export enum ChannelType {
 	private = 'private',
@@ -33,16 +39,21 @@ export class Channel {
 	@Column({ nullable: true, default: null })
 	image: string | null;
 
-	@Column({ length: 30 })
+	@Column({ length: CHANNEL_NAME_LIMIT })
+	@MinLength(1, { message: 'Name is too short' })
+	@MaxLength(CHANNEL_NAME_LIMIT, { message: 'Name is too long' })
 	name: string;
 
 	@Column({
-		length: 100,
+		length: CHANNEL_DESC_LIMIT,
 		default: 'This is a channel for nerds'
 	})
+	@MinLength(1, { message: 'Description is too short' })
+	@MaxLength(CHANNEL_DESC_LIMIT, { message: 'Description is too long' })
 	description: string;
 
 	@Column({ nullable: true, default: null })
+	@MinLength(1, { message: 'Password is too short' })
 	password: string | null;
 
 	@Column({
@@ -67,6 +78,10 @@ export class Channel {
 
 	@OneToMany(() => Message, message => message.channel, { cascade: ['remove'], })
 	log: Message[];
+	
+	async validate() {
+		await validateOrReject(this);
+	}
 }
 
 @Entity()
@@ -168,6 +183,8 @@ export class Message {
 	author: User;
 
 	@Column()
+	@MinLength(1, { message: 'Message is too short' })
+	@MaxLength(MSG_LIMIT, { message: 'Message is too long' })
 	content: string;
 
 	@Column({

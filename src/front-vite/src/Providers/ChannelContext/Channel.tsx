@@ -84,7 +84,7 @@ export const ChannelContextProvider: React.FC<{ children: React.ReactNode }> = (
 				const updatedMemberships = updatePropArray(prevProps.memberships, data);
 				const updatedTarget = updatedMemberships.find((membership) => membership.id === data.content.id);
 
-				const isTargetSelected = updatedTarget?.id === prevProps.selected?.id;
+				const isTargetSelected = data?.id === prevProps.selected?.id;
 				const isDeleted = data.updateType === UpdateType.deleted;
 
 				const updatedSelected = isTargetSelected

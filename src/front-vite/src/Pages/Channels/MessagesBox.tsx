@@ -146,6 +146,7 @@ const MessageBubble = React.memo<MessageBubbeProps>(
 					paddingLeft={isDmStyle
 						? theme.spacing(isLocalUser ? 0 : 1)
 						: theme.spacing(2.8)}
+					paddingRight={isDmStyle ? 0 : theme.spacing(2)}
 					sx={{
 						backgroundColor: isEditing || isSearched
 							? isDmStyle

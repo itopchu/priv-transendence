@@ -4,11 +4,11 @@ import { ConfigService } from '@nestjs/config';
 import { ChannelService } from './channel/channel.service';
 import { UserService } from '../user/user.service';
 import { authenticateUser, UserSocket } from '../user/user.gateway';
-import { NotFoundException, ParseIntPipe, UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, ParseIntPipe, PayloadTooLargeException, UnauthorizedException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ChannelPublicDTO, ChatClientDTO, MemberClientDTO, MemberPublicDTO, MessagePublicDTO } from '../dto/chat.dto';
 import { MemberService } from './channel/member.service';
-import { ChannelMember, Chat } from '../entities/chat.entity';
+import { ChannelMember, Chat, MSG_LIMIT } from '../entities/chat.entity';
 import { ChatService } from './chat.service';
 import { InviteService } from './invite/invite.service';
 import { UserPublicDTO } from 'src/dto/user.dto';
@@ -31,6 +31,12 @@ type emitUpdateDTO<Type extends { id: number }> = {
 	id: number,
 	content?: PartialWithId<Type>,
 	updateType: UpdateType,
+}
+
+function validateMessageSize(message: string) {
+	if (message.length > MSG_LIMIT) {
+		throw new PayloadTooLargeException('Message too large');
+	}
 }
 
 @WebSocketGateway(3001, { cors: { origin: "*" } })
@@ -190,11 +196,12 @@ export class ChatGateway {
 			if (!user) {
 				throw new UnauthorizedException('Unauthorized: User not found');
 			}
+			validateMessageSize(data.message);
 
 			const message = await this.channelService.logMessage(data.channelId, user, data.message);
 			this.emitChannelMessageUpdate(data.channelId, new MessagePublicDTO(message), UpdateType.updated);
 		} catch (error) {
-			client.emit('messageError', error.message);
+			client.emit('channelMessageError', error.message);
 		}
 	}
 
@@ -205,6 +212,7 @@ export class ChatGateway {
 			if (!user) {
 				throw new UnauthorizedException('Unauthorized: User not found');
 			}
+			validateMessageSize(payload.content);
 
 			const chat = await this.chatService.getChatByUsersId(user.id, payload.receiverId);
 			if (!chat) {

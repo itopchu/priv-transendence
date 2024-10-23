@@ -428,6 +428,7 @@ export const PasswordTextField = forwardRef<HTMLInputElement, IPasswordTextField
 			type={visible ? "default" : "password"}
 			fullWidth={fullWidth}
 			autoComplete='off'
+			inputProps={{ maxLength: 24 }}
 			InputProps={{
 				style: style,
 				endAdornment: (

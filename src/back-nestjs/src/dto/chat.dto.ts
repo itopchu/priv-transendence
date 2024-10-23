@@ -1,23 +1,37 @@
 import { PartialType, PickType } from '@nestjs/mapped-types'
 import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsDate, ValidateNested, IsBoolean, Length, IsUUID } from 'class-validator';
-import { Channel, ChannelMember, ChannelRoles, ChannelType, Chat, Invite, Message, Mute } from '../entities/chat.entity';
 import { UserClient, UserPublicDTO } from './user.dto';
 import { Type } from 'class-transformer';
+import {
+	Channel,
+	CHANNEL_DESC_LIMIT,
+	CHANNEL_NAME_LIMIT,
+	CHANNEL_PASS_LIMIT,
+	MSG_LIMIT,
+	ChannelMember,
+	ChannelRoles,
+	ChannelType,
+	Chat,
+	Invite,
+	Message,
+	Mute
+} from '../entities/chat.entity';
 
 export class CreateChannelDto extends PartialType(PickType(Channel, ['type', 'name', 'password'] as const)) {
-  @IsString()
+	@IsString()
 	@IsNotEmpty({ message: 'Channel Name must not be empty' })
-	@Length(0, 30)
-  name: string;
+	@Length(1, CHANNEL_NAME_LIMIT)
+	name: string;
 
-  @IsString()
-  @IsOptional()
+	@IsString()
+	@IsOptional()
 	@IsNotEmpty({ message: 'Channel Password must not be empty' })
-  password?: string;
+	@Length(1, CHANNEL_PASS_LIMIT)
+	password?: string;
 
 	@IsEnum(ChannelType)
 	@IsNotEmpty({ message: 'Channel Type must not be empty' })
-  type: ChannelType;
+	type: ChannelType;
 }
 
 export class UpdateChannelDto extends PartialType(PickType(Channel, ['type', 'name', 'password', 'description'] as const)) {
@@ -28,18 +42,19 @@ export class UpdateChannelDto extends PartialType(PickType(Channel, ['type', 'na
 
 	@IsString()
 	@IsOptional()
-	@Length(0, 20)
+	@Length(1, CHANNEL_NAME_LIMIT)
 	@IsNotEmpty({ message: 'Channel Name must not be empty' })
 	name?: string;
 
 	@IsString()
 	@IsOptional()
 	@IsNotEmpty({ message: 'Channel Password must not be empty' })
+	@Length(1, CHANNEL_PASS_LIMIT)
 	password?: string;
 
 	@IsString()
 	@IsOptional()
-	@Length(0, 100)
+	@Length(1, CHANNEL_DESC_LIMIT)
 	@IsNotEmpty({ message: 'Channel Description must not be empty' })
 	description?: string;
 }
@@ -53,6 +68,7 @@ export class UpdateMemberDto extends PartialType(PickType(ChannelMember, ['role'
 
 export class UpdateMessageDto extends PartialType(PickType(Message, ['content'] as const)) {
 	@IsNotEmpty({ message: 'Content must not be empty' })
+	@Length(1, MSG_LIMIT)
 	content: string;
 }
 

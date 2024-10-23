@@ -293,7 +293,7 @@ export class ChannelController {
 			throw new UnauthorizedException('Unauthorized user')
 		await this.memberService.deleteMember(victimMembership.id);
 		this.chatGateway.emitMemberLeft(
-			user.id,
+			victimMembership.userId,
 			victimMembership.id, 
 			channel.id,
 			channel.members.length - 1
@@ -468,7 +468,8 @@ export class ChannelController {
 			}
 		}
 
-		if (updateChannelDto.type && updateChannelDto.type === 'protected') {
+		if (updateChannelDto.password
+				|| (updateChannelDto.type && updateChannelDto.type === ChannelType.protected)) {
 			if (!updateChannelDto.password) {
 				throw new BadRequestException('Password required');
 			}
